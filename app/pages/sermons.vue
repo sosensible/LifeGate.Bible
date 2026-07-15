@@ -1,92 +1,56 @@
 <template>
   <div>
+    <!-- Header -->
     <div class="bg-primary-800 py-10 px-6">
-      <div class="max-w-5xl mx-auto flex items-center justify-between">
-        <div>
-          <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
-          <h1 class="text-4xl font-bold font-serif text-white">Sermons</h1>
-        </div>
-        <UButton @click="showUploadForm = true" color="primary" size="md">+ Upload Sermon</UButton>
+      <div class="max-w-6xl mx-auto">
+        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Members Area</p>
+        <h1 class="text-4xl font-bold font-serif text-white">Sermons</h1>
       </div>
     </div>
 
-    <div class="max-w-5xl mx-auto py-12 px-6">
-      <!-- Upload Form -->
-      <div v-if="showUploadForm" class="mb-12 bg-elevated rounded shadow p-8">
-        <h3 class="text-2xl font-bold font-serif text-highlighted mb-6">Upload New Sermon</h3>
-        <form @submit.prevent="handleUpload" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Title *</label>
-              <input v-model="uploadForm.title" type="text" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Series</label>
-              <input v-model="uploadForm.series" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Date *</label>
-              <input v-model="uploadForm.date" type="date" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Pastor</label>
-              <input v-model="uploadForm.pastor" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
-            </div>
+    <!-- Live stream -->
+    <div class="bg-parchment-900 py-11 px-6">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="bg-secondary text-white px-2.5 py-1 text-xs font-bold tracking-wider uppercase rounded-sm">● Live</span>
+          <p class="text-gold-400 text-xs tracking-[0.15em] uppercase">Sunday Morning Worship Service</p>
+        </div>
+        <div class="bg-black rounded-lg aspect-video max-w-3xl flex flex-col items-center justify-center gap-3 border border-white/10">
+          <div class="w-16 h-16 rounded-full bg-gold-500/10 border-2 border-gold-500/40 flex items-center justify-center">
+            <UIcon name="i-lucide-play" class="w-7 h-7 text-gold-400" />
           </div>
-
-          <div>
-            <label class="block text-sm font-bold text-toned mb-2">Description</label>
-            <textarea v-model="uploadForm.description" rows="3" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm"></textarea>
+          <div class="text-center px-4">
+            <p class="text-white/50 text-sm">Live stream embed goes here</p>
+            <p class="text-white/30 text-xs">YouTube, Vimeo, Facebook Live, or other provider</p>
           </div>
-
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Video</label>
-              <input type="file" accept="video/*" @change="(e) => uploadForm.video = e.target.files?.[0]" class="w-full text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">Audio</label>
-              <input type="file" accept="audio/*" @change="(e) => uploadForm.audio = e.target.files?.[0]" class="w-full text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-toned mb-2">PDF Notes</label>
-              <input type="file" accept="application/pdf" @change="(e) => uploadForm.pdf = e.target.files?.[0]" class="w-full text-sm" />
-            </div>
-          </div>
-
-          <div v-if="uploadError" class="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-            {{ uploadError }}
-          </div>
-
-          <div class="flex gap-3">
-            <UButton type="submit" :loading="uploading" color="primary">Upload Sermon</UButton>
-            <UButton type="button" @click="showUploadForm = false" variant="outline" color="neutral">Cancel</UButton>
-          </div>
-        </form>
+        </div>
+        <div class="flex gap-3 mt-5 flex-wrap">
+          <UButton size="md" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold">Watch Live</UButton>
+          <UButton size="md" variant="outline" class="text-gold-400 ring-gold-500/40 hover:bg-gold-500/10 uppercase tracking-wide font-semibold">Download Sermon Notes (PDF)</UButton>
+        </div>
       </div>
+    </div>
 
-      <!-- Sermons List -->
-      <h2 class="text-3xl font-bold font-serif text-highlighted mb-8">Recent Sermons</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="sermon in sermons" :key="sermon.id" class="bg-elevated rounded shadow overflow-hidden">
-          <div class="h-32 bg-gradient-to-br from-primary to-primary-950 flex items-center justify-center">
-            <span class="text-white text-4xl">🎙️</span>
-          </div>
-          <div class="p-5">
-            <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-1">{{ sermon.series }}</p>
-            <h3 class="text-lg font-bold font-serif text-highlighted mb-2">{{ sermon.title }}</h3>
-            <p class="text-sm text-muted mb-4">{{ sermon.date }} · {{ sermon.pastor }}</p>
-            <div class="flex gap-2 flex-wrap">
-              <UButton v-if="sermon.video_url" variant="ghost" color="primary" size="sm">▶ Watch</UButton>
-              <UButton v-if="sermon.audio_url" variant="ghost" color="primary" size="sm">🎧 Audio</UButton>
-              <UButton v-if="sermon.pdf_url" variant="ghost" color="primary" size="sm">📄 Notes</UButton>
+    <!-- Archive -->
+    <div class="bg-default py-14 px-6">
+      <div class="max-w-6xl mx-auto">
+        <h2 class="text-3xl font-bold font-serif text-highlighted mb-8">Recent Sermons</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="s in sermons" :key="s.id" class="bg-elevated rounded-lg overflow-hidden shadow-sm border border-default">
+            <div class="h-32 flex items-center justify-center relative" :style="{ backgroundColor: s.color }">
+              <UIcon name="i-lucide-play" class="w-9 h-9 text-white/30" />
+              <div class="absolute bottom-2.5 right-2.5 flex gap-1.5">
+                <span v-for="f in s.formats" :key="f" class="bg-black/55 text-white px-2 py-0.5 text-[10px] font-semibold rounded-sm">{{ f }}</span>
+              </div>
+            </div>
+            <div class="p-5">
+              <p class="text-gold-600 text-[10px] tracking-[0.15em] uppercase mb-1.5">{{ s.series }}</p>
+              <h3 class="font-serif text-lg font-bold text-highlighted leading-tight mb-2">{{ s.title }}</h3>
+              <p class="text-muted text-xs mb-3.5">{{ s.date }} · {{ s.pastor }}</p>
+              <span class="text-primary text-xs font-bold border-b-2 border-gold-500 pb-0.5 cursor-pointer">Watch / Download →</span>
             </div>
           </div>
         </div>
-      </div>
-
-      <div v-if="sermons.length === 0" class="text-center py-12">
-        <p class="text-muted">No sermons yet</p>
       </div>
     </div>
   </div>
@@ -98,74 +62,13 @@ definePageMeta({
   layout: 'default',
 })
 
-const showUploadForm = ref(false)
-const uploading = ref(false)
-const uploadError = ref('')
-const sermons = ref<any[]>([])
-
-const uploadForm = reactive({
-  title: '',
-  series: '',
-  date: '',
-  pastor: '',
-  description: '',
-  video: null as File | null,
-  audio: null as File | null,
-  pdf: null as File | null,
-})
-
-const fetchSermons = async () => {
-  try {
-    const { data } = await useFetch('/api/sermons')
-    sermons.value = data.value?.sermons || []
-  }
-  catch (err) {
-    console.error('Failed to fetch sermons', err)
-  }
-}
-
-const handleUpload = async () => {
-  uploadError.value = ''
-  uploading.value = true
-
-  try {
-    const formData = new FormData()
-    formData.append('title', uploadForm.title)
-    formData.append('series', uploadForm.series)
-    formData.append('date', uploadForm.date)
-    formData.append('pastor', uploadForm.pastor)
-    formData.append('description', uploadForm.description)
-    if (uploadForm.video) formData.append('video', uploadForm.video)
-    if (uploadForm.audio) formData.append('audio', uploadForm.audio)
-    if (uploadForm.pdf) formData.append('pdf', uploadForm.pdf)
-
-    const response = await $fetch('/api/sermons/upload', {
-      method: 'POST',
-      body: formData,
-    })
-
-    if (response.success) {
-      uploadForm.title = ''
-      uploadForm.series = ''
-      uploadForm.date = ''
-      uploadForm.pastor = ''
-      uploadForm.description = ''
-      uploadForm.video = null
-      uploadForm.audio = null
-      uploadForm.pdf = null
-      showUploadForm.value = false
-      await fetchSermons()
-    }
-  }
-  catch (err: any) {
-    uploadError.value = err.message || 'Upload failed'
-  }
-  finally {
-    uploading.value = false
-  }
-}
-
-onMounted(() => {
-  fetchSermons()
-})
+// Demo data until live sermons are wired in.
+const sermons = [
+  { id: 1, title: 'The Good Shepherd', series: 'Gospel of John', date: 'June 22, 2025', pastor: 'Pastor Dave', formats: ['Video', 'PDF'], color: '#1A5C30' },
+  { id: 2, title: 'Walking in the Light', series: 'Gospel of John', date: 'June 15, 2025', pastor: 'Pastor Dave', formats: ['Video', 'PDF'], color: '#7B1828' },
+  { id: 3, title: 'Bread of Life', series: 'Gospel of John', date: 'June 8, 2025', pastor: 'Pastor Dave', formats: ['Video', 'Audio', 'PDF'], color: '#256035' },
+  { id: 4, title: 'Grace Abounding', series: 'Romans: The Gospel Unveiled', date: 'June 1, 2025', pastor: 'Pastor Dave', formats: ['Video', 'PDF'], color: '#5D1220' },
+  { id: 5, title: 'Justification by Faith', series: 'Romans: The Gospel Unveiled', date: 'May 25, 2025', pastor: 'Pastor Dave', formats: ['Video'], color: '#4A3C1A' },
+  { id: 6, title: 'The Love Chapter', series: 'Special Series', date: 'May 18, 2025', pastor: 'Guest Speaker', formats: ['Video', 'Audio'], color: '#2A3C6C' },
+]
 </script>
