@@ -1,10 +1,12 @@
 <template>
-  <div class="min-h-screen bg-default text-default">
-    <NuxtRouteAnnouncer />
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-  </div>
+  <UApp>
+    <div class="min-h-screen bg-default text-default">
+      <NuxtRouteAnnouncer />
+      <NuxtLayout>
+        <NuxtPage />
+      </NuxtLayout>
+    </div>
+  </UApp>
 </template>
 
 <script setup lang="ts">

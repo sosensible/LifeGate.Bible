@@ -11,13 +11,6 @@
             <UButton @click="handleLogout" variant="outline" size="sm" class="text-white ring-white/40 hover:bg-white/10">Sign Out</UButton>
           </template>
           <UButton v-else @click="navigateTo('/login')" size="sm" color="secondary">Member Login</UButton>
-          <UButton
-            :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
-            variant="ghost"
-            aria-label="Toggle color mode"
-            class="text-white hover:bg-white/10"
-            @click="colorMode.preference = isDark ? 'light' : 'dark'"
-          />
         </div>
       </div>
     </nav>
@@ -27,9 +20,6 @@
 
 <script setup lang="ts">
 const auth = useAuthStore()
-
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
 
 const handleLogout = () => {
   auth.logout()

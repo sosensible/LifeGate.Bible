@@ -30,6 +30,13 @@ export default defineNuxtConfig({
   ],
   // @nuxt/ui v4 requires this CSS entry; color aliases live in app.config.ts.
   css: ['~/assets/css/main.css'],
+  // No dark mode. Disable the color-mode integration entirely so the `.dark`
+  // class is never added to <html>. Nuxt UI's dark styling is purely class-based
+  // (no prefers-color-scheme media query), so with the class never present the
+  // site is light-only and never follows the OS.
+  ui: {
+    colorMode: false,
+  },
   googleFonts: {
     families: {
       'Playfair Display': [400, 600, 700],
