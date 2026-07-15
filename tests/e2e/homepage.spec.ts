@@ -8,6 +8,6 @@ describe('Feature: the public homepage', async () => {
 
   it('Given the site is running, When I request "/", Then it responds with the hero copy', async () => {
     const html = await $fetch<string>('/')
-    expect(html).toContain('Meets the Word')
+    expect(html).toContain('Where Life')
   })
 })
