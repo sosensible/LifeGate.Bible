@@ -1,0 +1,25 @@
+# dependencies
+node_modules
+
+# nuxt / nitro build output
+.nuxt
+.output
+.data
+
+# cloudflare / wrangler
+.wrangler
+.dev.vars
+.dev.vars.*
+
+# local env
+.env
+.env.*
+
+# testing
+coverage
+test-results
+playwright-report
+
+# misc
+.DS_Store
+*.log

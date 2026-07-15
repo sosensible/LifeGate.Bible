@@ -1,0 +1,37 @@
+{
+  // Starter Cloudflare config for the Lifegate portal.
+  // NOTE: v1 (public marketing site) runs on the Nuxt dev server WITHOUT any of these
+  // bindings. They are declared here so the pieces are ready for later phases:
+  //   - D1  (db)     -> Phase 3 (Drizzle + member portal)
+  //   - R2  (MEDIA)  -> Phase 3 (sermon media / resumes / images)
+  //   - EMAIL        -> Phase 1b/2, only if the contact form ships
+  // Fill the placeholder IDs after provisioning, e.g.:
+  //   wrangler d1 create lifegate_db      -> paste database_id
+  //   wrangler r2 bucket create lifegate-media
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lifegate-church",
+  "compatibility_date": "2024-11-01",
+
+  "d1_databases": [
+    {
+      "binding": "db",
+      "database_name": "lifegate_db",
+      "database_id": "TODO_RUN_wrangler_d1_create"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "lifegate-media"
+    }
+  ],
+
+  // Cloudflare Email Sending binding. Destination address is verified during
+  // email onboarding (see cloudflare-email-service skill).
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ]
+}
