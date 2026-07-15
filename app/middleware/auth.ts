@@ -1,24 +1,11 @@
-export default defineNuxtRouteMiddleware(async (to, from) => {
-  const token = useCookie('auth_token').value
+export default defineNuxtRouteMiddleware(() => {
+  // v1 client-side gate: matches the invite-code login, which stores a token in
+  // localStorage (auth store). Runs on the client only (localStorage isn't
+  // available during SSR). Server-validated auth + role checks come with the
+  // portal phase.
+  if (import.meta.server) return
 
-  if (!token) {
-    return navigateTo('/login')
-  }
-
-  try {
-    const { data } = await useFetch('/api/auth/user', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    })
-
-    const user = data.value as any
-
-    if (to.path.startsWith('/admin') && user.role !== 'admin' && user.role !== 'pastor') {
-      return navigateTo('/')
-    }
-  }
-  catch (err) {
+  if (!localStorage.getItem('auth_token')) {
     return navigateTo('/login')
   }
 })
