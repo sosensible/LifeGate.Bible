@@ -1,29 +1,29 @@
 <template>
-  <div class="min-h-screen bg-[#ebe6d2] flex items-center justify-center p-6">
+  <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md">
-      <div class="bg-white rounded-lg shadow-lg p-12">
-        <h1 class="text-3xl font-bold text-[#1A5C30] mb-2 text-center font-serif">Member Access</h1>
-        <p class="text-center text-[#5C4230] mb-6 text-sm">Enter your credentials to access the members portal.</p>
+      <div class="bg-elevated rounded-lg shadow-lg p-12">
+        <h1 class="text-3xl font-bold text-primary mb-2 text-center font-serif">Member Access</h1>
+        <p class="text-center text-toned mb-6 text-sm">Enter your credentials to access the members portal.</p>
 
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-[#5C4230] uppercase tracking-wide mb-2">Email</label>
+            <label class="block text-xs font-bold text-toned uppercase tracking-wide mb-2">Email</label>
             <input
               v-model="form.email"
               type="email"
               placeholder="your@email.com"
-              class="w-full px-4 py-3 border border-[#C8B89A] rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C30]"
+              class="w-full px-4 py-3 bg-default text-default border border-default rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-[#5C4230] uppercase tracking-wide mb-2">Password</label>
+            <label class="block text-xs font-bold text-toned uppercase tracking-wide mb-2">Password</label>
             <input
               v-model="form.password"
               type="password"
               placeholder="••••••••"
-              class="w-full px-4 py-3 border border-[#C8B89A] rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C30]"
+              class="w-full px-4 py-3 bg-default text-default border border-default rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
           </div>
@@ -35,14 +35,14 @@
           <UButton
             type="submit"
             :loading="loading"
-            class="w-full bg-[#1A5C30] hover:bg-[#154a27] text-white font-bold py-3 rounded uppercase tracking-wide"
+            class="w-full bg-primary hover:bg-primary-800 text-white font-bold py-3 rounded uppercase tracking-wide"
           >
             {{ loading ? 'Signing in...' : 'Sign In' }}
           </UButton>
         </form>
 
         <p class="text-center mt-6">
-          <NuxtLink to="/" class="text-[#5C4230] text-sm hover:underline">← Back to main site</NuxtLink>
+          <NuxtLink to="/" class="text-toned text-sm hover:underline">← Back to main site</NuxtLink>
         </p>
       </div>
     </div>

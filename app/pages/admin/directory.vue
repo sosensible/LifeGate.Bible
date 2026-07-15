@@ -1,9 +1,9 @@
 <template>
   <div>
-    <div class="bg-[#294231] py-10 px-6">
+    <div class="bg-primary-800 py-10 px-6">
       <div class="max-w-5xl mx-auto flex items-center justify-between">
         <div>
-          <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
+          <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
           <h1 class="text-4xl font-bold font-serif text-white">Members Directory</h1>
         </div>
         <UButton @click="showAddForm = true" color="primary" size="md">+ Add Member</UButton>
@@ -12,21 +12,21 @@
 
     <div class="max-w-5xl mx-auto py-12 px-6">
       <!-- Add Member Form -->
-      <div v-if="showAddForm" class="mb-12 bg-white rounded shadow p-8">
-        <h3 class="text-2xl font-bold font-serif text-[#2A1A0E] mb-6">Add New Member</h3>
+      <div v-if="showAddForm" class="mb-12 bg-elevated rounded shadow p-8">
+        <h3 class="text-2xl font-bold font-serif text-highlighted mb-6">Add New Member</h3>
         <form @submit.prevent="handleAddMember" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Name *</label>
-              <input v-model="addForm.name" type="text" required class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Name *</label>
+              <input v-model="addForm.name" type="text" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Email *</label>
-              <input v-model="addForm.email" type="email" required class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Email *</label>
+              <input v-model="addForm.email" type="email" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Role</label>
-              <select v-model="addForm.role" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm">
+              <label class="block text-sm font-bold text-toned mb-2">Role</label>
+              <select v-model="addForm.role" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm">
                 <option value="member">Member</option>
                 <option value="deacon">Deacon</option>
                 <option value="elder">Elder</option>
@@ -34,24 +34,24 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Phone</label>
-              <input v-model="addForm.phone" type="tel" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Phone</label>
+              <input v-model="addForm.phone" type="tel" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div class="col-span-2">
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Address</label>
-              <input v-model="addForm.address" type="text" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Address</label>
+              <input v-model="addForm.address" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Birthday</label>
-              <input v-model="addForm.birthday" type="date" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Birthday</label>
+              <input v-model="addForm.birthday" type="date" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Family Unit</label>
-              <input v-model="addForm.familyUnit" type="text" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Family Unit</label>
+              <input v-model="addForm.familyUnit" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div class="col-span-2">
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Ministries (comma-separated)</label>
-              <textarea v-model="addForm.ministries" rows="2" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm"></textarea>
+              <label class="block text-sm font-bold text-toned mb-2">Ministries (comma-separated)</label>
+              <textarea v-model="addForm.ministries" rows="2" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm"></textarea>
             </div>
           </div>
 
@@ -72,32 +72,32 @@
           v-model="searchQuery"
           type="text"
           placeholder="Search by name or email..."
-          class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C30]"
+          class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <!-- Members Table -->
-      <div class="bg-white rounded shadow overflow-x-auto">
+      <div class="bg-elevated rounded shadow overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="bg-[#f5f0e8] border-b border-[#C8B89A]">
+          <thead class="bg-muted border-b border-default">
             <tr>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Name</th>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Email</th>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Role</th>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Phone</th>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Ministries</th>
-              <th class="text-left p-4 font-bold text-[#2A1A0E]">Actions</th>
+              <th class="text-left p-4 font-bold text-highlighted">Name</th>
+              <th class="text-left p-4 font-bold text-highlighted">Email</th>
+              <th class="text-left p-4 font-bold text-highlighted">Role</th>
+              <th class="text-left p-4 font-bold text-highlighted">Phone</th>
+              <th class="text-left p-4 font-bold text-highlighted">Ministries</th>
+              <th class="text-left p-4 font-bold text-highlighted">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="member in filteredMembers" :key="member.id" class="border-b border-[#e8dcc8] hover:bg-[#faf8f0]">
-              <td class="p-4 font-bold text-[#2A1A0E]">{{ member.name }}</td>
-              <td class="p-4 text-[#5C4230]">{{ member.email }}</td>
+            <tr v-for="member in filteredMembers" :key="member.id" class="border-b border-accented hover:bg-default">
+              <td class="p-4 font-bold text-highlighted">{{ member.name }}</td>
+              <td class="p-4 text-toned">{{ member.email }}</td>
               <td class="p-4">
-                <span class="px-2 py-1 bg-[#e8dcc8] text-[#2A1A0E] text-xs font-bold rounded">{{ member.role }}</span>
+                <span class="px-2 py-1 bg-accented text-highlighted text-xs font-bold rounded">{{ member.role }}</span>
               </td>
-              <td class="p-4 text-[#5C4230]">{{ member.phone || '—' }}</td>
-              <td class="p-4 text-[#5C4230] text-xs">{{ member.ministries || '—' }}</td>
+              <td class="p-4 text-toned">{{ member.phone || '—' }}</td>
+              <td class="p-4 text-toned text-xs">{{ member.ministries || '—' }}</td>
               <td class="p-4">
                 <UButton @click="editMember(member)" variant="ghost" color="primary" size="xs">Edit</UButton>
               </td>
@@ -107,7 +107,7 @@
       </div>
 
       <div v-if="filteredMembers.length === 0" class="text-center py-12">
-        <p class="text-[#8C7050]">No members found</p>
+        <p class="text-muted">No members found</p>
       </div>
     </div>
   </div>

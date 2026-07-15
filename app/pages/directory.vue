@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="bg-[#294231] py-10 px-6">
+    <div class="bg-primary-800 py-10 px-6">
       <div class="max-w-5xl mx-auto">
-        <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
+        <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
         <h1 class="text-4xl font-bold font-serif text-white">Members Directory</h1>
       </div>
     </div>
@@ -13,26 +13,26 @@
           v-model="searchQuery"
           type="text"
           placeholder="Search by name..."
-          class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#1A5C30]"
+          class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="member in filteredMembers" :key="member.id" class="bg-white rounded shadow overflow-hidden">
-          <div class="h-1 bg-[#1A5C30]"></div>
+        <div v-for="member in filteredMembers" :key="member.id" class="bg-elevated rounded shadow overflow-hidden">
+          <div class="h-1 bg-primary"></div>
           <div class="p-6">
-            <h3 class="text-lg font-bold text-[#2A1A0E]">{{ member.name }}</h3>
-            <p class="text-sm text-[#8C7050] mb-4">{{ member.role }}</p>
+            <h3 class="text-lg font-bold text-highlighted">{{ member.name }}</h3>
+            <p class="text-sm text-muted mb-4">{{ member.role }}</p>
             <div class="space-y-2 text-sm">
-              <p><span class="font-bold text-[#C4993C]">Email:</span> {{ member.email }}</p>
-              <p><span class="font-bold text-[#C4993C]">Phone:</span> {{ member.phone }}</p>
+              <p><span class="font-bold text-gold-500">Email:</span> {{ member.email }}</p>
+              <p><span class="font-bold text-gold-500">Phone:</span> {{ member.phone }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <div v-if="filteredMembers.length === 0" class="text-center py-12">
-        <p class="text-[#8C7050]">No members found</p>
+        <p class="text-muted">No members found</p>
       </div>
     </div>
   </div>

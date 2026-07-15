@@ -1,9 +1,9 @@
 <template>
   <div>
-    <div class="bg-[#294231] py-10 px-6">
+    <div class="bg-primary-800 py-10 px-6">
       <div class="max-w-5xl mx-auto flex items-center justify-between">
         <div>
-          <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
+          <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
           <h1 class="text-4xl font-bold font-serif text-white">Sermons</h1>
         </div>
         <UButton @click="showUploadForm = true" color="primary" size="md">+ Upload Sermon</UButton>
@@ -12,44 +12,44 @@
 
     <div class="max-w-5xl mx-auto py-12 px-6">
       <!-- Upload Form -->
-      <div v-if="showUploadForm" class="mb-12 bg-white rounded shadow p-8">
-        <h3 class="text-2xl font-bold font-serif text-[#2A1A0E] mb-6">Upload New Sermon</h3>
+      <div v-if="showUploadForm" class="mb-12 bg-elevated rounded shadow p-8">
+        <h3 class="text-2xl font-bold font-serif text-highlighted mb-6">Upload New Sermon</h3>
         <form @submit.prevent="handleUpload" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Title *</label>
-              <input v-model="uploadForm.title" type="text" required class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Title *</label>
+              <input v-model="uploadForm.title" type="text" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Series</label>
-              <input v-model="uploadForm.series" type="text" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Series</label>
+              <input v-model="uploadForm.series" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Date *</label>
-              <input v-model="uploadForm.date" type="date" required class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Date *</label>
+              <input v-model="uploadForm.date" type="date" required class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Pastor</label>
-              <input v-model="uploadForm.pastor" type="text" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm" />
+              <label class="block text-sm font-bold text-toned mb-2">Pastor</label>
+              <input v-model="uploadForm.pastor" type="text" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm" />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-bold text-[#5C4230] mb-2">Description</label>
-            <textarea v-model="uploadForm.description" rows="3" class="w-full px-4 py-2 border border-[#C8B89A] rounded text-sm"></textarea>
+            <label class="block text-sm font-bold text-toned mb-2">Description</label>
+            <textarea v-model="uploadForm.description" rows="3" class="w-full px-4 py-2 bg-default text-default border border-default rounded text-sm"></textarea>
           </div>
 
           <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Video</label>
+              <label class="block text-sm font-bold text-toned mb-2">Video</label>
               <input type="file" accept="video/*" @change="(e) => uploadForm.video = e.target.files?.[0]" class="w-full text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">Audio</label>
+              <label class="block text-sm font-bold text-toned mb-2">Audio</label>
               <input type="file" accept="audio/*" @change="(e) => uploadForm.audio = e.target.files?.[0]" class="w-full text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-bold text-[#5C4230] mb-2">PDF Notes</label>
+              <label class="block text-sm font-bold text-toned mb-2">PDF Notes</label>
               <input type="file" accept="application/pdf" @change="(e) => uploadForm.pdf = e.target.files?.[0]" class="w-full text-sm" />
             </div>
           </div>
@@ -66,16 +66,16 @@
       </div>
 
       <!-- Sermons List -->
-      <h2 class="text-3xl font-bold font-serif text-[#2A1A0E] mb-8">Recent Sermons</h2>
+      <h2 class="text-3xl font-bold font-serif text-highlighted mb-8">Recent Sermons</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="sermon in sermons" :key="sermon.id" class="bg-white rounded shadow overflow-hidden">
-          <div class="h-32 bg-gradient-to-br from-[#1A5C30] to-[#0d3a1d] flex items-center justify-center">
+        <div v-for="sermon in sermons" :key="sermon.id" class="bg-elevated rounded shadow overflow-hidden">
+          <div class="h-32 bg-gradient-to-br from-primary to-primary-950 flex items-center justify-center">
             <span class="text-white text-4xl">🎙️</span>
           </div>
           <div class="p-5">
-            <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-1">{{ sermon.series }}</p>
-            <h3 class="text-lg font-bold font-serif text-[#2A1A0E] mb-2">{{ sermon.title }}</h3>
-            <p class="text-sm text-[#8C7050] mb-4">{{ sermon.date }} · {{ sermon.pastor }}</p>
+            <p class="text-gold-500 text-xs font-bold tracking-widest uppercase mb-1">{{ sermon.series }}</p>
+            <h3 class="text-lg font-bold font-serif text-highlighted mb-2">{{ sermon.title }}</h3>
+            <p class="text-sm text-muted mb-4">{{ sermon.date }} · {{ sermon.pastor }}</p>
             <div class="flex gap-2 flex-wrap">
               <UButton v-if="sermon.video_url" variant="ghost" color="primary" size="sm">▶ Watch</UButton>
               <UButton v-if="sermon.audio_url" variant="ghost" color="primary" size="sm">🎧 Audio</UButton>
@@ -86,7 +86,7 @@
       </div>
 
       <div v-if="sermons.length === 0" class="text-center py-12">
-        <p class="text-[#8C7050]">No sermons yet</p>
+        <p class="text-muted">No sermons yet</p>
       </div>
     </div>
   </div>
