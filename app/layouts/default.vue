@@ -1,14 +1,23 @@
 <template>
   <div class="min-h-screen flex flex-col">
-    <nav class="sticky top-0 z-50 bg-[#2c583a] shadow-md">
+    <nav class="sticky top-0 z-50 bg-primary-800 shadow-md">
       <div class="max-w-5xl mx-auto px-6 h-[70px] flex items-center justify-between">
-        <div class="text-white font-bold text-xl">Lifegate Baptist Church</div>
-        <div class="flex gap-6">
-          <UButton v-if="auth.isAuthenticated" @click="navigateTo('/sermons')" variant="ghost" color="neutral">Sermons</UButton>
-          <UButton v-if="auth.isAuthenticated" @click="navigateTo('/calendar')" variant="ghost" color="neutral">Calendar</UButton>
-          <UButton v-if="auth.isAuthenticated" @click="navigateTo('/directory')" variant="ghost" color="neutral">Directory</UButton>
-          <UButton v-if="auth.isAuthenticated" @click="handleLogout" variant="outline" size="sm" color="neutral">Sign Out</UButton>
+        <div class="text-white font-serif font-bold text-xl">Lifegate Baptist Church</div>
+        <div class="flex items-center gap-4">
+          <template v-if="auth.isAuthenticated">
+            <UButton @click="navigateTo('/sermons')" variant="ghost" class="text-white hover:bg-white/10">Sermons</UButton>
+            <UButton @click="navigateTo('/calendar')" variant="ghost" class="text-white hover:bg-white/10">Calendar</UButton>
+            <UButton @click="navigateTo('/directory')" variant="ghost" class="text-white hover:bg-white/10">Directory</UButton>
+            <UButton @click="handleLogout" variant="outline" size="sm" class="text-white ring-white/40 hover:bg-white/10">Sign Out</UButton>
+          </template>
           <UButton v-else @click="navigateTo('/login')" size="sm" color="secondary">Member Login</UButton>
+          <UButton
+            :icon="isDark ? 'i-lucide-moon' : 'i-lucide-sun'"
+            variant="ghost"
+            aria-label="Toggle color mode"
+            class="text-white hover:bg-white/10"
+            @click="colorMode.preference = isDark ? 'light' : 'dark'"
+          />
         </div>
       </div>
     </nav>
@@ -18,6 +27,9 @@
 
 <script setup lang="ts">
 const auth = useAuthStore()
+
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 
 const handleLogout = () => {
   auth.logout()

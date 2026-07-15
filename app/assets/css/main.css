@@ -55,3 +55,49 @@
   --color-gold-900: #5f3e24;
   --color-gold-950: #372010;
 }
+
+/* ------------------------------------------------------------------ *
+ * Light / dark surfaces + text (the "dark mode is a variation" layer).
+ * Pages use semantic utilities (bg-default, bg-muted, text-highlighted,
+ * text-muted, border-default ...) which resolve through these variables,
+ * so one refactor themes both modes. Warm parchment in light, warm brown
+ * in dark — keeping the church feel rather than flat neutral gray.
+ * ------------------------------------------------------------------ */
+:root {
+  --ui-bg: #faf8f0;            /* page parchment */
+  --ui-bg-muted: #f0ead9;      /* hero / tinted sections (~ reference #ebe6d2) */
+  --ui-bg-elevated: #ffffff;   /* cards */
+  --ui-bg-accented: #e6ddc8;
+  --ui-text-highlighted: #2a1a0e; /* dark brown headings */
+  --ui-text: #4a3524;             /* brown body */
+  --ui-text-toned: #5c4230;
+  --ui-text-muted: #8c7050;
+  --ui-text-dimmed: #a8926f;
+  --ui-border: #e0d5c0;
+  --ui-border-muted: #ebe3d3;
+  --ui-border-accented: #d3c4a8;
+
+  /* Use the deep brand shades for primary/secondary in light mode (matches the
+     reference's forest-green / wine buttons and accents). */
+  --ui-primary: var(--ui-color-primary-700);
+  --ui-secondary: var(--ui-color-secondary-700);
+}
+
+.dark {
+  --ui-bg: #17110b;            /* deep warm brown-black */
+  --ui-bg-muted: #1f160e;
+  --ui-bg-elevated: #271c12;
+  --ui-bg-accented: #2f2216;
+  --ui-text-highlighted: #f8f1e3; /* warm cream headings */
+  --ui-text: #e4d7c1;
+  --ui-text-toned: #d3c3a6;
+  --ui-text-muted: #b09b7e;
+  --ui-text-dimmed: #8a7860;
+  --ui-border: #3a2b1c;
+  --ui-border-muted: #2a1f14;
+  --ui-border-accented: #4a3826;
+
+  /* Brighter brand shades read better on the dark warm background. */
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-secondary: var(--ui-color-secondary-400);
+}
