@@ -23,6 +23,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // v1 invite-code gate (matches marketing-site-reference.html). Per-member
+  // accounts + server-side validation come with the portal build (Phase 3).
+  const loginWithInviteCode = async (code: string) => {
+    if (code.trim().toUpperCase() === 'LIFEGATE') {
+      token.value = 'invite_' + Date.now()
+      user.value = { email: '', name: 'Member' }
+      if (process.client) {
+        localStorage.setItem('auth_token', token.value)
+      }
+      return
+    }
+    throw new Error('Invalid invite code. Please check with your church administrator.')
+  }
+
   const logout = () => {
     user.value = null
     token.value = ''
@@ -40,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, token, isAuthenticated, login, logout, initAuth }
+  return { user, token, isAuthenticated, login, loginWithInviteCode, logout, initAuth }
 })
