@@ -14,21 +14,21 @@
         <div class="bg-white rounded shadow p-8 hover:shadow-lg transition">
           <h3 class="text-2xl font-bold font-serif text-[#2A1A0E] mb-3">One-Time Gift</h3>
           <p class="text-[#5C4230] mb-6 text-sm leading-relaxed">Support our immediate ministry needs with a single generous gift.</p>
-          <UButton @click="selectedOption = 'onetime'" class="w-full" color="green">Give Now</UButton>
+          <UButton @click="selectedOption = 'onetime'" class="w-full" color="primary">Give Now</UButton>
         </div>
 
         <!-- Monthly Giving -->
         <div class="bg-white rounded shadow p-8 hover:shadow-lg transition">
           <h3 class="text-2xl font-bold font-serif text-[#2A1A0E] mb-3">Monthly Support</h3>
           <p class="text-[#5C4230] mb-6 text-sm leading-relaxed">Join our sustaining partners with consistent monthly contributions.</p>
-          <UButton @click="selectedOption = 'monthly'" class="w-full" color="green">Set Up Monthly</UButton>
+          <UButton @click="selectedOption = 'monthly'" class="w-full" color="primary">Set Up Monthly</UButton>
         </div>
 
         <!-- Pledge -->
         <div class="bg-white rounded shadow p-8 hover:shadow-lg transition">
           <h3 class="text-2xl font-bold font-serif text-[#2A1A0E] mb-3">Capital Campaign</h3>
           <p class="text-[#5C4230] mb-6 text-sm leading-relaxed">Make a pledge toward our upcoming building or special project.</p>
-          <UButton @click="selectedOption = 'pledge'" class="w-full" color="green">Make a Pledge</UButton>
+          <UButton @click="selectedOption = 'pledge'" class="w-full" color="primary">Make a Pledge</UButton>
         </div>
       </div>
 
@@ -109,12 +109,12 @@
 
           <!-- Submit -->
           <div class="flex gap-3 pt-4 border-t border-[#C8B89A]">
-            <UButton type="submit" :loading="submitting" color="green" class="flex-1">
+            <UButton type="submit" :loading="submitting" color="primary" class="flex-1">
               <template v-if="selectedOption === 'onetime'">Complete Gift</template>
               <template v-else-if="selectedOption === 'monthly'">Set Up Monthly</template>
               <template v-else>Submit Pledge</template>
             </UButton>
-            <UButton type="button" @click="selectedOption = null" variant="outline" color="gray">Cancel</UButton>
+            <UButton type="button" @click="selectedOption = null" variant="outline" color="neutral">Cancel</UButton>
           </div>
         </form>
       </div>

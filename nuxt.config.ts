@@ -28,12 +28,8 @@ export default defineNuxtConfig({
     '@nuxtjs/google-fonts',
     '@pinia/nuxt',
   ],
-  ui: {
-    colors: {
-      primary: 'green',
-      gray: 'stone',
-    },
-  },
+  // @nuxt/ui v4 requires this CSS entry; color aliases live in app.config.ts.
+  css: ['~/assets/css/main.css'],
   googleFonts: {
     families: {
       'Playfair Display': [400, 600, 700],

@@ -6,7 +6,7 @@
           <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
           <h1 class="text-4xl font-bold font-serif text-white">Members Directory</h1>
         </div>
-        <UButton @click="showAddForm = true" color="green" size="md">+ Add Member</UButton>
+        <UButton @click="showAddForm = true" color="primary" size="md">+ Add Member</UButton>
       </div>
     </div>
 
@@ -60,8 +60,8 @@
           </div>
 
           <div class="flex gap-3">
-            <UButton type="submit" :loading="adding" color="green">Add Member</UButton>
-            <UButton type="button" @click="showAddForm = false" variant="outline" color="gray">Cancel</UButton>
+            <UButton type="submit" :loading="adding" color="primary">Add Member</UButton>
+            <UButton type="button" @click="showAddForm = false" variant="outline" color="neutral">Cancel</UButton>
           </div>
         </form>
       </div>
@@ -99,7 +99,7 @@
               <td class="p-4 text-[#5C4230]">{{ member.phone || '—' }}</td>
               <td class="p-4 text-[#5C4230] text-xs">{{ member.ministries || '—' }}</td>
               <td class="p-4">
-                <UButton @click="editMember(member)" variant="ghost" color="green" size="xs">Edit</UButton>
+                <UButton @click="editMember(member)" variant="ghost" color="primary" size="xs">Edit</UButton>
               </td>
             </tr>
           </tbody>

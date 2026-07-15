@@ -120,7 +120,7 @@
               Thanks for reaching out! We'll be in touch soon.
             </div>
 
-            <UButton type="submit" :loading="submitting" color="green" class="w-full">Send Message</UButton>
+            <UButton type="submit" :loading="submitting" color="primary" class="w-full">Send Message</UButton>
           </form>
         </div>
       </div>

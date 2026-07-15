@@ -6,7 +6,7 @@
           <p class="text-[#C4993C] text-xs font-bold tracking-widest uppercase mb-2">Members Area</p>
           <h1 class="text-4xl font-bold font-serif text-white">Sermons</h1>
         </div>
-        <UButton @click="showUploadForm = true" color="green" size="md">+ Upload Sermon</UButton>
+        <UButton @click="showUploadForm = true" color="primary" size="md">+ Upload Sermon</UButton>
       </div>
     </div>
 
@@ -59,8 +59,8 @@
           </div>
 
           <div class="flex gap-3">
-            <UButton type="submit" :loading="uploading" color="green">Upload Sermon</UButton>
-            <UButton type="button" @click="showUploadForm = false" variant="outline" color="gray">Cancel</UButton>
+            <UButton type="submit" :loading="uploading" color="primary">Upload Sermon</UButton>
+            <UButton type="button" @click="showUploadForm = false" variant="outline" color="neutral">Cancel</UButton>
           </div>
         </form>
       </div>
@@ -77,9 +77,9 @@
             <h3 class="text-lg font-bold font-serif text-[#2A1A0E] mb-2">{{ sermon.title }}</h3>
             <p class="text-sm text-[#8C7050] mb-4">{{ sermon.date }} · {{ sermon.pastor }}</p>
             <div class="flex gap-2 flex-wrap">
-              <UButton v-if="sermon.video_url" variant="ghost" color="green" size="sm">▶ Watch</UButton>
-              <UButton v-if="sermon.audio_url" variant="ghost" color="green" size="sm">🎧 Audio</UButton>
-              <UButton v-if="sermon.pdf_url" variant="ghost" color="green" size="sm">📄 Notes</UButton>
+              <UButton v-if="sermon.video_url" variant="ghost" color="primary" size="sm">▶ Watch</UButton>
+              <UButton v-if="sermon.audio_url" variant="ghost" color="primary" size="sm">🎧 Audio</UButton>
+              <UButton v-if="sermon.pdf_url" variant="ghost" color="primary" size="sm">📄 Notes</UButton>
             </div>
           </div>
         </div>

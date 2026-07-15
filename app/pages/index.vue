@@ -8,8 +8,8 @@
         </h1>
         <p class="text-lg text-[#5C4230] mb-8 max-w-md mx-auto leading-relaxed">A Baptist church family in Eau Claire, Michigan — gathering in faith, friendship, and the love of Scripture.</p>
         <div class="flex gap-4 justify-center flex-wrap">
-          <UButton color="green" variant="solid" size="lg">Plan Your Visit</UButton>
-          <UButton @click="navigateTo('/login')" color="red" variant="outline" size="lg">Member Login</UButton>
+          <UButton color="primary" variant="solid" size="lg">Plan Your Visit</UButton>
+          <UButton @click="navigateTo('/login')" color="error" variant="outline" size="lg">Member Login</UButton>
         </div>
       </div>
     </div>

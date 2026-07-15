@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* Brand color ramps and light/dark theme variables are added in the next
+   Phase 1a step. This file is the required @nuxt/ui v4 CSS entry — without it
+   Tailwind generates no utilities. */

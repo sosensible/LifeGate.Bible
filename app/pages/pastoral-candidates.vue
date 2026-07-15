@@ -45,7 +45,7 @@
                 </ul>
               </div>
 
-              <UButton @click="openApplication(position)" color="green" class="w-full">Submit Application</UButton>
+              <UButton @click="openApplication(position)" color="primary" class="w-full">Submit Application</UButton>
             </div>
           </sc-for>
         </div>
@@ -126,8 +126,8 @@
           </div>
 
           <div class="flex gap-3">
-            <UButton type="submit" :loading="submitting" color="green" class="flex-1">Submit Application</UButton>
-            <UButton type="button" @click="showApplicationForm = false" variant="outline" color="gray">Cancel</UButton>
+            <UButton type="submit" :loading="submitting" color="primary" class="flex-1">Submit Application</UButton>
+            <UButton type="button" @click="showApplicationForm = false" variant="outline" color="neutral">Cancel</UButton>
           </div>
         </form>
       </div>
