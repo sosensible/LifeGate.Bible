@@ -2,6 +2,7 @@
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md">
       <div class="bg-elevated rounded-lg shadow-lg p-12">
+        <img src="/logo.png" alt="Lifegate Baptist Church" class="h-24 w-auto mx-auto mb-6" />
         <h1 class="text-3xl font-bold text-primary mb-2 text-center font-serif">Member Access</h1>
         <p class="text-center text-toned mb-6 text-sm">Enter your credentials to access the members portal.</p>
 

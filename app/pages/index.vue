@@ -56,8 +56,8 @@
           </p>
           <span class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 cursor-pointer">Learn More About Us →</span>
         </div>
-        <div class="shrink-0 w-52 h-52 rounded-full border-4 border-gold-500 bg-muted flex items-center justify-center">
-          <UIcon name="i-lucide-church" class="w-20 h-20 text-primary" />
+        <div class="shrink-0">
+          <img src="/logo.png" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
         </div>
       </div>
     </section>
@@ -98,7 +98,7 @@
     <footer class="bg-primary-900 border-t-4 border-gold-500 py-14 px-6">
       <div class="max-w-5xl mx-auto flex flex-wrap gap-12">
         <div class="max-w-xs">
-          <p class="font-serif text-2xl font-bold text-white mb-3">Lifegate Baptist Church</p>
+          <img src="/logo.png" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 rounded bg-white/95 p-1.5" />
           <p class="text-white/60 text-sm font-bold leading-relaxed">Rooted in Faith.<br>Planted in Community.</p>
         </div>
         <div class="flex-1"></div>
@@ -115,7 +115,7 @@
           <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-4">Contact</p>
           <div class="flex flex-col gap-2.5">
             <span class="text-white/70 text-sm font-bold">Eau Claire, Michigan 49111</span>
-            <span class="text-white/70 text-sm font-bold">info@lifegatebc.org</span>
+            <span class="text-white/70 text-sm font-bold">info@lifegate.bible</span>
           </div>
         </div>
       </div>

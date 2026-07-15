@@ -2,7 +2,7 @@
   <div class="min-h-screen flex flex-col">
     <nav class="sticky top-0 z-50 bg-primary-800 shadow-md">
       <div class="max-w-5xl mx-auto px-6 h-[70px] flex items-center justify-between">
-        <div class="text-white font-serif font-bold text-xl">Lifegate Baptist Church</div>
+        <img src="/logo.png" alt="Lifegate Baptist Church" class="h-12 w-auto cursor-pointer rounded bg-white/95 p-1" @click="navigateTo('/')" />
         <div class="flex items-center gap-4">
           <template v-if="auth.isAuthenticated">
             <UButton @click="navigateTo('/sermons')" variant="ghost" class="text-white hover:bg-white/10">Sermons</UButton>
