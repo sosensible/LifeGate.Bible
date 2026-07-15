@@ -1,6 +1,57 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Brand color ramps and light/dark theme variables are added in the next
-   Phase 1a step. This file is the required @nuxt/ui v4 CSS entry — without it
-   Tailwind generates no utilities. */
+/* ------------------------------------------------------------------ *
+ * Lifegate brand design tokens (Nuxt UI v4 / Tailwind v4)
+ *
+ * Color ramps are anchored on the marketing-site-reference values:
+ *   green   #1A5C30  -> lifegate-700   (primary)
+ *   burgundy#7B1828  -> burgundy-700   (secondary)
+ *   gold    #C4993C  -> gold-500       (accent, used directly e.g. text-gold-500)
+ * Semantic aliases (primary/secondary/neutral) are set in app.config.ts.
+ * ------------------------------------------------------------------ */
+@theme static {
+  /* Fonts — Playfair Display (loaded via @nuxtjs/google-fonts) for display/serif,
+     Lato for body/sans. */
+  --font-sans: 'Lato', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Playfair Display', ui-serif, Georgia, serif;
+
+  /* Brand green */
+  --color-lifegate-50: #f0f8f3;
+  --color-lifegate-100: #dbefe1;
+  --color-lifegate-200: #b9dfc6;
+  --color-lifegate-300: #8bc7a3;
+  --color-lifegate-400: #56a87b;
+  --color-lifegate-500: #328a5d;
+  --color-lifegate-600: #226f49;
+  --color-lifegate-700: #1a5c30;
+  --color-lifegate-800: #164826;
+  --color-lifegate-900: #123b21;
+  --color-lifegate-950: #08210f;
+
+  /* Burgundy */
+  --color-burgundy-50: #fbf3f4;
+  --color-burgundy-100: #f6e4e6;
+  --color-burgundy-200: #eecacf;
+  --color-burgundy-300: #e0a3ab;
+  --color-burgundy-400: #cf7080;
+  --color-burgundy-500: #bc475a;
+  --color-burgundy-600: #a12f43;
+  --color-burgundy-700: #7b1828;
+  --color-burgundy-800: #691623;
+  --color-burgundy-900: #5a1621;
+  --color-burgundy-950: #32090f;
+
+  /* Gold (accent) */
+  --color-gold-50: #fbf8ed;
+  --color-gold-100: #f5edcb;
+  --color-gold-200: #ecd893;
+  --color-gold-300: #e0bf5b;
+  --color-gold-400: #d5aa42;
+  --color-gold-500: #c4993c;
+  --color-gold-600: #a87a30;
+  --color-gold-700: #865a2a;
+  --color-gold-800: #6f4927;
+  --color-gold-900: #5f3e24;
+  --color-gold-950: #372010;
+}

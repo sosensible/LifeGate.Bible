@@ -8,7 +8,7 @@
           <UButton v-if="auth.isAuthenticated" @click="navigateTo('/calendar')" variant="ghost" color="neutral">Calendar</UButton>
           <UButton v-if="auth.isAuthenticated" @click="navigateTo('/directory')" variant="ghost" color="neutral">Directory</UButton>
           <UButton v-if="auth.isAuthenticated" @click="handleLogout" variant="outline" size="sm" color="neutral">Sign Out</UButton>
-          <UButton v-else @click="navigateTo('/login')" size="sm" color="error">Member Login</UButton>
+          <UButton v-else @click="navigateTo('/login')" size="sm" color="secondary">Member Login</UButton>
         </div>
       </div>
     </nav>
