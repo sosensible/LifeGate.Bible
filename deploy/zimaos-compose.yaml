@@ -1,0 +1,53 @@
+# ZimaOS custom-app definition for the Lifegate church site.
+#
+# Install: ZimaOS App Store -> "Install a Custom App" -> paste this YAML.
+#
+# Deliberately minimal. The ZimaOS/CasaOS compose importer is known to choke on
+# Swarm-only keys (`deploy:`) and on top-level named `volumes:`, so neither
+# appears here. That costs nothing: this deployment serves the public site only,
+# which reads from app/data/ and holds no writable state, so the container needs
+# no persistent mounts at all.
+
+name: lifegate-church
+
+services:
+  lifegate:
+    # Built by ../Dockerfile for linux/amd64. Replace the tag when you cut a new
+    # version; see deploy/README.md for how to get the image onto the box.
+    image: lifegate-church:1.0.0-alpha.1
+    container_name: lifegate-church
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # 0.0.0.0 binds inside the container's own network namespace only.
+      HOST: 0.0.0.0
+      PORT: "3000"
+    ports:
+      - target: 3000
+        published: "3007"
+        protocol: tcp
+
+x-casaos:
+  id: bible.lifegate.church
+  main: lifegate
+  index: /
+  port_map: "3007"
+  scheme: http
+  # TODO: point at a reachable URL for public/logo.png once the repo has a
+  # remote; ZimaOS fetches this for the dashboard tile.
+  icon: ""
+  title:
+    en_US: Lifegate Baptist Church
+  category: Others
+  version: "1.0.0-alpha.1"
+  tagline:
+    en_US: Lifegate Baptist Church - Eau Claire, Michigan
+  description:
+    en_US: >-
+      Nuxt 4 site for Lifegate Baptist Church, served by the Nitro node-server
+      build and published to the public over a Cloudflare Tunnel. Public pages
+      only; the D1-backed /api/* routes are inactive on this target.
+  author: SOS Apps
+  developer: SOS Apps
+  architectures:
+    - amd64

@@ -23,3 +23,9 @@ playwright-report
 # misc
 .DS_Store
 *.log
+
+# cloudflare_pages preset build output
+dist
+
+# deploy: saved docker image tarballs
+deploy/out

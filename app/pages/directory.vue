@@ -44,7 +44,11 @@
               <p class="text-gold-600 text-[9px] tracking-[0.15em] uppercase mb-0.5">Family Unit</p>
               <p class="text-toned text-xs mb-2.5">{{ m.family || 'Individual Member' }}</p>
               <p class="text-gold-600 text-[9px] tracking-[0.15em] uppercase mb-0.5">Ministries</p>
-              <p class="text-toned text-xs mb-3.5">{{ m.ministries.join(' · ') }}</p>
+              <p class="text-toned text-xs mb-3.5">
+                <template v-for="(min, i) in m.ministries" :key="min">
+                  <NuxtLink :to="`/ministries/${ministrySlug(min)}`" class="text-primary hover:underline">{{ min }}</NuxtLink><span v-if="i < m.ministries.length - 1"> · </span>
+                </template>
+              </p>
               <div class="border-t border-default pt-3.5 flex flex-col gap-2 text-xs text-toned">
                 <div class="flex gap-2.5 items-center"><UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-gold-600 shrink-0" /><span>{{ m.phone }}</span></div>
                 <div class="flex gap-2.5 items-center"><UIcon name="i-lucide-mail" class="w-3.5 h-3.5 text-gold-600 shrink-0" /><span>{{ m.email }}</span></div>
@@ -65,19 +69,9 @@ definePageMeta({
   layout: 'default',
 })
 
-const search = ref('')
+import { members, ministrySlug } from '~/data/directory'
 
-// Demo data until the live member directory is wired in.
-const members = [
-  { id: 1, name: 'James Mitchell', family: 'Mitchell Family', role: 'Deacon', ministries: ['Worship Team', 'Visitation'], phone: '(269) 555-0101', email: 'jmitchell@lifegate.bible', birthday: 'March 15', address: '123 Oak Street, Eau Claire, MI', initials: 'JM', color: '#1A5C30' },
-  { id: 2, name: 'Robert Hayes', family: 'Hayes Family', role: 'Elder', ministries: ['Adult Sunday School'], phone: '(269) 555-0102', email: 'rhayes@lifegate.bible', birthday: 'July 4', address: '456 Maple Ave, Eau Claire, MI', initials: 'RH', color: '#7B1828' },
-  { id: 3, name: 'Patricia Summers', family: null, role: 'Member', ministries: ['Children\'s Ministry', 'Nursery'], phone: '(269) 555-0103', email: 'psummers@lifegate.bible', birthday: 'October 22', address: '789 Pine Road, Eau Claire, MI', initials: 'PS', color: '#7A5828' },
-  { id: 4, name: 'Thomas Olson', family: 'Olson Family', role: 'Member', ministries: ['Hospitality'], phone: '(269) 555-0104', email: 'tolson@lifegate.bible', birthday: 'February 8', address: '321 Elm Street, Eau Claire, MI', initials: 'TO', color: '#256035' },
-  { id: 5, name: 'Dorothy Perkins', family: null, role: 'Member', ministries: ['Choir', 'Prayer Team'], phone: '(269) 555-0105', email: 'dperkins@lifegate.bible', birthday: 'August 30', address: '654 Cedar Lane, Eau Claire, MI', initials: 'DP', color: '#5D1220' },
-  { id: 6, name: 'Michael Torres', family: 'Torres Family', role: 'Member', ministries: ['Youth Group', 'Worship Team'], phone: '(269) 555-0106', email: 'mtorres@lifegate.bible', birthday: 'December 12', address: '987 Birch Blvd, Eau Claire, MI', initials: 'MT', color: '#3A4E24' },
-  { id: 7, name: 'William Carter', family: null, role: 'Deacon', ministries: ['Grounds & Facilities'], phone: '(269) 555-0107', email: 'wcarter@lifegate.bible', birthday: 'May 19', address: '147 Willow Way, Eau Claire, MI', initials: 'WC', color: '#4A3224' },
-  { id: 8, name: 'Helen Johnson', family: 'Johnson Family', role: 'Member', ministries: ['Nursery', 'Hospitality', 'Choir'], phone: '(269) 555-0108', email: 'hjohnson@lifegate.bible', birthday: 'September 3', address: '258 Oak Park Drive, Eau Claire, MI', initials: 'HJ', color: '#2A3C6C' },
-]
+const search = ref('')
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()

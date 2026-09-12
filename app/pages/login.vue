@@ -55,7 +55,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     await auth.loginWithInviteCode(inviteCode.value)
-    await navigateTo('/sermons')
+    await navigateTo('/members')
   }
   catch (err: any) {
     error.value = err.message || 'Invalid invite code.'
@@ -68,7 +68,7 @@ const handleLogin = async () => {
 onMounted(() => {
   auth.initAuth()
   if (auth.isAuthenticated) {
-    navigateTo('/sermons')
+    navigateTo('/members')
   }
 })
 </script>

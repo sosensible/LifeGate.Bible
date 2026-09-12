@@ -54,7 +54,7 @@
           <p class="text-toned leading-relaxed mb-7">
             Whether you are new to faith or rooted in Scripture, there is a place for you here. We would love to worship alongside you.
           </p>
-          <span class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 cursor-pointer">Learn More About Us →</span>
+          <span class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 cursor-pointer" @click="navigateTo('/about')">Learn More About Us →</span>
         </div>
         <div class="shrink-0">
           <img src="/logo.png" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
@@ -98,17 +98,18 @@
     <footer class="bg-primary-900 border-t-4 border-gold-500 py-14 px-6">
       <div class="max-w-5xl mx-auto flex flex-wrap gap-12">
         <div class="max-w-xs">
-          <img src="/logo.png" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 rounded bg-white/95 p-1.5" />
+          <img src="/logo.png" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_5px_rgba(255,255,255,0.8))_drop-shadow(0_0_10px_rgba(255,255,255,0.5))]" />
           <p class="text-white/60 text-sm font-bold leading-relaxed">Rooted in Faith.<br>Planted in Community.</p>
         </div>
         <div class="flex-1"></div>
         <div>
           <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-4">Quick Links</p>
           <div class="flex flex-col gap-2.5">
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white">About Us</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white">Sermons</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white">Connect</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/login')">Member Login</span>
+            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/about')">About Us</span>
+            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/seeking-pastor')">Seeking Pastor</span>
+            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/ministries')">Ministries</span>
+            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/teaching')">Teaching</span>
+            <span v-if="!auth.isAuthenticated" class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/login')">Member Login</span>
           </div>
         </div>
         <div>
@@ -134,9 +135,8 @@ definePageMeta({
 const auth = useAuthStore()
 
 onMounted(() => {
+  // Keep nav auth-state in sync; the home page is public and stays visible to
+  // signed-in members too (the logo returns everyone here).
   auth.initAuth()
-  if (auth.isAuthenticated) {
-    navigateTo('/sermons')
-  }
 })
 </script>

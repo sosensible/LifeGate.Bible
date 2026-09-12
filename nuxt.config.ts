@@ -6,9 +6,20 @@ export default defineNuxtConfig({
     port: 3007,
   },
   nitro: {
+    // Deploy target. Default is the self-hosted Node server (`.output/server/index.mjs`),
+    // which is what the Docker image in ./Dockerfile runs on the ZimaOS box behind the
+    // Cloudflare Tunnel. Left env-overridable so a Cloudflare build still works:
+    //   NITRO_PRESET=cloudflare_pages npm run build
+    // Pinned rather than auto-detected so the artifact never depends on which machine
+    // or CI provider happens to run the build.
+    preset: process.env.NITRO_PRESET || 'node-server',
     prerender: {
       crawlLinks: false,
-      routes: ['/sitemap.xml'],
+      // Served by server/routes/sitemap.xml.ts and server/routes/robots.txt.ts.
+      // Because they are prerendered, the absolute URLs inside are fixed at BUILD
+      // time from runtimeConfig.public.siteUrl (see below) -- changing the host
+      // means rebuilding, not just restarting.
+      routes: ['/sitemap.xml', '/robots.txt'],
     },
     cloudflare: {
       pages: {
@@ -21,6 +32,17 @@ export default defineNuxtConfig({
         db: 'lifegate_db',
         EMAIL: { type: 'email' },
       },
+    },
+  },
+  runtimeConfig: {
+    public: {
+      // Canonical public origin, used for the absolute <loc> URLs in /sitemap.xml.
+      // The sitemap is prerendered, so override this at BUILD time:
+      //   NUXT_PUBLIC_SITE_URL=https://lifegate.bible npm run build
+      // Keep it the canonical hostname even when the box is reached through a
+      // Cloudflare Tunnel -- a sitemap full of *.trycloudflare.com URLs is worse
+      // than no sitemap.
+      siteUrl: 'https://lifegate.bible',
     },
   },
   modules: [
@@ -52,7 +74,12 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Lifegate Baptist Church - Eau Claire, Michigan' },
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        // Favicon generated from the church crest logo (public/logo.png).
+        // ?v= busts the browser's aggressive favicon cache; bump it if the icon changes.
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=2' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=2' },
+        { rel: 'icon', type: 'image/png', href: '/favicon-32x32.png?v=2' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=2' },
       ],
     },
   },
