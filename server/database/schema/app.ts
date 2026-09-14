@@ -4,7 +4,7 @@
 // without ever signing in (children, homebound members, a spouse who never
 // logs in). An account may link to at most one person via `people.userId`.
 import { relations } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { user } from './auth.ts'
 
 const id = () => text('id').primaryKey().$defaultFn(() => crypto.randomUUID())
@@ -27,6 +27,8 @@ export const people = sqliteTable('people', {
   lastName: text('last_name').notNull(),
   // Minors are never listed to other members. Their names are not "adult names".
   isMinor: integer('is_minor', { mode: 'boolean' }).notNull().default(false),
+  // Church office shown beside the name, e.g. "Deacon". Not personal info.
+  title: text('title'),
 
   // Contact info: staff always see these; other members only if opted in.
   phone: text('phone'),
@@ -52,6 +54,26 @@ export const people = sqliteTable('people', {
   index('people_name_idx').on(table.lastName, table.firstName),
 ])
 
+// Ministries are public content: name and description show to everyone. Who
+// serves in each (ministry_members) is members-only.
+export const ministries = sqliteTable('ministries', {
+  id: id(),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const ministryMembers = sqliteTable('ministry_members', {
+  ministryId: text('ministry_id').notNull().references(() => ministries.id, { onDelete: 'cascade' }),
+  personId: text('person_id').notNull().references(() => people.id, { onDelete: 'cascade' }),
+}, table => [
+  primaryKey({ columns: [table.ministryId, table.personId] }),
+  index('ministry_members_person_idx').on(table.personId),
+])
+
 // Who changed what, and when. Written for changes to people, privacy
 // settings, roles and accounts.
 export const auditLog = sqliteTable('audit_log', {
@@ -71,7 +93,17 @@ export const householdRelations = relations(households, ({ many }) => ({
   people: many(people),
 }))
 
-export const peopleRelations = relations(people, ({ one }) => ({
+export const peopleRelations = relations(people, ({ one, many }) => ({
   household: one(households, { fields: [people.householdId], references: [households.id] }),
   user: one(user, { fields: [people.userId], references: [user.id] }),
+  ministries: many(ministryMembers),
+}))
+
+export const ministryRelations = relations(ministries, ({ many }) => ({
+  members: many(ministryMembers),
+}))
+
+export const ministryMemberRelations = relations(ministryMembers, ({ one }) => ({
+  ministry: one(ministries, { fields: [ministryMembers.ministryId], references: [ministries.id] }),
+  person: one(people, { fields: [ministryMembers.personId], references: [people.id] }),
 }))

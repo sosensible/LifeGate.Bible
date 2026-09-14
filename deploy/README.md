@@ -12,7 +12,13 @@ deployment here, so that is what `../Dockerfile` produces.
 
 ## Architecture note
 
-`nuxi build` emits pure ESM JavaScript into `.output/` with **zero native
+> **Out of date since accounts were added.** `.output/` now includes
+> `better-sqlite3`'s native `.node` binary, built for the machine that ran the
+> build. A Mac-built `.output/` will not run on the Intel box; the build stage
+> must run as `linux/amd64` (or rebuild that module for it). Everything below
+> describes the earlier, JavaScript-only build.
+
+`nuxi build` emitted pure ESM JavaScript into `.output/` with **zero native
 binaries**. That makes the build artifact architecture-neutral, so the Dockerfile
 compiles in a `$BUILDPLATFORM` stage (fast and native on an Apple Silicon laptop)
 and copies the result into a `linux/amd64` runtime stage for the Intel host. No
@@ -56,17 +62,16 @@ Two caveats before choosing this:
 account, no credentials on an immutable OS, nothing published. For a single box
 that is updated by hand, this is perfectly reasonable.
 
-### Do not push a public image once real member data lands
+### Member data is not in the image
 
-`app/data/directory.ts` is bundled into the build, so member names, emails and
-phone numbers would be baked into the image layers. On a public Docker Hub repo
-that is permanent, world-pullable publication of member PII, and registry layer
-history means deleting the tag later does not reliably undo it.
+Directory records live in the SQLite database (`DATABASE_PATH`), not in the
+build. Keep that file on a mounted volume, outside the image, and never bake a
+database into an image you push anywhere.
 
-While that file holds demo data this is a non-issue. The moment it holds real
-member records, switch to save/load or a private repo. This is the same
-underlying problem as the SSR gap documented further down: member data currently
-lives in the client bundle rather than behind an authenticated API.
+> Not yet covered by this runbook: the database volume, `BETTER_AUTH_*` and
+> mail environment variables, running migrations on the box, and building
+> `better-sqlite3`'s native module for amd64. Until then this path serves the
+> public pages only.
 
 ### Always build for amd64
 
@@ -145,40 +150,27 @@ secret; it authenticates the connector to your account.
   `zimaos-compose.yaml` and giving `cloudflared` a shared Docker network
   instead, so the site is reachable *only* through Cloudflare. That trade-off
   costs you the ZimaOS dashboard tile link and LAN access.
-- No cookies are set by the app (the member gate is `localStorage`-based), so
-  there is no `Secure`/`SameSite` flag to reconcile behind the proxy.
+- Sign-in uses an httpOnly session cookie (Better Auth). Set `BETTER_AUTH_URL`
+  to the public `https://` origin so the cookie is issued with `Secure`.
 
 ## What does NOT work on this target
 
-Every handler under `server/routes/api/` reads `event.context.cloudflare.env.db`
-— the Cloudflare **D1** binding. That context object exists only in the Workers
-runtime; on Node it is `undefined` and each route returns **500**:
+The remaining legacy handlers -- `/api/sermons*`, `/api/contact`, `/api/giving`,
+`/api/pastoral-candidates` -- still read `event.context.cloudflare.env.db`, the
+Cloudflare **D1** binding, which does not exist on Node, so they return **500**.
+`server/utils/email.ts` has the same dependency on the `EMAIL` binding. They are
+being moved to SQLite phase by phase.
 
-```
-GET /api/sermons -> 500  {"message":"Failed to fetch sermons"}
-```
-
-`server/utils/email.ts` has the same dependency on the `EMAIL` binding.
-
-Affected: the contact, giving and pastoral-candidate form submissions, plus
-`/admin/directory` and `/api/auth/login`.
-
-**Not** affected, and the reason this deployment is still useful: every public
-page. They render from `app/data/` and the member gate is client-side. Nothing a
-visitor can reach on the public site calls these endpoints.
-
-Resolving this later means picking one of: a local SQLite adapter behind the same
-`.prepare()/.bind()/.all()` shape, D1's HTTP REST API, or explicitly gating the
-routes and forms off. None is needed to ship the public site.
+Accounts, the directory, ministries, profiles and people admin already use
+SQLite and work on this target once the database and environment are set up.
 
 ## Sitemap
 
 `server/routes/sitemap.xml.ts` emits 8 static paths plus one entry per ministry
-from `app/data/directory.ts` (19 at present), so adding a ministry updates the
-sitemap on the next build with no edit here.
+in the `ministries` table (19 seeded by migration), read per request.
 
-The four `middleware: 'auth'` routes -- `/members`, `/directory`, `/calendar`,
-`/admin/directory` -- are excluded by design, as is `/login`.
+The `middleware: 'auth'` routes -- `/members`, `/directory`, `/calendar`,
+`/profile`, `/admin/*` -- are excluded by design, as is `/login`.
 
 ### robots.txt
 
@@ -194,25 +186,13 @@ blocked automated testing tools from the preview host.
 Still worth submitting the sitemap in Google Search Console; robots.txt only
 helps crawlers that already found the domain.
 
-## Known gap: member pages are not actually protected server-side
+## Access control
 
-`app/middleware/auth.ts` returns early during SSR (`if (import.meta.server) return`)
-because the invite-code token lives in `localStorage`. The redirect therefore
-happens only after hydration, which means the server renders the full page first.
-Confirmed:
-
-```
-curl http://<host>/directory   # returns roster HTML, before any gate runs
-```
-
-The `Disallow` rules in robots.txt are crawl hygiene, **not** access control --
-well-behaved crawlers honour them and nothing else does.
-
-This is currently harmless: `app/data/directory.ts` holds demo data only. It must
-be fixed with a server-side check before real member data ships. Doing that means
-a real server-validated session (the `Server-validated auth + role checks come
-with the portal phase` note in that middleware), which is the same work as
-resolving the D1 gap below.
+Member pages are gated during SSR from the session cookie
+(`app/middleware/auth.ts`), and every data route checks permissions itself
+(`requirePermission`). `curl http://<host>/directory` without a session gets a
+302 to `/login` and no roster. The robots.txt `Disallow` rules are crawl
+hygiene, not access control.
 
 ## Building for Cloudflare instead
 

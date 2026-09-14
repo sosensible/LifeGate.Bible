@@ -20,8 +20,8 @@
           >
             <h3 class="font-serif font-bold text-lg text-highlighted mb-1.5">{{ item.ministry.name }}</h3>
             <p class="text-toned text-sm mb-3 leading-relaxed">{{ item.ministry.description }}</p>
-            <p v-if="auth.isMember" class="text-gold-600 text-[11px] uppercase tracking-wide">
-              {{ item.ministry.members.length }} {{ item.ministry.members.length === 1 ? 'member' : 'members' }}
+            <p v-if="item.ministry.memberCount !== undefined" class="text-gold-600 text-[11px] uppercase tracking-wide">
+              {{ item.ministry.memberCount }} {{ item.ministry.memberCount === 1 ? 'member' : 'members' }}
             </p>
           </NuxtLink>
 
@@ -77,17 +77,13 @@
 </template>
 
 <script setup lang="ts">
-import { allMinistries } from '~/data/directory'
-
 // Public page. The ministry list + descriptions are open to everyone; the
-// rosters (who serves) are gated to signed-in members below and on each page.
+// server adds member counts only for signed-in members.
 definePageMeta({
   layout: 'default',
 })
 
-const auth = useAuthStore()
-
-const ministries = allMinistries()
+const { data } = await useFetch('/api/ministries')
 
 // "One body, many members" — KJV (public domain). Interleaved between cards.
 const quotes = [
@@ -98,9 +94,12 @@ const quotes = [
 
 // One Scripture callout after every N cards, spanning the full grid row.
 const CARDS_PER_QUOTE = 6
-const gridItems = (() => {
+type MinistryCard = NonNullable<typeof data.value>[number] & { memberCount?: number }
+
+const gridItems = computed(() => {
+  const ministries: MinistryCard[] = data.value ?? []
   const items: Array<
-    { type: 'ministry', key: string, ministry: typeof ministries[number] }
+    { type: 'ministry', key: string, ministry: MinistryCard }
     | { type: 'quote', key: string, quote: typeof quotes[number] }
   > = []
   let qi = 0
@@ -109,10 +108,10 @@ const gridItems = (() => {
     const isBoundary = (i + 1) % CARDS_PER_QUOTE === 0
     const isLast = i === ministries.length - 1
     if (isBoundary && !isLast && qi < quotes.length) {
-      items.push({ type: 'quote', key: `q-${qi}`, quote: quotes[qi] })
+      items.push({ type: 'quote', key: `q-${qi}`, quote: quotes[qi]! })
       qi++
     }
   })
   return items
-})()
+})
 </script>

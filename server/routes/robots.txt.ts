@@ -6,18 +6,15 @@
 // plain runtime env vars -- see runtimeConfig in nuxt.config.ts.
 //
 // IMPORTANT: the Disallow rules below are a crawl-hygiene measure, NOT an access
-// control. robots.txt is advisory -- well-behaved crawlers honour it, and nothing
-// else does. The member-gated routes are still fully rendered by SSR because
-// app/middleware/auth.ts bails out on the server (`if (import.meta.server) return`)
-// and only redirects after hydration, so `curl /directory` returns the roster HTML.
-// That is acceptable while app/data/directory.ts holds demo data; it must be fixed
-// with server-side auth before real member data ships. See deploy/README.md.
+// control. robots.txt is advisory. Access control is the session check in
+// app/middleware/auth.ts (runs during SSR) and requirePermission in the API routes.
 
 const DISALLOW = [
   // Member-gated pages (middleware: 'auth').
   '/members',
   '/directory',
   '/calendar',
+  '/profile',
   '/admin/',
   // No search value, and not meant to be indexed.
   '/login',

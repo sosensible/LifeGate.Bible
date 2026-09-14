@@ -14,7 +14,11 @@
             <UButton to="/ministries" variant="ghost" class="text-white hover:bg-white/10">Ministries</UButton>
             <UButton to="/members" size="sm" color="secondary">Members</UButton>
           </template>
-          <UButton v-if="auth.isAuthenticated" @click="handleLogout" variant="outline" size="sm" class="text-white ring-white/40 hover:bg-white/10">Sign Out</UButton>
+          <UDropdownMenu v-if="auth.isAuthenticated" :items="accountMenu" :content="{ align: 'end' }">
+            <UButton variant="outline" size="sm" trailing-icon="i-lucide-chevron-down" class="text-white ring-white/40 hover:bg-white/10">
+              {{ auth.user?.name?.split(' ')[0] || 'Account' }}
+            </UButton>
+          </UDropdownMenu>
           <UButton v-else to="/login" size="sm" color="secondary">Member Login</UButton>
         </div>
       </div>
@@ -24,10 +28,20 @@
 </template>
 
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
+
 const auth = useAuthStore()
 
 const handleLogout = async () => {
   await auth.logout()
   await navigateTo('/')
 }
+
+const accountMenu = computed<DropdownMenuItem[][]>(() => [
+  [
+    ...(auth.isMember ? [{ label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
+    ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
+  ],
+  [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
+].filter(group => group.length))
 </script>

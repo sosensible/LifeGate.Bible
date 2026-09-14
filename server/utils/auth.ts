@@ -38,6 +38,17 @@ export const hasPermission = async (userId: string, permissions: Permissions) =>
   return true
 }
 
+// Who is looking, for privacy decisions. Never throws: the public is a viewer too.
+export const getViewer = async (event: H3Event) => {
+  const session = await getAuthSession(event)
+  if (!session) return { session: null, isMember: false, isStaff: false }
+  const [isMember, isStaff] = await Promise.all([
+    hasPermission(session.user.id, { directory: ['view'] }),
+    hasPermission(session.user.id, { people: ['viewContact'] }),
+  ])
+  return { session, isMember, isStaff }
+}
+
 export const requirePermission = async (event: H3Event, permissions: Permissions) => {
   const session = await requireSession(event)
   if (!(await hasPermission(session.user.id, permissions))) {

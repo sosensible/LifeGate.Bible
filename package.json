@@ -14,7 +14,8 @@
     "auth:generate": "auth generate --config server/lib/auth.ts --output server/database/schema/auth.ts --yes",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "admin:create": "node --env-file=.env scripts/create-admin.ts"
+    "admin:create": "node --env-file=.env scripts/create-admin.ts",
+    "db:seed-demo": "node --env-file=.env scripts/seed-demo.ts"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.2",

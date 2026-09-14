@@ -2,7 +2,8 @@
 //
 // The rules, as decided with the church:
 //   - The directory is members-only. The public sees nothing.
-//   - Adults' names are visible to members.
+//   - Adults' names are visible to members, with their church office (title)
+//     and the ministries they serve in.
 //   - Minors are not listed to members.
 //   - Contact info (phone, email, address): staff always; members only if
 //     the person opted in.
@@ -11,6 +12,9 @@
 //
 // Hidden fields are OMITTED, never sent as null, so nothing the viewer is not
 // allowed to see ever reaches the browser.
+//
+// Shared by the server (which enforces it) and the profile page (which uses it
+// to preview exactly what others will see).
 
 export interface Viewer {
   isMember: boolean
@@ -18,17 +22,25 @@ export interface Viewer {
   isStaff: boolean
 }
 
+export interface MinistryRef {
+  slug: string
+  name: string
+}
+
 export interface PersonRecord {
   id: string
   firstName: string
   lastName: string
   isMinor: boolean
+  title?: string | null
   phone: string | null
   email: string | null
   address: string | null
   birthday: string | null // YYYY-MM-DD
   photoUrl: string | null
   householdId: string | null
+  householdName?: string | null
+  ministries?: MinistryRef[]
   sharePhone: boolean
   shareEmail: boolean
   shareAddress: boolean
@@ -41,6 +53,8 @@ export interface DirectoryEntry {
   id: string
   firstName: string
   lastName: string
+  title?: string
+  ministries?: MinistryRef[]
   phone?: string
   email?: string
   address?: string
@@ -48,6 +62,7 @@ export interface DirectoryEntry {
   birthday?: string // MM-DD
   photoUrl?: string
   householdId?: string
+  householdName?: string
 }
 
 export const presentPerson = (person: PersonRecord, viewer: Viewer): DirectoryEntry | null => {
@@ -60,6 +75,9 @@ export const presentPerson = (person: PersonRecord, viewer: Viewer): DirectoryEn
     lastName: person.lastName,
   }
 
+  if (person.title) entry.title = person.title
+  if (person.ministries?.length) entry.ministries = person.ministries
+
   const contactVisible = (optedIn: boolean) => viewer.isStaff || optedIn
 
   if (person.phone && contactVisible(person.sharePhone)) entry.phone = person.phone
@@ -68,7 +86,13 @@ export const presentPerson = (person: PersonRecord, viewer: Viewer): DirectoryEn
 
   if (person.birthday && person.shareBirthday) entry.birthday = person.birthday.slice(5, 10)
   if (person.photoUrl && person.sharePhoto) entry.photoUrl = person.photoUrl
-  if (person.householdId && person.shareHousehold) entry.householdId = person.householdId
+  if (person.householdId && person.shareHousehold) {
+    entry.householdId = person.householdId
+    if (person.householdName) entry.householdName = person.householdName
+  }
 
   return entry
 }
+
+export const MEMBER_VIEW: Viewer = { isMember: true, isStaff: false }
+export const STAFF_VIEW: Viewer = { isMember: true, isStaff: true }

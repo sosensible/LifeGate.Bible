@@ -24,11 +24,11 @@
         <div class="max-w-6xl mx-auto">
           <h2 class="text-2xl font-bold font-serif text-highlighted mb-6">
             Serving in this Ministry
-            <span v-if="auth.isMember" class="text-muted text-base font-sans font-normal">({{ ministry.members.length }})</span>
+            <span v-if="roster" class="text-muted text-base font-sans font-normal">({{ roster.length }})</span>
           </h2>
 
-          <!-- Public: roster is members-only -->
-          <div v-if="!auth.isMember" class="bg-muted border border-default rounded-lg p-8 text-center">
+          <!-- Public: roster is members-only (the server sends none) -->
+          <div v-if="!roster" class="bg-muted border border-default rounded-lg p-8 text-center">
             <UIcon name="i-lucide-lock" class="w-6 h-6 text-gold-600 mx-auto mb-3" />
             <p class="text-toned mb-4 max-w-md mx-auto">The list of members serving in this ministry is available to signed-in members. Sign in to see who serves here.</p>
             <div class="flex gap-3 justify-center flex-wrap">
@@ -44,7 +44,7 @@
           </div>
 
           <!-- Members: empty roster -->
-          <div v-else-if="ministry.members.length === 0" class="bg-muted border border-default rounded-lg p-8 text-center">
+          <div v-else-if="roster.length === 0" class="bg-muted border border-default rounded-lg p-8 text-center">
             <p class="text-toned mb-3">We're looking for people to serve in this ministry.</p>
             <UButton
               variant="outline"
@@ -57,11 +57,12 @@
 
           <!-- Members: roster -->
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div v-for="m in ministry.members" :key="m.id" class="bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center">
-              <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-bold" :style="{ backgroundColor: m.color }">{{ m.initials }}</div>
+            <div v-for="m in roster" :key="m.id" class="bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center">
+              <img v-if="m.photoUrl" :src="m.photoUrl" :alt="fullName(m)" class="w-11 h-11 rounded-full object-cover shrink-0">
+              <div v-else class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-bold" :style="{ backgroundColor: avatarColor(m.id) }">{{ initialsOf(m) }}</div>
               <div class="min-w-0">
-                <h3 class="font-serif font-bold text-highlighted leading-tight">{{ m.name }}</h3>
-                <p class="text-muted text-[11px] uppercase tracking-wide">{{ m.role }}</p>
+                <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(m) }}</h3>
+                <p v-if="m.title" class="text-muted text-[11px] uppercase tracking-wide">{{ m.title }}</p>
               </div>
             </div>
           </div>
@@ -78,28 +79,33 @@
 </template>
 
 <script setup lang="ts">
-import { ministryBySlug } from '~/data/directory'
-
 // Public page. Name + description show to everyone; the roster (who serves) is
-// gated to signed-in members.
+// sent by the server only to signed-in members.
 definePageMeta({
   layout: 'default',
 })
 
-const auth = useAuthStore()
-
 const route = useRoute()
-const ministry = computed(() => ministryBySlug(String(route.params.slug)))
+const { data: ministry, error } = await useFetch(() => `/api/ministries/${encodeURIComponent(String(route.params.slug))}`)
+
+const roster = computed(() =>
+  ministry.value && 'members' in ministry.value ? ministry.value.members : null,
+)
+
+useSeoMeta({ title: () => `${ministry.value?.name ?? 'Ministry'} | Lifegate Baptist Church` })
 
 // An unknown slug must be a real 404, not a 200 with an empty shell. Previously
 // this rendered the header with a 'Ministry' placeholder and no body, which
 // search engines treat as a soft-404 / thin duplicate page. Thrown during setup
 // so SSR sends the status code, not just the client.
-if (!ministry.value) {
+if (error.value?.statusCode === 404) {
   throw createError({
     statusCode: 404,
     statusMessage: 'Ministry not found',
     fatal: true,
   })
+}
+if (error.value) {
+  throw createError({ statusCode: error.value.statusCode ?? 500, statusMessage: 'Could not load this ministry', fatal: true })
 }
 </script>

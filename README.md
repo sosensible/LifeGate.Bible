@@ -38,8 +38,10 @@ app/
     giving.vue                   # Donations
     contact.vue                  # Contact form
     pastoral-candidates.vue      # Job applications
+    directory.vue                # Members directory (server-filtered by privacy)
+    profile.vue                  # My profile: own details + sharing choices
     admin/
-      directory.vue              # Member directory (admin only)
+      people.vue                 # People and households (church office)
   middleware/
     auth.ts                      # Auth guard
   layouts/
@@ -51,10 +53,11 @@ server/
       login.ts                   # POST /auth/login
       logout.ts                  # POST /auth/logout
     api/
-      members/
-        index.ts                 # GET /api/members
-        add.ts                   # POST /api/members/add
-        [id].ts                  # PATCH /api/members/[id]
+      directory.get.ts           # GET /api/directory (members)
+      ministries/                # GET /api/ministries, /api/ministries/[slug]
+      profile.get.ts / .patch.ts # GET/PATCH /api/profile (own record)
+      admin/people/              # people CRUD, privacy, sign-in access
+      admin/households/          # household CRUD
       sermons/
         upload.ts                # POST /api/sermons/upload (file handling)
         index.ts                 # GET /api/sermons
@@ -144,20 +147,26 @@ nuxt.config.ts                   # Cloudflare bindings (D1, EMAIL)
 - **Storage**: D1 `pastoral_applications` table
 - **TODO**: Store resume file to R2 or local storage; send confirmation emails
 
-### 7. Admin Directory (`/admin/directory`)
-- **Purpose**: Search, add, edit members
-- **Auth**: Requires `admin` or `pastor` role
-- **Features**:
-  - Member list with search (name/email)
-  - Add new member form (creates user + member record)
-  - Edit buttons (not yet implemented — shows placeholder)
-- **Endpoints**:
-  - `GET /api/members` — fetch all members with user info
-  - `POST /api/members/add` — create new member
-  - `PATCH /api/members/[id]` — update member details
-- **Fields tracked**:
-  - Name, email, phone, address, birthday
-  - Family unit, role (member/deacon/elder/pastor), ministries
+### 7. Directory, profile and people admin
+
+Data lives in SQLite (`server/database/schema/app.ts`): `people`, `households`,
+`ministries`, `ministry_members`, `audit_log`. A person is a directory record,
+not an account; an account can be linked to one person.
+
+- **Privacy rules** (`shared/privacy.ts`, enforced on the server):
+  - Members see adults' names, titles and ministries. Minors are never listed to members.
+  - Phone, email and address: staff (`people:viewContact`) always; members only if the person shares them.
+  - Birthday (month and day only), household and photo: only if shared, staff included.
+- **`/directory`**: `GET /api/directory` returns each entry already filtered for the viewer.
+- **`/ministries`**: names and descriptions are public; rosters come from the server only for members.
+- **`/profile`**: a person edits their own phone, email, address, birthday and sharing, with a live preview of what members and staff see.
+- **`/admin/people`** (`people:update`):
+  - add, edit and remove people (`people:create` and `people:delete` for those two); manage households and ministries;
+  - change sharing on someone's behalf (`people:managePrivacy`);
+  - give sign-in access by linking an account, or creating a member account and emailing a set-password link (`user:create`).
+  - Nobody edits what they cannot see: staff cannot set or change a birthday (or, later, a photo) until the person shares it. Titles are a separate field shown beside the name, never part of it.
+- **Audit log**: every change records who, what and which fields, never the values.
+- **Dev data**: `npm run db:migrate`, then `npm run db:seed-demo -- <account email> <first name>` adds fictional people to an empty local database and optionally links an account.
 
 ## Database Schema
 

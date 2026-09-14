@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { presentPerson, type PersonRecord, type Viewer } from '../../server/lib/privacy'
+import { presentPerson, type PersonRecord, type Viewer } from '../../shared/privacy'
 
 const adult: PersonRecord = {
   id: 'p1', firstName: 'Helen', lastName: 'Johnson', isMinor: false,
@@ -52,6 +52,19 @@ describe('directory privacy', () => {
     const entry = presentPerson({ ...adult, shareBirthday: true }, MEMBER)!
     expect(entry.birthday).toBe('09-03')
     expect(JSON.stringify(entry)).not.toContain('1961')
+  })
+
+  it('shows title and ministries with the name, without any opt-in', () => {
+    const ministries = [{ slug: 'nursery', name: 'Nursery' }]
+    expect(presentPerson({ ...adult, title: 'Deacon', ministries }, MEMBER)).toEqual({
+      id: 'p1', firstName: 'Helen', lastName: 'Johnson', title: 'Deacon', ministries,
+    })
+  })
+
+  it('shows the household name only when the household is shared', () => {
+    const named = { ...adult, householdName: 'Johnson Family' }
+    expect(presentPerson(named, STAFF)).not.toHaveProperty('householdName')
+    expect(presentPerson({ ...named, shareHousehold: true }, MEMBER)!.householdName).toBe('Johnson Family')
   })
 
   it('omits hidden fields entirely rather than sending null', () => {

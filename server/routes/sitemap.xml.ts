@@ -1,4 +1,6 @@
-import { allMinistries } from '~/data/directory'
+import { asc } from 'drizzle-orm'
+import { ministries } from '../database/schema/index.ts'
+import { db } from '../lib/db.ts'
 
 // Public XML sitemap.
 //
@@ -9,8 +11,8 @@ import { allMinistries } from '~/data/directory'
 // checking the output -- but robots.txt does not advertise it and every response
 // carries X-Robots-Tag: noindex.
 //
-// Member-gated routes are deliberately absent -- /members, /directory, /calendar
-// and /admin/directory all carry `middleware: 'auth'` -- as is /login, which has
+// Member-gated routes are deliberately absent -- /members, /directory, /calendar,
+// /profile and /admin/* all carry `middleware: 'auth'` -- as is /login, which has
 // no search value. Listing gated URLs in a sitemap just invites crawlers to
 // bounce off the auth redirect.
 //
@@ -44,7 +46,8 @@ export default defineEventHandler((event) => {
   // the roster is gated inside the page), so they belong here.
   const paths = [
     ...STATIC_PATHS,
-    ...allMinistries().map(m => `/ministries/${m.slug}`),
+    ...db.select({ slug: ministries.slug }).from(ministries).orderBy(asc(ministries.name)).all()
+      .map(m => `/ministries/${m.slug}`),
   ]
 
   const urls = paths
