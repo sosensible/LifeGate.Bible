@@ -138,7 +138,7 @@
             {{ hiddenCount }} more {{ hiddenCount === 1 ? 'message is' : 'messages are' }} available to members.
             Sign in to view the full archive.
           </p>
-          <UButton color="secondary" class="shrink-0" @click="navigateTo('/login')">Member Login</UButton>
+          <UButton to="/login" color="secondary" class="shrink-0">Member Login</UButton>
         </div>
       </div>
     </div>

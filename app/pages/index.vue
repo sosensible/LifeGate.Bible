@@ -16,7 +16,7 @@
         </p>
         <div class="flex gap-4 flex-wrap">
           <UButton color="primary" size="xl" class="uppercase tracking-wide font-bold">Plan Your Visit</UButton>
-          <UButton color="secondary" variant="outline" size="xl" class="uppercase tracking-wide font-bold" @click="navigateTo('/login')">Member Login</UButton>
+          <UButton to="/login" color="secondary" variant="outline" size="xl" class="uppercase tracking-wide font-bold">Member Login</UButton>
         </div>
       </div>
     </section>
@@ -54,7 +54,7 @@
           <p class="text-toned leading-relaxed mb-7">
             Whether you are new to faith or rooted in Scripture, there is a place for you here. We would love to worship alongside you.
           </p>
-          <span class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 cursor-pointer" @click="navigateTo('/about')">Learn More About Us →</span>
+          <NuxtLink to="/about" class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 inline-block">Learn More About Us →</NuxtLink>
         </div>
         <div class="shrink-0">
           <img src="/logo.png" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
@@ -105,11 +105,11 @@
         <div>
           <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-4">Quick Links</p>
           <div class="flex flex-col gap-2.5">
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/about')">About Us</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/seeking-pastor')">Seeking Pastor</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/ministries')">Ministries</span>
-            <span class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/teaching')">Teaching</span>
-            <span v-if="!auth.isAuthenticated" class="text-white/70 text-sm font-bold cursor-pointer hover:text-white" @click="navigateTo('/login')">Member Login</span>
+            <NuxtLink to="/about" class="text-white/70 text-sm font-bold hover:text-white">About Us</NuxtLink>
+            <NuxtLink to="/seeking-pastor" class="text-white/70 text-sm font-bold hover:text-white">Seeking Pastor</NuxtLink>
+            <NuxtLink to="/ministries" class="text-white/70 text-sm font-bold hover:text-white">Ministries</NuxtLink>
+            <NuxtLink to="/teaching" class="text-white/70 text-sm font-bold hover:text-white">Teaching</NuxtLink>
+            <NuxtLink v-if="!auth.isAuthenticated" to="/login" class="text-white/70 text-sm font-bold hover:text-white">Member Login</NuxtLink>
           </div>
         </div>
         <div>

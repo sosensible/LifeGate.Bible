@@ -62,7 +62,7 @@
       <div class="max-w-2xl mx-auto">
         <h2 class="text-3xl font-bold font-serif text-white mb-4">Come Worship With Us</h2>
         <p class="text-secondary-200 mb-8">Sunday School 10:00 AM · Worship 11:00 AM · Wednesday Prayer &amp; Study 6:30 PM</p>
-        <UButton size="xl" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold" @click="navigateTo('/')">Plan Your Visit</UButton>
+        <UButton to="/" size="xl" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold">Plan Your Visit</UButton>
       </div>
     </section>
   </div>

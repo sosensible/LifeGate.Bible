@@ -28,13 +28,6 @@ RUN npm ci
 
 COPY . .
 
-# /sitemap.xml is prerendered, so its absolute URLs are baked HERE, at image
-# build time -- setting NUXT_PUBLIC_SITE_URL in the container environment later
-# has no effect on the generated file. Override per-build with:
-#   docker buildx build --build-arg SITE_URL=https://example.org ...
-ARG SITE_URL=https://lifegate.bible
-ENV NUXT_PUBLIC_SITE_URL=$SITE_URL
-
 # Explicit, so the image never inherits an auto-detected Cloudflare preset.
 ENV NITRO_PRESET=node-server
 RUN npm run build
@@ -46,9 +39,15 @@ FROM --platform=linux/amd64 node:24-alpine AS runtime
 
 WORKDIR /app
 
+# NUXT_PUBLIC_SITE_URL / NUXT_PUBLIC_INDEXABLE: the public origin this
+# deployment answers on, and whether search engines may index it. Nothing is
+# prerendered, so both are read per-request -- override them in the compose file
+# and restart, no rebuild or re-push. Defaults are the safe preview combination.
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
-    PORT=3000
+    PORT=3000 \
+    NUXT_PUBLIC_SITE_URL=https://new.lifegate.bible \
+    NUXT_PUBLIC_INDEXABLE=false
 
 # 0.0.0.0 is correct *inside* the container -- it has its own network
 # namespace. Loopback-only exposure on the host is done by the compose port

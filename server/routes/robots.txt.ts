@@ -2,7 +2,8 @@
 // Sitemap: hostname comes from the same runtimeConfig.public.siteUrl the sitemap
 // itself uses. One source of truth: a `SITE_URL=` build changes both together.
 //
-// Prerendered alongside /sitemap.xml, so this is fixed at BUILD time.
+// Served live (not prerendered), so the hostname and the indexable flag are
+// plain runtime env vars -- see runtimeConfig in nuxt.config.ts.
 //
 // IMPORTANT: the Disallow rules below are a crawl-hygiene measure, NOT an access
 // control. robots.txt is advisory -- well-behaved crawlers honour it, and nothing
@@ -24,17 +25,40 @@ const DISALLOW = [
 ]
 
 export default defineEventHandler((event) => {
-  const siteUrl = useRuntimeConfig(event).public.siteUrl.replace(/\/+$/, '')
+  const { siteUrl, indexable } = useRuntimeConfig(event).public
+  const origin = String(siteUrl).replace(/\/+$/, '')
 
+  // Preview deployments deliberately still ALLOW crawling. Indexing is refused
+  // by the `X-Robots-Tag: noindex` header on every response
+  // (server/middleware/noindex.ts); a crawler has to be able to fetch the page
+  // to see that. `Disallow: /` here would block the fetch and can leave URLs
+  // indexed with no content -- the opposite of what we want. What does change is
+  // that we stop advertising a sitemap, since there is nothing to submit.
+  const preamble = indexable
+    ? []
+    : [
+        '# Preview deployment -- not the canonical site.',
+        '# Indexing is refused via the X-Robots-Tag header on every response.',
+        '# Crawling stays allowed so crawlers can actually see that header.',
+        '',
+      ]
+
+  // In preview mode the Disallow list is not just redundant, it is harmful.
+  // X-Robots-Tag already refuses indexing for every path, and these entries
+  // additionally block well-behaved automated clients -- including our own
+  // tooling -- from fetching /login and /api/*, which is exactly what a preview
+  // host needs to be testable. The earlier version emitted this list while the
+  // comment above claimed crawling stayed allowed; those contradicted.
+  //
+  // At launch (indexable), the list returns to keep gated pages out of search.
   const body = [
+    ...preamble,
     'User-agent: *',
     'Allow: /',
     '',
     // Longest-match wins for Google, so these override the blanket Allow above.
-    ...DISALLOW.map(path => `Disallow: ${path}`),
-    '',
-    `Sitemap: ${siteUrl}/sitemap.xml`,
-    '',
+    ...(indexable ? DISALLOW.map(path => `Disallow: ${path}`) : []),
+    ...(indexable ? ['', `Sitemap: ${origin}/sitemap.xml`, ''] : []),
   ].join('\n')
 
   setHeader(event, 'content-type', 'text/plain; charset=utf-8')

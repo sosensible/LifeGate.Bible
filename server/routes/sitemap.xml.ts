@@ -2,10 +2,12 @@ import { allMinistries } from '~/data/directory'
 
 // Public XML sitemap.
 //
-// Prerendered at build time (nuxt.config.ts -> nitro.prerender.routes), so
-// NUXT_PUBLIC_SITE_URL is a BUILD-time variable here, not a runtime one:
-//   NUXT_PUBLIC_SITE_URL=https://lifegate.bible npm run build
-// Setting it only in the container environment will not change the baked file.
+// Served live (not prerendered), so NUXT_PUBLIC_SITE_URL is a plain runtime env
+// var: change it in the compose file and restart, no rebuild needed.
+//
+// While NUXT_PUBLIC_INDEXABLE is false this is still served -- useful for
+// checking the output -- but robots.txt does not advertise it and every response
+// carries X-Robots-Tag: noindex.
 //
 // Member-gated routes are deliberately absent -- /members, /directory, /calendar
 // and /admin/directory all carry `middleware: 'auth'` -- as is /login, which has

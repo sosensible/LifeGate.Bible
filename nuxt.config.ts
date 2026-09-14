@@ -5,6 +5,18 @@ export default defineNuxtConfig({
     // `dev` script (listhen dual-stack: LAN + localhost/IPv6 both work).
     port: 3007,
   },
+  vite: {
+    server: {
+      // Vite 7 rejects requests whose Host header it does not recognise (a
+      // DNS-rebinding guard), which is what a Cloudflare Tunnel pointed at the
+      // dev server hits:
+      //   Blocked request. This host ("new.lifegate.bible") is not allowed.
+      // The leading dot allows lifegate.bible and every subdomain, so www/new/
+      // preview hosts all work without further edits. Dev-server only -- the
+      // production Nitro server does no host checking.
+      allowedHosts: ['.lifegate.bible'],
+    },
+  },
   nitro: {
     // Deploy target. Default is the self-hosted Node server (`.output/server/index.mjs`),
     // which is what the Docker image in ./Dockerfile runs on the ZimaOS box behind the
@@ -15,11 +27,12 @@ export default defineNuxtConfig({
     preset: process.env.NITRO_PRESET || 'node-server',
     prerender: {
       crawlLinks: false,
-      // Served by server/routes/sitemap.xml.ts and server/routes/robots.txt.ts.
-      // Because they are prerendered, the absolute URLs inside are fixed at BUILD
-      // time from runtimeConfig.public.siteUrl (see below) -- changing the host
-      // means rebuilding, not just restarting.
-      routes: ['/sitemap.xml', '/robots.txt'],
+      // Nothing is prerendered. /sitemap.xml and /robots.txt are served live by
+      // server/routes/ so their hostname and indexability come from runtime env
+      // (see runtimeConfig below). Prerendering them would freeze both into the
+      // image, meaning the preview -> canonical switch needed a rebuild and a
+      // re-push of a ~250MB image rather than an env change plus a restart.
+      routes: [],
     },
     cloudflare: {
       pages: {
@@ -36,13 +49,23 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      // Canonical public origin, used for the absolute <loc> URLs in /sitemap.xml.
-      // The sitemap is prerendered, so override this at BUILD time:
-      //   NUXT_PUBLIC_SITE_URL=https://lifegate.bible npm run build
-      // Keep it the canonical hostname even when the box is reached through a
-      // Cloudflare Tunnel -- a sitemap full of *.trycloudflare.com URLs is worse
-      // than no sitemap.
-      siteUrl: 'https://lifegate.bible',
+      // Public origin this deployment answers on, used for the absolute <loc>
+      // URLs in /sitemap.xml and the Sitemap: line in /robots.txt.
+      // Runtime override (no rebuild): NUXT_PUBLIC_SITE_URL=https://new.lifegate.bible
+      siteUrl: 'https://new.lifegate.bible',
+
+      // Whether search engines may index this deployment. Defaults to FALSE so a
+      // preview host can never be indexed by accident -- only a deliberate
+      // NUXT_PUBLIC_INDEXABLE=true opts in.
+      //
+      // While false, every response carries `X-Robots-Tag: noindex, nofollow`
+      // (server/middleware/noindex.ts), pages carry a matching <meta> tag, and
+      // robots.txt omits the Sitemap: line.
+      //
+      // At launch, set NUXT_PUBLIC_INDEXABLE=true and point NUXT_PUBLIC_SITE_URL
+      // at the canonical host. Both are plain container env vars: change them in
+      // the compose file and restart. No rebuild, no re-push.
+      indexable: false,
     },
   },
   modules: [

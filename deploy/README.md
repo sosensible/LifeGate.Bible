@@ -79,18 +79,14 @@ Tags are pinned, not `latest`, so ZimaOS never silently swaps versions under you
 Deploying a new build means bumping the version in `package.json`, rebuilding,
 and updating `image:` in the compose YAML.
 
-### Sitemap hostname is a build-time input
+### Hostname and indexing are runtime settings
 
-`/sitemap.xml` is prerendered, so its absolute URLs are frozen when the image is
-built. Setting `NUXT_PUBLIC_SITE_URL` in the container environment does nothing.
-Defaults to `https://lifegate.bible`; override with:
+`/sitemap.xml` and `/robots.txt` are served live, not prerendered. Set these in
+the compose file's `environment:` and restart; no rebuild is needed:
 
-```
-SITE_URL=https://lifegate.bible ./deploy/build-image.sh
-```
-
-Keep this the canonical hostname even though traffic arrives through the tunnel.
-A sitemap advertising `*.trycloudflare.com` URLs is worse than no sitemap.
+- `NUXT_PUBLIC_SITE_URL` -- the public origin (default `https://new.lifegate.bible`)
+- `NUXT_PUBLIC_INDEXABLE` -- `false` (default) sends `X-Robots-Tag: noindex` on
+  every response and omits the sitemap from robots.txt; set `true` at launch.
 
 ## 2. Load onto the box
 
@@ -186,10 +182,14 @@ The four `middleware: 'auth'` routes -- `/members`, `/directory`, `/calendar`,
 
 ### robots.txt
 
-`server/routes/robots.txt.ts` advertises the sitemap and keeps crawlers off the
-gated areas. It is a server route rather than a static `public/robots.txt` so the
-`Sitemap:` hostname comes from the same `siteUrl` config the sitemap uses -- one
-`SITE_URL=` value updates both. Also prerendered, so also build-time.
+`server/routes/robots.txt.ts` is a server route rather than a static
+`public/robots.txt`, so its output follows the same runtime settings as the
+sitemap. While `NUXT_PUBLIC_INDEXABLE` is `false` it allows all crawling (so
+crawlers can see the `noindex` header) and lists no sitemap. When `true`, it
+disallows the gated areas and advertises `NUXT_PUBLIC_SITE_URL/sitemap.xml`.
+
+It deliberately does not disallow `/login` or `/api/` in preview mode: doing so
+blocked automated testing tools from the preview host.
 
 Still worth submitting the sitemap in Google Search Console; robots.txt only
 helps crawlers that already found the domain.

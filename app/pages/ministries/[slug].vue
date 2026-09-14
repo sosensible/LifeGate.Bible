@@ -32,7 +32,7 @@
             <UIcon name="i-lucide-lock" class="w-6 h-6 text-gold-600 mx-auto mb-3" />
             <p class="text-toned mb-4 max-w-md mx-auto">The list of members serving in this ministry is available to signed-in members. Sign in to see who serves here.</p>
             <div class="flex gap-3 justify-center flex-wrap">
-              <UButton color="secondary" @click="navigateTo('/login')">Member Login</UButton>
+              <UButton to="/login" color="secondary">Member Login</UButton>
               <UButton
                 variant="outline"
                 color="primary"
