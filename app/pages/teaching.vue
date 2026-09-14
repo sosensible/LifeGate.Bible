@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="bg-primary-800 py-10 px-6">
       <div class="max-w-6xl mx-auto">
-        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">{{ auth.isAuthenticated ? 'Members Area' : 'Watch & Listen' }}</p>
+        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">{{ auth.isMember ? 'Members Area' : 'Watch & Listen' }}</p>
         <h1 class="text-4xl font-bold font-serif text-white">Teaching</h1>
       </div>
     </div>
@@ -107,7 +107,7 @@
           <div v-for="s in filteredSermons" :key="s.id" class="bg-elevated rounded-lg overflow-hidden shadow-sm border border-default flex flex-col">
             <div class="h-32 flex items-center justify-center relative shrink-0" :style="{ backgroundColor: s.color }">
               <UIcon name="i-lucide-play" class="w-9 h-9 text-white/30" />
-              <span v-if="auth.isAuthenticated && s.isPublic" class="absolute top-2.5 left-2.5 bg-white/90 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-sm">Public</span>
+              <span v-if="auth.isMember && s.isPublic" class="absolute top-2.5 left-2.5 bg-white/90 text-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-sm">Public</span>
               <div class="absolute bottom-2.5 right-2.5 flex gap-1.5">
                 <span v-for="f in s.formats" :key="f" class="bg-black/55 text-white px-2 py-0.5 text-[10px] font-semibold rounded-sm">{{ f }}</span>
               </div>
@@ -133,7 +133,7 @@
         </div>
 
         <!-- Members-only nudge -->
-        <div v-if="!auth.isAuthenticated && hiddenCount > 0" class="mt-10 border-l-4 border-gold-500 bg-muted rounded-r-lg px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+        <div v-if="!auth.isMember && hiddenCount > 0" class="mt-10 border-l-4 border-gold-500 bg-muted rounded-r-lg px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
           <p class="text-toned">
             {{ hiddenCount }} more {{ hiddenCount === 1 ? 'message is' : 'messages are' }} available to members.
             Sign in to view the full archive.
@@ -155,10 +155,6 @@ definePageMeta({
 })
 
 const auth = useAuthStore()
-
-onMounted(() => {
-  auth.initAuth()
-})
 
 // Demo data until live sermons are wired in. `isPublic` controls what shows to
 // signed-out visitors; `books`/`reference`/`tags` drive search and filtering.
@@ -192,7 +188,7 @@ const dateLabel = computed(() => {
 })
 
 const visibleSermons = computed(() =>
-  auth.isAuthenticated ? sermons : sermons.filter(s => s.isPublic),
+  auth.isMember ? sermons : sermons.filter(s => s.isPublic),
 )
 
 const hiddenCount = computed(() => sermons.length - visibleSermons.value.length)

@@ -134,9 +134,4 @@ definePageMeta({
 
 const auth = useAuthStore()
 
-onMounted(() => {
-  // Keep nav auth-state in sync; the home page is public and stays visible to
-  // signed-in members too (the logo returns everyone here).
-  auth.initAuth()
-})
 </script>

@@ -16,6 +16,18 @@ export default defineNuxtConfig({
       // production Nitro server does no host checking.
       allowedHosts: ['.lifegate.bible'],
     },
+    optimizeDeps: {
+      // Pre-bundle client dependencies Vite would otherwise discover on first
+      // use. Discovery triggers a full page reload in dev, which silently wiped
+      // a half-filled sign-in form. List taken from Vite's own dev-server hint.
+      include: [
+        'better-auth/vue',
+        'better-auth/client/plugins',
+        'better-auth/plugins/access',
+        'better-auth/plugins/admin/access',
+        'zod',
+      ],
+    },
   },
   nitro: {
     // Deploy target. Default is the self-hosted Node server (`.output/server/index.mjs`),

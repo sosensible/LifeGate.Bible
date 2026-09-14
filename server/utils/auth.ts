@@ -1,67 +1,47 @@
-export default defineEventHandler(async (event) => {
-  const token = getCookie(event, 'auth_token')
+// Server-side guards, auto-imported into every server route.
+//
+// These are the real enforcement. Hiding a button in the UI is only a hint.
+import type { H3Event } from 'h3'
+import type { statement } from '../../shared/auth/permissions.ts'
+import { auth } from '../lib/auth.ts'
 
-  if (!token) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Not authenticated',
-    })
+type Permissions = {
+  [Resource in keyof typeof statement]?: Array<(typeof statement)[Resource][number]>
+}
+
+export const getAuthSession = (event: H3Event) =>
+  auth.api.getSession({ headers: event.headers })
+
+export const requireSession = async (event: H3Event) => {
+  const session = await getAuthSession(event)
+  if (!session) {
+    throw createError({ statusCode: 401, statusMessage: 'Not signed in' })
   }
+  return session
+}
 
-  try {
-    const db = event.context.cloudflare?.env?.db
-    if (!db) {
-      throw new Error('Database not available')
-    }
-
-    const stmt = db.prepare(
-      'SELECT id, email, name, role FROM users WHERE auth_token = ? LIMIT 1',
-    )
-    const result = await stmt.bind(token).first()
-
-    if (!result) {
-      throw new Error('Invalid token')
-    }
-
-    event.context.user = result
-    return result
-  }
-  catch (err: any) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Authentication failed',
-    })
-  }
-})
-
-export const requireAuth = async (event: any) => {
-  const user = event.context.user
-
-  if (!user) {
-    const token = getCookie(event, 'auth_token')
-    if (!token) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Not authenticated',
+// Better Auth evaluates each of a user's roles on its own: a check passes only
+// if ONE role covers every requested permission. Lifegate roles are additive
+// ("member,pastor"), so a single combined check would wrongly deny someone who
+// holds the permissions across two roles. Check each action separately and
+// require all of them. (Verified against Better Auth 1.7.4; see
+// tests/unit/auth-guard.spec.ts.)
+export const hasPermission = async (userId: string, permissions: Permissions) => {
+  for (const [resource, actions] of Object.entries(permissions)) {
+    for (const action of actions ?? []) {
+      const result = await auth.api.userHasPermission({
+        body: { userId, permissions: { [resource]: [action] } },
       })
+      if (!result?.success) return false
     }
-
-    const db = event.context.cloudflare?.env?.db
-    const stmt = db.prepare(
-      'SELECT id, email, name, role FROM users WHERE auth_token = ? LIMIT 1',
-    )
-    const result = await stmt.bind(token).first()
-
-    if (!result) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token',
-      })
-    }
-
-    event.context.user = result
-    return result
   }
+  return true
+}
 
-  return user
+export const requirePermission = async (event: H3Event, permissions: Permissions) => {
+  const session = await requireSession(event)
+  if (!(await hasPermission(session.user.id, permissions))) {
+    throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+  }
+  return session
 }

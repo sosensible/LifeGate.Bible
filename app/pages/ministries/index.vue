@@ -20,7 +20,7 @@
           >
             <h3 class="font-serif font-bold text-lg text-highlighted mb-1.5">{{ item.ministry.name }}</h3>
             <p class="text-toned text-sm mb-3 leading-relaxed">{{ item.ministry.description }}</p>
-            <p v-if="auth.isAuthenticated" class="text-gold-600 text-[11px] uppercase tracking-wide">
+            <p v-if="auth.isMember" class="text-gold-600 text-[11px] uppercase tracking-wide">
               {{ item.ministry.members.length }} {{ item.ministry.members.length === 1 ? 'member' : 'members' }}
             </p>
           </NuxtLink>
@@ -86,10 +86,6 @@ definePageMeta({
 })
 
 const auth = useAuthStore()
-
-onMounted(() => {
-  auth.initAuth()
-})
 
 const ministries = allMinistries()
 

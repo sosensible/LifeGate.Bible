@@ -1,58 +1,53 @@
+// The signed-in session, for the UI.
+//
+// Populated during SSR by app/plugins/auth-session.ts, so pages and the layout
+// render correctly on the first response. `can()` is only for showing or
+// hiding UI; the server enforces permissions independently.
+import { roles, type RoleName } from '#shared/auth/permissions'
+import type { Permissions } from '~/types/auth'
+
+type Session = typeof authClient.$Infer.Session
+
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<{ email: string; name: string } | null>(null)
-  const token = ref<string>('')
+  const session = ref<Session | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const user = computed(() => session.value?.user ?? null)
+  const isAuthenticated = computed(() => session.value !== null)
 
-  const login = async (email: string, password: string) => {
-    const { data, error } = await useFetch('/api/auth/login', {
-      method: 'POST',
-      body: { email, password },
-    })
+  const roleNames = computed<RoleName[]>(() =>
+    String((user.value as { role?: string } | null)?.role ?? '')
+      .split(',')
+      .map(role => role.trim())
+      .filter((role): role is RoleName => role in roles),
+  )
 
-    if (error.value) {
-      throw new Error(error.value.message || 'Login failed')
-    }
+  // A person holds several additive roles, so check each requested action
+  // against the union of their roles, not against one role at a time.
+  const can = (permissions: Permissions) =>
+    Object.entries(permissions).every(([resource, actions]) =>
+      (actions ?? []).every(action =>
+        roleNames.value.some(role =>
+          roles[role].authorize({ [resource]: [action] } as never).success,
+        ),
+      ),
+    )
 
-    if (data.value) {
-      token.value = data.value.token
-      user.value = data.value.user
-      if (process.client) {
-        localStorage.setItem('auth_token', data.value.token)
-      }
-    }
+  const isMember = computed(() => can({ memberArea: ['view'] }))
+  const isStaff = computed(() => can({ people: ['viewContact'] }))
+
+  const setSession = (value: Session | null) => {
+    session.value = value
   }
 
-  // v1 invite-code gate (matches marketing-site-reference.html). Per-member
-  // accounts + server-side validation come with the portal build (Phase 3).
-  const loginWithInviteCode = async (code: string) => {
-    if (code.trim().toUpperCase() === 'LIFEGATE') {
-      token.value = 'invite_' + Date.now()
-      user.value = { email: '', name: 'Member' }
-      if (process.client) {
-        localStorage.setItem('auth_token', token.value)
-      }
-      return
-    }
-    throw new Error('Invalid invite code. Please check with your church administrator.')
+  const refresh = async () => {
+    const { data } = await authClient.getSession()
+    session.value = data ?? null
   }
 
-  const logout = () => {
-    user.value = null
-    token.value = ''
-    if (process.client) {
-      localStorage.removeItem('auth_token')
-    }
+  const logout = async () => {
+    await authClient.signOut()
+    session.value = null
   }
 
-  const initAuth = () => {
-    if (process.client) {
-      const stored = localStorage.getItem('auth_token')
-      if (stored) {
-        token.value = stored
-      }
-    }
-  }
-
-  return { user, token, isAuthenticated, login, loginWithInviteCode, logout, initAuth }
+  return { session, user, isAuthenticated, isMember, isStaff, roleNames, can, setSession, refresh, logout }
 })

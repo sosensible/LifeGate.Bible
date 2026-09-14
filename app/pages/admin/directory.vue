@@ -116,6 +116,7 @@
 <script setup lang="ts">
 definePageMeta({
   middleware: 'auth',
+  permission: { people: ['update'] },
   layout: 'default',
   name: 'admin-directory',
 })

@@ -1,12 +1,7 @@
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
-
-  if (user.role !== 'admin' && user.role !== 'pastor') {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Admin access required',
-    })
-  }
+  // Guard updated for Better Auth. The D1 queries below predate the new schema
+  // and are rewritten in a later phase.
+  await requirePermission(event, { people: ['create'] })
 
   const { name, email, role, phone, address, birthday, familyUnit, ministries } = await readBody(event)
 

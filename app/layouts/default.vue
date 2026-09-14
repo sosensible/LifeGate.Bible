@@ -7,14 +7,14 @@
         </NuxtLink>
         <div class="flex items-center gap-4">
           <UButton to="/about" variant="ghost" class="text-white hover:bg-white/10">About</UButton>
-          <template v-if="auth.isAuthenticated">
+          <template v-if="auth.isMember">
             <UButton to="/teaching" variant="ghost" class="text-white hover:bg-white/10">Teaching</UButton>
             <UButton to="/calendar" variant="ghost" class="text-white hover:bg-white/10">Calendar</UButton>
             <UButton to="/directory" variant="ghost" class="text-white hover:bg-white/10">Directory</UButton>
             <UButton to="/ministries" variant="ghost" class="text-white hover:bg-white/10">Ministries</UButton>
             <UButton to="/members" size="sm" color="secondary">Members</UButton>
-            <UButton @click="handleLogout" variant="outline" size="sm" class="text-white ring-white/40 hover:bg-white/10">Sign Out</UButton>
           </template>
+          <UButton v-if="auth.isAuthenticated" @click="handleLogout" variant="outline" size="sm" class="text-white ring-white/40 hover:bg-white/10">Sign Out</UButton>
           <UButton v-else to="/login" size="sm" color="secondary">Member Login</UButton>
         </div>
       </div>
@@ -26,8 +26,8 @@
 <script setup lang="ts">
 const auth = useAuthStore()
 
-const handleLogout = () => {
-  auth.logout()
-  navigateTo('/')
+const handleLogout = async () => {
+  await auth.logout()
+  await navigateTo('/')
 }
 </script>

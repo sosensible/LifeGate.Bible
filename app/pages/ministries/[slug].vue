@@ -24,11 +24,11 @@
         <div class="max-w-6xl mx-auto">
           <h2 class="text-2xl font-bold font-serif text-highlighted mb-6">
             Serving in this Ministry
-            <span v-if="auth.isAuthenticated" class="text-muted text-base font-sans font-normal">({{ ministry.members.length }})</span>
+            <span v-if="auth.isMember" class="text-muted text-base font-sans font-normal">({{ ministry.members.length }})</span>
           </h2>
 
           <!-- Public: roster is members-only -->
-          <div v-if="!auth.isAuthenticated" class="bg-muted border border-default rounded-lg p-8 text-center">
+          <div v-if="!auth.isMember" class="bg-muted border border-default rounded-lg p-8 text-center">
             <UIcon name="i-lucide-lock" class="w-6 h-6 text-gold-600 mx-auto mb-3" />
             <p class="text-toned mb-4 max-w-md mx-auto">The list of members serving in this ministry is available to signed-in members. Sign in to see who serves here.</p>
             <div class="flex gap-3 justify-center flex-wrap">
@@ -87,10 +87,6 @@ definePageMeta({
 })
 
 const auth = useAuthStore()
-
-onMounted(() => {
-  auth.initAuth()
-})
 
 const route = useRoute()
 const ministry = computed(() => ministryBySlug(String(route.params.slug)))

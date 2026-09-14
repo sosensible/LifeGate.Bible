@@ -29,3 +29,6 @@ dist
 
 # deploy: saved docker image tarballs
 deploy/out
+
+# keep the documented template
+!.env.example

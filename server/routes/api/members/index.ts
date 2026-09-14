@@ -1,5 +1,7 @@
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  // Guard updated for Better Auth. The D1 queries below predate the new schema
+  // and are rewritten in a later phase.
+  await requirePermission(event, { people: ['viewContact'] })
 
   try {
     const db = event.context.cloudflare?.env?.db
