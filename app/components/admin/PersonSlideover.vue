@@ -23,9 +23,22 @@
               </p>
             </UFormField>
           </div>
-          <UFormField name="isMinor">
-            <USwitch v-model="state.isMinor" label="Under 18" description="Minors are never listed to members, whatever is shared." />
-          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <UFormField name="isMinor">
+              <USwitch v-model="state.isMinor" label="Under 18" description="Minors are never listed to members, whatever is shared." />
+            </UFormField>
+            <UFormField name="isSpeaker">
+              <USwitch v-model="state.isSpeaker" label="Speaker" description="Listed under Speakers in the directory." />
+            </UFormField>
+            <UFormField name="kind" class="sm:col-span-2">
+              <USwitch
+                :model-value="state.kind === 'guest'"
+                label="Guest, not a church member"
+                description="For guest speakers and others the church keeps a record of. Guests are not in the members list, ministry rosters or households."
+                @update:model-value="value => state.kind = value ? 'guest' : 'member'"
+              />
+            </UFormField>
+          </div>
           <UFormField label="Ministries" name="ministryIds">
             <USelectMenu
               v-model="state.ministryIds"
@@ -142,6 +155,7 @@ const sharingFields: Array<{ key: PrivacyField, label: string }> = [
 
 const blank = () => ({
   firstName: '', lastName: '', title: '', isMinor: false,
+  kind: 'member' as 'member' | 'guest', isSpeaker: false,
   ministryIds: [] as string[],
   phone: '', email: '', address: '', birthday: '',
 })
@@ -166,6 +180,7 @@ const load = () => {
   Object.assign(state, p
     ? {
         firstName: p.firstName, lastName: p.lastName, title: p.title ?? '', isMinor: p.isMinor,
+        kind: p.kind, isSpeaker: p.isSpeaker,
         ministryIds: p.ministries.map(m => m.id),
         phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', birthday: p.birthday ?? '',
       }

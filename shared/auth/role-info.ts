@@ -32,6 +32,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'sermon.delete': 'Remove sermons',
   'sermon.publish': 'Publish sermons',
   'ministry.update': 'Edit ministries',
+  'missions.update': 'Edit missions',
   'contactMessage.view': 'Read contact messages',
   'audit.view': 'Audit log',
   'user.list': 'Manage accounts',

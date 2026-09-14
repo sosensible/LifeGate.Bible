@@ -176,11 +176,14 @@ const option = (p: AdminPersonView, disabled: boolean) => ({
   disabled,
 })
 
+// Guests (such as guest speakers) are not church members, so are not offered.
+const members = computed(() => props.people.filter(p => p.kind === 'member'))
+
 const adultItems = (current: string | undefined) =>
-  props.people.map(p => option(p, p.isMinor || inOtherHousehold(p) || (chosen.value.has(p.id) && p.id !== current)))
+  members.value.map(p => option(p, p.isMinor || inOtherHousehold(p) || (chosen.value.has(p.id) && p.id !== current)))
 
 const childItems = computed(() =>
-  props.people.filter(p => !chosen.value.has(p.id)).map(p => option(p, inOtherHousehold(p))))
+  members.value.filter(p => !chosen.value.has(p.id)).map(p => option(p, inOtherHousehold(p))))
 
 const addChild = (personId: string | undefined) => {
   if (personId) childIds.value.push(personId)

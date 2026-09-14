@@ -13,6 +13,8 @@ export interface FullPerson extends PersonRecord {
   title: string | null
   householdName: string | null
   householdRole: PersonRow['householdRole']
+  kind: PersonRow['kind']
+  isSpeaker: boolean
   ministries: Array<{ id: string, slug: string, name: string }>
   userId: string | null
   account: { email: string, role: string | null } | null
@@ -61,6 +63,8 @@ export const presentForAdmin = (person: FullPerson): AdminPersonView => ({
   lastName: person.lastName,
   title: person.title,
   isMinor: person.isMinor,
+  kind: person.kind,
+  isSpeaker: person.isSpeaker,
   phone: person.phone,
   email: person.email,
   address: person.address,

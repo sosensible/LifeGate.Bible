@@ -4,6 +4,7 @@
 import type { H3Event } from 'h3'
 import type { statement } from '../../shared/auth/permissions.ts'
 import { auth } from '../lib/auth.ts'
+import { servesInMissionsMinistry } from '../lib/missions.ts'
 
 type Permissions = {
   [Resource in keyof typeof statement]?: Array<(typeof statement)[Resource][number]>
@@ -58,6 +59,31 @@ export const getSermonViewer = async (event: H3Event) => {
     hasPermission(session.user.id, { sermon: ['update'] }),
   ])
   return { session, isMember, canManage }
+}
+
+// Missions pages: members read them; staff, admins and people serving in the
+// Missions ministry edit them.
+export const getMissionsViewer = async (event: H3Event) => {
+  const session = await getAuthSession(event)
+  if (!session) return { session: null, isMember: false, canEdit: false }
+  const [isMember, hasRolePermission] = await Promise.all([
+    hasPermission(session.user.id, { memberArea: ['view'] }),
+    hasPermission(session.user.id, { missions: ['update'] }),
+  ])
+  return { session, isMember, canEdit: hasRolePermission || servesInMissionsMinistry(session.user.id) }
+}
+
+export const requireMissionsReader = async (event: H3Event) => {
+  const viewer = await getMissionsViewer(event)
+  if (!viewer.session) throw createError({ statusCode: 401, statusMessage: 'Not signed in' })
+  if (!viewer.isMember && !viewer.canEdit) throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+  return viewer
+}
+
+export const requireMissionsEditor = async (event: H3Event) => {
+  const viewer = await requireMissionsReader(event)
+  if (!viewer.canEdit) throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+  return viewer as typeof viewer & { session: NonNullable<typeof viewer.session> }
 }
 
 export const requirePermission = async (event: H3Event, permissions: Permissions) => {

@@ -41,6 +41,9 @@ export const personSchema = z.object({
   lastName: z.string().trim().min(1, 'Enter a last name').max(80),
   title: optionalText(80),
   isMinor: z.boolean(),
+  // A guest (e.g. a guest speaker) is not a church member.
+  kind: z.enum(['member', 'guest']),
+  isSpeaker: z.boolean(),
   // Household membership is set in the household editor, with a role.
   ministryIds: z.array(z.string().min(1)).max(50),
   phone: contactFields.phone,
@@ -65,6 +68,8 @@ export interface AdminPersonView {
   lastName: string
   title: string | null
   isMinor: boolean
+  kind: 'member' | 'guest'
+  isSpeaker: boolean
   phone: string | null
   email: string | null
   address: string | null

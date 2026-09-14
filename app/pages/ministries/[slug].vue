@@ -14,8 +14,12 @@
     <template v-if="ministry">
       <!-- Description -->
       <div class="bg-parchment-900 py-8 px-6">
-        <div class="max-w-6xl mx-auto">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <p class="text-toned max-w-2xl leading-relaxed">{{ ministry.description }}</p>
+          <!-- The missionaries themselves are on the members-only Missions page. -->
+          <UButton v-if="ministry.slug === 'missions' && auth.isMember" to="/missions" color="secondary" icon="i-lucide-globe" trailing-icon="i-lucide-arrow-right">
+            Our missionaries
+          </UButton>
         </div>
       </div>
 
@@ -86,6 +90,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const auth = useAuthStore()
 const { data: ministry, error } = await useFetch(() => `/api/ministries/${encodeURIComponent(String(route.params.slug))}`)
 
 const roster = computed(() =>

@@ -1,7 +1,7 @@
 // Reading the audit log for the viewer: filtered, paged, with names instead of ids.
 import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizzle-orm'
 import type { AuditEntryView } from '../../shared/audit.ts'
-import { auditLog, households, people, sermonSeries, sermons, user } from '../database/schema/index.ts'
+import { auditLog, households, missionaries, missionOrganizations, people, sermonSeries, sermons, user } from '../database/schema/index.ts'
 import { db } from './db.ts'
 
 export interface AuditQuery {
@@ -36,6 +36,12 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
     case 'sermonSeries':
       return new Map(db.select({ id: sermonSeries.id, name: sermonSeries.name }).from(sermonSeries)
         .where(inArray(sermonSeries.id, ids)).all().map(r => [r.id, r.name]))
+    case 'missionary':
+      return new Map(db.select({ id: missionaries.id, name: missionaries.name }).from(missionaries)
+        .where(inArray(missionaries.id, ids)).all().map(r => [r.id, r.name]))
+    case 'missionOrganization':
+      return new Map(db.select({ id: missionOrganizations.id, name: missionOrganizations.name }).from(missionOrganizations)
+        .where(inArray(missionOrganizations.id, ids)).all().map(r => [r.id, r.name]))
     case 'user':
       return new Map(db.select({ id: user.id, email: user.email }).from(user)
         .where(inArray(user.id, ids)).all().map(r => [r.id, r.email]))

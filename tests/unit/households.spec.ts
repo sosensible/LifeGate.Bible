@@ -104,6 +104,12 @@ describe('household rules', () => {
       .toThrow(/only once/)
   })
 
+  it('refuses a guest, who is not a church member', () => {
+    const guest = db.insert(schema.people).values({ firstName: 'Daniel', lastName: 'Brooks', kind: 'guest', isSpeaker: true }).returning().get().id
+    expect(() => save(null, { kind: 'singleParent', adultId: guest, role: 'father', childIds: [ids.ben], customName: null }))
+      .toThrow(/is a guest/)
+  })
+
   it('keeps a custom name, and replaces the structure on edit', () => {
     const id = save(null, { kind: 'singleParent', adultId: ids.helen, role: 'mother', childIds: [ids.lucas], customName: 'The Johnsons' })
     expect(lib.loadHousehold(id)!.name).toBe('The Johnsons')

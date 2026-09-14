@@ -28,6 +28,15 @@ export const ACTION_LABELS: Record<string, string> = {
   'series.create': 'Added series',
   'series.update': 'Edited series',
   'series.delete': 'Removed series',
+  'missionary.create': 'Added missionary',
+  'missionary.update': 'Edited missionary',
+  'missionary.delete': 'Removed missionary',
+  'missionary.prayerRequest': 'Added prayer request',
+  'missionary.letter': 'Added prayer letter',
+  'missionary.updateRemoved': 'Removed a prayer request or letter',
+  'missionOrganization.create': 'Added mission organization',
+  'missionOrganization.update': 'Edited mission organization',
+  'missionOrganization.delete': 'Removed mission organization',
 }
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
@@ -36,6 +45,8 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
   household: 'Households',
   sermon: 'Sermons',
   sermonSeries: 'Sermon series',
+  missionary: 'Missionaries',
+  missionOrganization: 'Mission organizations',
 }
 
 export const actionLabel = (action: string) => ACTION_LABELS[action] ?? action

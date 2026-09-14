@@ -11,6 +11,7 @@
           <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(entry) }}</h3>
           <p v-if="entry.title" class="text-muted text-[11px] uppercase tracking-wide">{{ entry.title }}</p>
         </div>
+        <UBadge v-if="badge" color="neutral" variant="subtle" size="sm" class="ml-auto shrink-0 self-start">{{ badge }}</UBadge>
       </div>
 
       <template v-if="entry.householdName">
@@ -57,6 +58,7 @@ import type { DirectoryEntry } from '#shared/privacy'
 const props = withDefaults(defineProps<{
   entry: DirectoryEntry
   linkMinistries?: boolean
+  badge?: string
 }>(), { linkMinistries: true })
 
 const color = computed(() => avatarColor(props.entry.id))

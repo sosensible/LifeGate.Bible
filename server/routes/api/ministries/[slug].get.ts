@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   if (!viewer.isMember) return base
 
   const members = loadPeople()
-    .filter(person => person.ministries.some(m => m.id === ministry.id))
+    .filter(person => person.kind === 'member' && person.ministries.some(m => m.id === ministry.id))
     .map(person => presentPerson(person, viewer))
     .filter(entry => entry !== null)
     .map(({ id, firstName, lastName, title, photoUrl }) => ({ id, firstName, lastName, title, photoUrl }))

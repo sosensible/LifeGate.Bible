@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
     return list.map(({ id, slug, name, description }) => ({ id, slug, name, description }))
   }
 
-  const visible = loadPeople().filter(person => presentPerson(person, viewer))
+  // Rosters list church members; guests (such as guest speakers) do not serve here.
+  const visible = loadPeople().filter(person => person.kind === 'member' && presentPerson(person, viewer))
   return list.map(({ id, slug, name, description }) => ({
     id,
     slug,

@@ -110,6 +110,11 @@ export const saveHousehold = (tx: Tx, id: string | null, input: HouseholdInput) 
   }
   const byId = new Map(found.map(p => [p.id, p]))
 
+  const guest = found.find(p => p.kind === 'guest')
+  if (guest) {
+    throw createError({ statusCode: 400, statusMessage: `${guest.firstName} ${guest.lastName} is a guest, not a church member, so cannot be in a household` })
+  }
+
   for (const adult of adults) {
     const person = byId.get(adult.personId)!
     if (person.isMinor) {

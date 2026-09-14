@@ -168,7 +168,10 @@ not an account; an account can be linked to one person.
   - Members see adults' names, titles and ministries. Minors are never listed to members.
   - Phone, email and address: staff (`people:viewContact`) always; members only if the person shares them.
   - Birthday (month and day only), household and photo: only if shared, staff included.
-- **`/directory`**: `GET /api/directory` returns each entry already filtered for the viewer.
+- **`/directory`**: `GET /api/directory` returns each entry already filtered for the viewer, in two lists:
+  - **Members**: church members only;
+  - **Speakers**: people marked as speakers, each labeled Member or Guest speaker. Their contact details follow the same sharing rules, so a speaker's contact shows only if they choose to share it.
+- **Guests** (`people.kind = 'guest'`, e.g. guest speakers) are kept as records but are not in the members list, ministry rosters or households.
 - **`/ministries`**: names and descriptions are public; rosters come from the server only for members.
 - **`/profile`**: a person edits their own phone, email, address, birthday and sharing, with a live preview of what members and staff see.
 - **`/admin/people`** (`people:update`):
@@ -187,7 +190,20 @@ not an account; an account can be linked to one person.
 - **Audit log**: every change records who, what and which fields, never the values.
 - **Dev data**: `npm run db:migrate`, then `npm run db:seed-demo -- <account email> <first name>` adds fictional people to an empty local database and optionally links an account.
 
-### 8. Accounts and audit log (`/admin/accounts`, `/admin/audit`)
+### 8. Missions (`/missions`, `/missions/[slug]`, `/missions/organizations/[slug]`)
+
+Members only, and not indexed by search engines. Some countries make being known as a missionary dangerous. The Missions ministry page links here for members.
+
+- **Entries**: mission organizations, and missionary families or individuals, each with a photo, write-up, field, focus, organization, status, start year, support link, next visit to Lifegate, and prayer requests and letters.
+- **Contact details** (email, phone, website, mailing address) reach members only when `shareContact` is on; editors always see them.
+- **Editors**: roles with `missions:update` (pastor, directory manager, admin), plus anyone whose directory entry serves in the Missions ministry (`server/lib/missions.ts`, `server/utils/auth.ts`).
+- **Photos** (`server/lib/uploads.ts`):
+  - stored outside the public folder (`UPLOADS_PATH`, default `uploads/` beside the database) and served only to members;
+  - accepted only as JPEG, PNG or WebP, judged by file contents, up to 5 MB;
+  - previewed before saving, and deleted when replaced or removed.
+- Every change is in the audit log.
+
+### 9. Accounts and audit log (`/admin/accounts`, `/admin/audit`)
 
 - **Accounts** (`user:list`):
   - create accounts (always email-verified; optional set-password email);

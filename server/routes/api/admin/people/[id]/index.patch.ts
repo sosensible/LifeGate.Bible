@@ -14,6 +14,9 @@ export default defineEventHandler(async (event) => {
   const { ministryIds, ...values } = emptyToNull(await readValidatedBody(event, personUpdateSchema.parse))
   assertStaffCanReview(person, Object.keys(values))
   assertReferencesExist({ ministryIds })
+  if (values.kind === 'guest' && person.householdId) {
+    throw createError({ statusCode: 400, statusMessage: `Remove ${person.firstName} from ${person.householdName ?? 'their household'} before marking them a guest` })
+  }
 
   const fields = [...Object.keys(values), ...(ministryIds ? ['ministries'] : [])]
   if (fields.length) {

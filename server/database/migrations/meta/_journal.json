@@ -43,6 +43,13 @@
       "when": 1789407990037,
       "tag": "0005_household_structure",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789408709796,
+      "tag": "0006_missions_and_speakers",
+      "breakpoints": true
     }
   ]
 }

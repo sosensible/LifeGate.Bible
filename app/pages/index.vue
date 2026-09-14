@@ -108,6 +108,7 @@
             <NuxtLink to="/about" class="text-white/70 text-sm font-bold hover:text-white">About Us</NuxtLink>
             <NuxtLink to="/seeking-pastor" class="text-white/70 text-sm font-bold hover:text-white">Seeking Pastor</NuxtLink>
             <NuxtLink to="/ministries" class="text-white/70 text-sm font-bold hover:text-white">Ministries</NuxtLink>
+            <NuxtLink v-if="auth.isMember" to="/missions" class="text-white/70 text-sm font-bold hover:text-white">Missions</NuxtLink>
             <NuxtLink to="/teaching" class="text-white/70 text-sm font-bold hover:text-white">Teaching</NuxtLink>
             <NuxtLink v-if="!auth.isAuthenticated" to="/login" class="text-white/70 text-sm font-bold hover:text-white">Member Login</NuxtLink>
           </div>

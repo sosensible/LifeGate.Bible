@@ -26,6 +26,9 @@ export const statement = {
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
   ministry: ['update'],
+  // The members-only Missions pages. Also granted, outside roles, to anyone who
+  // serves in the Missions ministry (server/lib/missions.ts).
+  missions: ['update'],
   contactMessage: ['view'],
   // Deliberately granted to Search Committee only -- not even to admins.
   pastoralApplication: ['view'],
@@ -48,10 +51,12 @@ export const contentEditor = ac.newRole({
 
 export const directoryManager = ac.newRole({
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
+  missions: ['update'],
 })
 
 export const pastor = ac.newRole({
   people: ['viewContact'],
+  missions: ['update'],
   contactMessage: ['view'],
 })
 
@@ -64,6 +69,7 @@ export const admin = ac.newRole({
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
   ministry: ['update'],
+  missions: ['update'],
   contactMessage: ['view'],
   audit: ['view'],
 })

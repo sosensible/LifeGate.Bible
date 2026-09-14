@@ -12,6 +12,7 @@
             <UButton to="/calendar" variant="ghost" class="text-white hover:bg-white/10">Calendar</UButton>
             <UButton to="/directory" variant="ghost" class="text-white hover:bg-white/10">Directory</UButton>
             <UButton to="/ministries" variant="ghost" class="text-white hover:bg-white/10">Ministries</UButton>
+            <UButton to="/missions" variant="ghost" class="text-white hover:bg-white/10">Missions</UButton>
             <UButton to="/members" size="sm" color="secondary">Members</UButton>
           </template>
           <UDropdownMenu v-if="auth.isAuthenticated" :items="accountMenu" :content="{ align: 'end' }">

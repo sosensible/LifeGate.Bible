@@ -31,6 +31,10 @@ export const people = sqliteTable('people', {
   householdId: text('household_id').references(() => households.id, { onDelete: 'set null' }),
   // Set only through the household editor, together with householdId.
   householdRole: text('household_role', { enum: ['husband', 'wife', 'father', 'mother', 'guardian', 'child'] }),
+  // A guest is someone the church keeps a record of who is not a member, such
+  // as a guest speaker. Guests are not in the members list, rosters or households.
+  kind: text('kind', { enum: ['member', 'guest'] }).notNull().default('member'),
+  isSpeaker: integer('is_speaker', { mode: 'boolean' }).notNull().default(false),
   userId: text('user_id').unique().references(() => user.id, { onDelete: 'set null' }),
 
   firstName: text('first_name').notNull(),
@@ -125,6 +129,68 @@ export const sermons = sqliteTable('sermons', {
 }, table => [
   index('sermons_listing_idx').on(table.status, table.preachedOn),
   index('sermons_series_idx').on(table.seriesId),
+])
+
+// Missions: members-only pages about the organizations Lifegate works with and
+// the families and individuals it supports. Not public: some countries make it
+// dangerous for missionaries to be identified online.
+export const missionOrganizations = sqliteTable('mission_organizations', {
+  id: id(),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  photo: text('photo'), // stored upload name, see server/lib/uploads.ts
+  writeup: text('writeup'),
+  website: text('website'),
+  // How Lifegate relates to them, e.g. "Sends missionaries through".
+  relationship: text('relationship'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const MISSIONARY_KINDS = ['family', 'individual'] as const
+export const MISSIONARY_STATUS = ['onField', 'furlough', 'raisingSupport', 'retired'] as const
+
+export const missionaries = sqliteTable('missionaries', {
+  id: id(),
+  slug: text('slug').notNull().unique(),
+  kind: text('kind', { enum: MISSIONARY_KINDS }).notNull(),
+  name: text('name').notNull(), // "Tom & Anna Reyes" or "Grace Lee"
+  photo: text('photo'),
+  writeup: text('writeup'),
+  // Family members' first names, e.g. "Tom, Anna, Lucy and Sam".
+  familyNames: text('family_names'),
+  field: text('field'), // country or region
+  focus: text('focus'), // church planting, Bible translation...
+  organizationId: text('organization_id').references(() => missionOrganizations.id, { onDelete: 'set null' }),
+  status: text('status', { enum: MISSIONARY_STATUS }).notNull().default('onField'),
+  startedYear: integer('started_year'),
+  supportUrl: text('support_url'),
+  // Contact details are shown to members only when the missionaries agreed.
+  email: text('email'),
+  phone: text('phone'),
+  mailingAddress: text('mailing_address'),
+  website: text('website'),
+  shareContact: integer('share_contact', { mode: 'boolean' }).notNull().default(false),
+  nextVisitOn: text('next_visit_on'), // YYYY-MM-DD
+  nextVisitNote: text('next_visit_note'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('missionaries_organization_idx').on(table.organizationId),
+])
+
+// Dated prayer requests and prayer letters from a missionary.
+export const missionUpdates = sqliteTable('mission_updates', {
+  id: id(),
+  missionaryId: text('missionary_id').notNull().references(() => missionaries.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: ['prayer', 'letter'] }).notNull(),
+  postedOn: text('posted_on').notNull(), // YYYY-MM-DD
+  title: text('title'),
+  body: text('body'),
+  url: text('url'),
+  createdAt: createdAt(),
+}, table => [
+  index('mission_updates_missionary_idx').on(table.missionaryId, table.postedOn),
 ])
 
 // Who changed what, and when. Written for changes to people, privacy
