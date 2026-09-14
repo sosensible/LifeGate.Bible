@@ -35,6 +35,9 @@ export const people = sqliteTable('people', {
   // as a guest speaker. Guests are not in the members list, rosters or households.
   kind: text('kind', { enum: ['member', 'guest'] }).notNull().default('member'),
   isSpeaker: integer('is_speaker', { mode: 'boolean' }).notNull().default(false),
+  // An archived speaker is off the Speakers list; staff and admins can restore
+  // them, or remove them (a guest's record, or a member's speaker listing).
+  speakerArchivedAt: integer('speaker_archived_at', { mode: 'timestamp' }),
   userId: text('user_id').unique().references(() => user.id, { onDelete: 'set null' }),
 
   firstName: text('first_name').notNull(),
@@ -83,6 +86,13 @@ export const ministries = sqliteTable('ministries', {
 export const ministryMembers = sqliteTable('ministry_members', {
   ministryId: text('ministry_id').notNull().references(() => ministries.id, { onDelete: 'cascade' }),
   personId: text('person_id').notNull().references(() => people.id, { onDelete: 'cascade' }),
+  // Set by the church office.
+  isLeader: integer('is_leader', { mode: 'boolean' }).notNull().default(false),
+  // The person's own choices for this ministry's roster: members see them
+  // unless they opt out; the public sees them only if they opt in (and are
+  // shown to members).
+  showToMembers: integer('show_to_members', { mode: 'boolean' }).notNull().default(true),
+  showPublicly: integer('show_publicly', { mode: 'boolean' }).notNull().default(false),
 }, table => [
   primaryKey({ columns: [table.ministryId, table.personId] }),
   index('ministry_members_person_idx').on(table.personId),
@@ -143,6 +153,9 @@ export const missionOrganizations = sqliteTable('mission_organizations', {
   website: text('website'),
   // How Lifegate relates to them, e.g. "Sends missionaries through".
   relationship: text('relationship'),
+  // Archived entries are hidden from members; staff and admins can restore
+  // or permanently remove them.
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -173,6 +186,9 @@ export const missionaries = sqliteTable('missionaries', {
   shareContact: integer('share_contact', { mode: 'boolean' }).notNull().default(false),
   nextVisitOn: text('next_visit_on'), // YYYY-MM-DD
   nextVisitNote: text('next_visit_note'),
+  // Archived entries are hidden from members; staff and admins can restore
+  // or permanently remove them.
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, table => [

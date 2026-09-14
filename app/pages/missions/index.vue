@@ -60,17 +60,25 @@
           </div>
         </div>
       </div>
+
+      <!-- Archive: staff and admins -->
+      <div v-if="data.archived" class="bg-default border-t border-default py-8 px-6">
+        <div class="max-w-6xl mx-auto">
+          <LazyArchiveAccordion :sections="archiveSections" @changed="refresh()" />
+        </div>
+      </div>
     </template>
 
     <template v-if="data?.canEdit">
-      <MissionsMissionarySlideover v-model:open="missionaryOpen" :missionary="editingMissionary" :organizations="data.organizations" @saved="onMissionarySaved" @removed="refresh()" />
-      <MissionsOrganizationSlideover v-model:open="organizationOpen" :organization="editingOrganization" @saved="refresh()" @removed="refresh()" />
+      <LazyMissionsMissionarySlideover v-model:open="missionaryOpen" :missionary="editingMissionary" :organizations="data.organizations" @saved="onMissionarySaved" />
+      <LazyMissionsOrganizationSlideover v-model:open="organizationOpen" :organization="editingOrganization" @saved="refresh()" />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { MissionaryView, OrganizationView } from '#shared/missions'
+import type { ArchiveSection } from '~/components/ArchiveAccordion.vue'
 
 definePageMeta({
   middleware: 'auth',
@@ -97,6 +105,21 @@ const editMissionary = (missionary: MissionaryView | null) => {
   missionaryOpen.value = true
 }
 const onMissionarySaved = (missionary: MissionaryView) => navigateTo(`/missions/${missionary.slug}`)
+
+const archiveSections = computed<ArchiveSection[]>(() => [
+  {
+    label: 'Missionaries',
+    items: (data.value?.archived?.missionaries ?? []).map(m => ({ id: m.id, name: m.name, detail: m.field, archivedAt: m.archivedAt!, to: `/missions/${m.slug}` })),
+    base: item => `/api/missions/missionaries/${item.id}`,
+    removeWarning: item => `${item.name}, their photo, prayer requests and letters will be deleted. This cannot be undone.`,
+  },
+  {
+    label: 'Organizations',
+    items: (data.value?.archived?.organizations ?? []).map(o => ({ id: o.id, name: o.name, detail: o.relationship, archivedAt: o.archivedAt!, to: `/missions/organizations/${o.slug}` })),
+    base: item => `/api/missions/organizations/${item.id}`,
+    removeWarning: item => `${item.name} will be deleted. Missionaries who serve with it are kept, with no organization. This cannot be undone.`,
+  },
+])
 
 const organizationOpen = ref(false)
 const editingOrganization = ref<OrganizationView | null>(null)

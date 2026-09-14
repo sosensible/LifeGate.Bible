@@ -1,5 +1,5 @@
 // Reading and writing directory records.
-import { asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { createError } from 'h3'
 import type { AdminPersonView } from '../../shared/people.ts'
 import type { PersonRecord } from '../../shared/privacy.ts'
@@ -15,7 +15,8 @@ export interface FullPerson extends PersonRecord {
   householdRole: PersonRow['householdRole']
   kind: PersonRow['kind']
   isSpeaker: boolean
-  ministries: Array<{ id: string, slug: string, name: string }>
+  speakerArchivedAt: Date | null
+  ministries: Array<{ id: string, slug: string, name: string, isLeader: boolean, showToMembers: boolean, showPublicly: boolean }>
   userId: string | null
   account: { email: string, role: string | null } | null
 }
@@ -35,7 +36,15 @@ export const loadPeople = (ids?: string[]): FullPerson[] => {
   if (rows.length === 0) return []
 
   const service = db
-    .select({ personId: ministryMembers.personId, id: ministries.id, slug: ministries.slug, name: ministries.name })
+    .select({
+      personId: ministryMembers.personId,
+      id: ministries.id,
+      slug: ministries.slug,
+      name: ministries.name,
+      isLeader: ministryMembers.isLeader,
+      showToMembers: ministryMembers.showToMembers,
+      showPublicly: ministryMembers.showPublicly,
+    })
     .from(ministryMembers)
     .innerJoin(ministries, eq(ministryMembers.ministryId, ministries.id))
     .where(inArray(ministryMembers.personId, rows.map(row => row.person.id)))
@@ -47,7 +56,7 @@ export const loadPeople = (ids?: string[]): FullPerson[] => {
     householdName,
     ministries: service
       .filter(entry => entry.personId === person.id)
-      .map(({ id, slug, name }) => ({ id, slug, name })),
+      .map(({ personId: _, ...ministry }) => ministry),
     account: accountEmail ? { email: accountEmail, role: accountRole } : null,
   }))
 }
@@ -98,7 +107,10 @@ export const assertStaffCanReview = (person: Pick<PersonRecord, 'firstName' | 's
 }
 
 // A clear 400 instead of a foreign-key failure when a form sends a stale id.
-export const assertReferencesExist = (values: { ministryIds?: string[] }) => {
+export const assertReferencesExist = (values: { ministryIds?: string[], leaderMinistryIds?: string[] }) => {
+  if (values.leaderMinistryIds?.some(id => !values.ministryIds?.includes(id))) {
+    throw createError({ statusCode: 400, statusMessage: 'A leader must also serve in that ministry' })
+  }
   if (values.ministryIds?.length) {
     const unique = [...new Set(values.ministryIds)]
     const found = db.select({ id: ministries.id }).from(ministries).where(inArray(ministries.id, unique)).all()
@@ -106,12 +118,34 @@ export const assertReferencesExist = (values: { ministryIds?: string[] }) => {
   }
 }
 
-// Replace the set of ministries a person serves in.
-export const setMinistries = (tx: Tx, personId: string, ministryIds: string[]) => {
-  tx.delete(ministryMembers).where(eq(ministryMembers.personId, personId)).run()
-  const unique = [...new Set(ministryIds)]
-  if (unique.length) {
-    tx.insert(ministryMembers).values(unique.map(ministryId => ({ ministryId, personId }))).run()
+// Replace the set of ministries a person serves in, and which they lead.
+// The person's own roster choices are kept for ministries they still serve in.
+export const setMinistries = (tx: Tx, personId: string, ministryIds: string[], leaderMinistryIds: string[] = []) => {
+  const wanted = new Set(ministryIds)
+  const leads = new Set(leaderMinistryIds)
+  const current = tx.select({ ministryId: ministryMembers.ministryId }).from(ministryMembers).where(eq(ministryMembers.personId, personId)).all()
+  const kept = new Set(current.map(row => row.ministryId).filter(id => wanted.has(id)))
+
+  const gone = current.map(row => row.ministryId).filter(id => !wanted.has(id))
+  if (gone.length) {
+    tx.delete(ministryMembers).where(and(eq(ministryMembers.personId, personId), inArray(ministryMembers.ministryId, gone))).run()
+  }
+  for (const ministryId of kept) {
+    tx.update(ministryMembers).set({ isLeader: leads.has(ministryId) })
+      .where(and(eq(ministryMembers.personId, personId), eq(ministryMembers.ministryId, ministryId))).run()
+  }
+  const added = [...wanted].filter(id => !kept.has(id))
+  if (added.length) {
+    tx.insert(ministryMembers).values(added.map(ministryId => ({ ministryId, personId, isLeader: leads.has(ministryId) }))).run()
+  }
+}
+
+// A person's own roster choices. Only ministries they serve in are changed, and
+// being shown publicly requires being shown to members.
+export const setRosterChoices = (tx: Tx, personId: string, choices: Array<{ ministryId: string, showToMembers: boolean, showPublicly: boolean }>) => {
+  for (const { ministryId, showToMembers, showPublicly } of choices) {
+    tx.update(ministryMembers).set({ showToMembers, showPublicly: showToMembers && showPublicly })
+      .where(and(eq(ministryMembers.personId, personId), eq(ministryMembers.ministryId, ministryId))).run()
   }
 }
 

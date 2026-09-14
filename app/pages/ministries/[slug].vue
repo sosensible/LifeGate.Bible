@@ -28,13 +28,25 @@
         <div class="max-w-6xl mx-auto">
           <h2 class="text-2xl font-bold font-serif text-highlighted mb-6">
             Serving in this Ministry
-            <span v-if="roster" class="text-muted text-base font-sans font-normal">({{ roster.length }})</span>
+            <span v-if="ministry.fullRoster" class="text-muted text-base font-sans font-normal">({{ roster.length }})</span>
           </h2>
 
-          <!-- Public: roster is members-only (the server sends none) -->
-          <div v-if="!roster" class="bg-muted border border-default rounded-lg p-8 text-center">
+          <!-- Public: only people who chose to be shown publicly (the server sends no one else) -->
+          <div v-if="roster.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" :class="{ 'mb-8': !ministry.fullRoster }">
+            <div v-for="m in roster" :key="m.id" class="bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center">
+              <img v-if="m.photoUrl" :src="m.photoUrl" :alt="fullName(m)" class="w-11 h-11 rounded-full object-cover shrink-0">
+              <div v-else class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-bold" :style="{ backgroundColor: avatarColor(m.id) }">{{ initialsOf(m) }}</div>
+              <div class="min-w-0">
+                <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(m) }}</h3>
+                <p v-if="m.title" class="text-muted text-[11px] uppercase tracking-wide">{{ m.title }}</p>
+              </div>
+              <UBadge v-if="m.isLeader" color="secondary" variant="subtle" size="sm" class="ml-auto shrink-0 self-start">Leader</UBadge>
+            </div>
+          </div>
+
+          <div v-if="!ministry.fullRoster" class="bg-muted border border-default rounded-lg p-8 text-center">
             <UIcon name="i-lucide-lock" class="w-6 h-6 text-gold-600 mx-auto mb-3" />
-            <p class="text-toned mb-4 max-w-md mx-auto">The list of members serving in this ministry is available to signed-in members. Sign in to see who serves here.</p>
+            <p class="text-toned mb-4 max-w-md mx-auto">{{ roster.length ? 'Members can sign in to see everyone who serves here.' : 'The list of members serving in this ministry is available to signed-in members. Sign in to see who serves here.' }}</p>
             <div class="flex gap-3 justify-center flex-wrap">
               <UButton to="/login" color="secondary">Member Login</UButton>
               <UButton
@@ -59,17 +71,6 @@
             </UButton>
           </div>
 
-          <!-- Members: roster -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div v-for="m in roster" :key="m.id" class="bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center">
-              <img v-if="m.photoUrl" :src="m.photoUrl" :alt="fullName(m)" class="w-11 h-11 rounded-full object-cover shrink-0">
-              <div v-else class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-bold" :style="{ backgroundColor: avatarColor(m.id) }">{{ initialsOf(m) }}</div>
-              <div class="min-w-0">
-                <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(m) }}</h3>
-                <p v-if="m.title" class="text-muted text-[11px] uppercase tracking-wide">{{ m.title }}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </template>
@@ -93,9 +94,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const { data: ministry, error } = await useFetch(() => `/api/ministries/${encodeURIComponent(String(route.params.slug))}`)
 
-const roster = computed(() =>
-  ministry.value && 'members' in ministry.value ? ministry.value.members : null,
-)
+const roster = computed(() => ministry.value?.members ?? [])
 
 useSeoMeta({ title: () => `${ministry.value?.name ?? 'Ministry'} | Lifegate Baptist Church` })
 

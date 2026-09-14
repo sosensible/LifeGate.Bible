@@ -50,6 +50,27 @@
       "when": 1789408709796,
       "tag": "0006_missions_and_speakers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789410495417,
+      "tag": "0007_missions_archive",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789410711603,
+      "tag": "0008_speakers_archive",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789412499737,
+      "tag": "0009_ministry_leaders_and_roster_choices",
+      "breakpoints": true
     }
   ]
 }

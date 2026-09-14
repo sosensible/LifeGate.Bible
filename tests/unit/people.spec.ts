@@ -61,6 +61,25 @@ describe('people records', () => {
     expect(lib.loadPerson(personId)!.ministries.map(m => m.slug)).toEqual(['music'])
   })
 
+  it('records leaders, and keeps the person\'s roster choices when the office edits ministries', () => {
+    db.transaction(tx => lib.setRosterChoices(tx, personId, [{ ministryId: musicId, showToMembers: true, showPublicly: true }]))
+    db.transaction(tx => lib.setMinistries(tx, personId, [musicId, nurseryId], [musicId]))
+    const music = lib.loadPerson(personId)!.ministries.find(m => m.slug === 'music')!
+    expect(music).toMatchObject({ isLeader: true, showToMembers: true, showPublicly: true })
+    expect(lib.loadPerson(personId)!.ministries.find(m => m.slug === 'nursery')).toMatchObject({ isLeader: false, showToMembers: true, showPublicly: false })
+
+    expect(() => lib.assertReferencesExist({ ministryIds: [nurseryId], leaderMinistryIds: [musicId] })).toThrow(/leader must also serve/)
+  })
+
+  it('never shows someone publicly who is hidden from members, and hides that ministry from their entry', () => {
+    db.transaction(tx => lib.setRosterChoices(tx, personId, [{ ministryId: musicId, showToMembers: false, showPublicly: true }]))
+    const person = lib.loadPerson(personId)!
+    expect(person.ministries.find(m => m.slug === 'music')).toMatchObject({ showToMembers: false, showPublicly: false })
+    expect(presentPerson(person, MEMBER_VIEW)?.ministries?.map(m => m.slug)).toEqual(['nursery'])
+
+    db.transaction(tx => lib.setMinistries(tx, personId, [musicId]))
+  })
+
   it('shows staff the household but not an unshared birthday or photo, or that one exists', () => {
     const view = lib.presentForAdmin(lib.loadPerson(personId)!)
     expect(view.householdName).toBe('Perkins Household')

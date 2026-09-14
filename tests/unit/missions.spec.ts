@@ -106,3 +106,59 @@ describe('photos', () => {
     expect(missionUpdateSchema.safeParse({ kind: 'prayer', postedOn: '2026-09-01', title: null, body: null, url: null }).success).toBe(false)
   })
 })
+
+describe('the missions archive', () => {
+  it('hides archived entries from lists, and an archived organization from its missionaries for members', async () => {
+    const { eq } = await import('drizzle-orm')
+    const org = db.insert(schema.missionOrganizations).values({ slug: 'board', name: 'Board' }).returning().get()
+    db.insert(schema.missionaries).values([
+      { slug: 'active-one', kind: 'individual', name: 'Active One', organizationId: org.id },
+      { slug: 'gone-one', kind: 'individual', name: 'Gone One', organizationId: org.id, archivedAt: new Date() },
+    ]).run()
+
+    const active = missions.loadMissionaries({ canEdit: false }).map(m => m.name)
+    expect(active).toContain('Active One')
+    expect(active).not.toContain('Gone One')
+    expect(missions.loadMissionaries({ canEdit: true, shelf: 'archived' }).map(m => m.name)).toEqual(['Gone One'])
+    expect(missions.loadOrganizations({ id: org.id })[0]!.missionaryCount).toBe(1)
+
+    db.update(schema.missionOrganizations).set({ archivedAt: new Date() }).where(eq(schema.missionOrganizations.id, org.id)).run()
+    expect(missions.loadOrganizations().map(o => o.name)).not.toContain('Board')
+    expect(missions.loadMissionaries({ canEdit: false, slug: 'active-one' })[0]!.organization).toBeNull()
+    expect(missions.loadMissionaries({ canEdit: true, canSeeArchived: true, slug: 'active-one' })[0]!.organization?.name).toBe('Board')
+  })
+
+  it('treats archived entries as missing for anyone who cannot see the archive', async () => {
+    const gone = missions.loadMissionaries({ canEdit: true, shelf: 'archived' })[0]!
+    expect(() => missions.findMissionary(gone.id, false)).toThrow(/not found/)
+    expect(missions.findMissionary(gone.id, true).name).toBe('Gone One')
+  })
+
+  it('lets a missionary keep an organization archived after it was chosen, but not join one', () => {
+    const org = missions.loadOrganizations({ shelf: 'archived' })[0]!
+    expect(() => missions.assertOrganizationExists(org.id)).toThrow(/no longer exists/)
+    expect(() => missions.assertOrganizationExists(org.id, org.id)).not.toThrow()
+  })
+})
+
+describe('the speakers archive', () => {
+  it('lists active and archived speakers apart, and offers only adult members to add', async () => {
+    const speakers = await import('../../server/lib/speakers')
+    db.insert(schema.people).values([
+      { firstName: 'Daniel', lastName: 'Brooks', kind: 'guest', isSpeaker: true, email: 'd@example.org' },
+      { firstName: 'Robert', lastName: 'Hayes', isSpeaker: true, email: 'r@example.org', speakerArchivedAt: new Date() },
+      { firstName: 'Minor', lastName: 'Child', isMinor: true },
+    ]).run()
+
+    expect(speakers.loadSpeakers().map(s => s.firstName)).toEqual(['Daniel'])
+    const [robert] = speakers.loadSpeakers('archived')
+    expect(robert).toMatchObject({ firstName: 'Robert', kind: 'member', email: null })
+    expect(speakers.loadSpeakers()[0]!.email).toBe('d@example.org')
+    expect(() => speakers.findSpeaker(robert!.id, false)).toThrow(/not found/)
+
+    const candidates = speakers.loadSpeakerCandidates().map(c => c.firstName)
+    expect(candidates).not.toContain('Minor')
+    expect(candidates).not.toContain('Daniel')
+    expect(candidates).not.toContain('Robert')
+  })
+})

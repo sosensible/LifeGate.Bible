@@ -3,7 +3,7 @@
 // The rules, as decided with the church:
 //   - The directory is members-only. The public sees nothing.
 //   - Adults' names are visible to members, with their church office (title)
-//     and the ministries they serve in.
+//     and the ministries they serve in (except any they hide from members).
 //   - Minors are not listed to members.
 //   - Contact info (phone, email, address): staff always; members only if
 //     the person opted in.
@@ -25,6 +25,10 @@ export interface Viewer {
 export interface MinistryRef {
   slug: string
   name: string
+  isLeader?: boolean
+  // The person's choice for this ministry; missing means shown.
+  showToMembers?: boolean
+  showPublicly?: boolean
 }
 
 export interface PersonRecord {
@@ -76,7 +80,11 @@ export const presentPerson = (person: PersonRecord, viewer: Viewer): DirectoryEn
   }
 
   if (person.title) entry.title = person.title
-  if (person.ministries?.length) entry.ministries = person.ministries
+  // A ministry the person hides from members is left off their entry, for staff too.
+  const ministries = person.ministries
+    ?.filter(m => m.showToMembers !== false)
+    .map(({ showToMembers: _members, showPublicly: _public, ...m }) => m)
+  if (ministries?.length) entry.ministries = ministries
 
   const contactVisible = (optedIn: boolean) => viewer.isStaff || optedIn
 

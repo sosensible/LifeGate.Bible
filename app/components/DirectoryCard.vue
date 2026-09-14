@@ -25,6 +25,7 @@
           <template v-for="(ministry, i) in entry.ministries" :key="ministry.slug">
             <NuxtLink v-if="linkMinistries" :to="`/ministries/${ministry.slug}`" class="text-primary hover:underline">{{ ministry.name }}</NuxtLink>
             <span v-else>{{ ministry.name }}</span>
+            <span v-if="ministry.isLeader" class="text-muted"> (Leader)</span>
             <span v-if="i < entry.ministries.length - 1"> · </span>
           </template>
         </p>
@@ -47,6 +48,10 @@
           <UIcon name="i-lucide-cake" class="w-3.5 h-3.5 text-gold-600 shrink-0" />
           <span>Birthday: {{ formatBirthday(entry.birthday) }}</span>
         </div>
+      </div>
+
+      <div v-if="$slots.actions" class="border-t border-default pt-3 mt-3.5 flex flex-wrap gap-2">
+        <slot name="actions" />
       </div>
     </div>
   </div>

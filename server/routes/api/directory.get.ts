@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     .filter(entry => entry !== null)
 
   const speakers = everyone
-    .filter(person => person.isSpeaker)
+    .filter(person => person.isSpeaker && !person.speakerArchivedAt)
     .flatMap((person) => {
       const entry = presentPerson(person, viewer)
       return entry ? [{ ...entry, guest: person.kind === 'guest' }] : []

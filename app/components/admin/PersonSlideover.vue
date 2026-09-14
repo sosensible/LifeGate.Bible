@@ -50,6 +50,15 @@
               class="w-full"
             />
           </UFormField>
+          <ul v-if="state.ministryIds.length" class="divide-y divide-default border border-default rounded-md">
+            <li v-for="ministryId in state.ministryIds" :key="ministryId" class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+              <div class="min-w-0">
+                <span class="text-highlighted">{{ ministryName(ministryId) }}</span>
+                <p v-if="rosterNote(ministryId)" class="text-muted text-xs">{{ rosterNote(ministryId) }}</p>
+              </div>
+              <UCheckbox :model-value="state.leaderMinistryIds.includes(ministryId)" label="Leader" @update:model-value="value => setLeader(ministryId, Boolean(value))" />
+            </li>
+          </ul>
         </section>
 
         <!-- Contact -->
@@ -157,6 +166,7 @@ const blank = () => ({
   firstName: '', lastName: '', title: '', isMinor: false,
   kind: 'member' as 'member' | 'guest', isSpeaker: false,
   ministryIds: [] as string[],
+  leaderMinistryIds: [] as string[],
   phone: '', email: '', address: '', birthday: '',
 })
 const blankPrivacy = (): Record<PrivacyField, boolean> => ({
@@ -182,6 +192,7 @@ const load = () => {
         firstName: p.firstName, lastName: p.lastName, title: p.title ?? '', isMinor: p.isMinor,
         kind: p.kind, isSpeaker: p.isSpeaker,
         ministryIds: p.ministries.map(m => m.id),
+        leaderMinistryIds: p.ministries.filter(m => m.isLeader).map(m => m.id),
         phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', birthday: p.birthday ?? '',
       }
     : blank())
@@ -195,13 +206,26 @@ watch(open, (isOpen) => {
 }, { immediate: true })
 
 // "Husband", "Mother", "Guardian", "Child".
+const ministryName = (id: string) => props.ministries.find(m => m.id === id)?.name ?? 'Ministry'
+const setLeader = (id: string, leads: boolean) => {
+  state.leaderMinistryIds = leads ? [...new Set([...state.leaderMinistryIds, id])] : state.leaderMinistryIds.filter(m => m !== id)
+}
+// The person's own roster choices, shown so staff know why someone is not listed.
+const rosterNote = (id: string) => {
+  const service = props.person?.ministries.find(m => m.id === id)
+  if (!service) return null
+  if (!service.showToMembers) return 'They chose not to be listed on this roster'
+  return service.showPublicly ? 'They chose to be listed publicly' : null
+}
+
 const householdRoleLabel = computed(() => props.person?.householdRole ? HOUSEHOLD_ROLE_LABELS[props.person.householdRole] : null)
 
 const saving = ref(false)
 const save = async () => {
   saving.value = true
   try {
-    const body: Record<string, unknown> = { ...state }
+    // Only ministries still chosen can be led.
+    const body: Record<string, unknown> = { ...state, leaderMinistryIds: state.leaderMinistryIds.filter(id => state.ministryIds.includes(id)) }
     if (!birthdayVisible.value) delete body.birthday
 
     let saved = props.person

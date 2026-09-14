@@ -65,12 +65,14 @@ export const getSermonViewer = async (event: H3Event) => {
 // Missions ministry edit them.
 export const getMissionsViewer = async (event: H3Event) => {
   const session = await getAuthSession(event)
-  if (!session) return { session: null, isMember: false, canEdit: false }
-  const [isMember, hasRolePermission] = await Promise.all([
+  if (!session) return { session: null, isMember: false, canEdit: false, canDelete: false }
+  const [isMember, hasRolePermission, canDelete] = await Promise.all([
     hasPermission(session.user.id, { memberArea: ['view'] }),
     hasPermission(session.user.id, { missions: ['update'] }),
+    hasPermission(session.user.id, { missions: ['delete'] }),
   ])
-  return { session, isMember, canEdit: hasRolePermission || servesInMissionsMinistry(session.user.id) }
+  // canDelete: staff and admins, who alone see the archive, restore and remove.
+  return { session, isMember, canEdit: canDelete || hasRolePermission || servesInMissionsMinistry(session.user.id), canDelete }
 }
 
 export const requireMissionsReader = async (event: H3Event) => {
@@ -84,6 +86,24 @@ export const requireMissionsEditor = async (event: H3Event) => {
   const viewer = await requireMissionsReader(event)
   if (!viewer.canEdit) throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
   return viewer as typeof viewer & { session: NonNullable<typeof viewer.session> }
+}
+
+export const requireMissionsDeleter = async (event: H3Event) => {
+  const viewer = await requireMissionsEditor(event)
+  if (!viewer.canDelete) throw createError({ statusCode: 403, statusMessage: 'Only staff and administrators can do that' })
+  return viewer
+}
+
+// People who keep the Speakers list; canDelete also sees the archive.
+export const requireSpeakersEditor = async (event: H3Event) => {
+  const session = await requirePermission(event, { speakers: ['update'] })
+  return { session, canDelete: await hasPermission(session.user.id, { speakers: ['delete'] }) }
+}
+
+export const requireSpeakersDeleter = async (event: H3Event) => {
+  const viewer = await requireSpeakersEditor(event)
+  if (!viewer.canDelete) throw createError({ statusCode: 403, statusMessage: 'Only staff and administrators can do that' })
+  return viewer
 }
 
 export const requirePermission = async (event: H3Event, permissions: Permissions) => {

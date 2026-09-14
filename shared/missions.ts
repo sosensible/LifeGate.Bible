@@ -81,7 +81,10 @@ export interface OrganizationView {
   writeup: string | null
   website: string | null
   relationship: string | null
+  // Missionaries serving with it who are not archived.
   missionaryCount: number
+  // ISO time; only staff and admins ever receive archived entries.
+  archivedAt: string | null
 }
 
 export interface MissionUpdateView {
@@ -116,5 +119,6 @@ export interface MissionaryView {
   shareContact: boolean
   nextVisitOn: string | null
   nextVisitNote: string | null
+  archivedAt: string | null
   updates: MissionUpdateView[]
 }

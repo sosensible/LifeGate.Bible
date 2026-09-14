@@ -37,19 +37,20 @@ interface DemoPerson {
   address?: string
   birthday?: string
   ministries: string[]
+  leads?: string[]
   shares: Array<'sharePhone' | 'shareEmail' | 'shareAddress' | 'shareBirthday' | 'shareHousehold'>
 }
 
 // A spread of sharing choices, so every privacy rule has something to show.
 const demo: DemoPerson[] = [
-  { firstName: 'James', lastName: 'Mitchell', title: 'Deacon', phone: '(269) 555-0101', email: 'jmitchell@example.org', address: '123 Oak Street, Eau Claire, MI', birthday: '1968-03-15', ministries: ['Music', 'Deacons'], shares: ['sharePhone', 'shareEmail', 'shareHousehold', 'shareBirthday'] },
+  { firstName: 'James', lastName: 'Mitchell', title: 'Deacon', phone: '(269) 555-0101', email: 'jmitchell@example.org', address: '123 Oak Street, Eau Claire, MI', birthday: '1968-03-15', ministries: ['Music', 'Deacons'], leads: ['Music'], shares: ['sharePhone', 'shareEmail', 'shareHousehold', 'shareBirthday'] },
   { firstName: 'Sarah', lastName: 'Mitchell', phone: '(269) 555-0111', email: 'smitchell@example.org', address: '123 Oak Street, Eau Claire, MI', birthday: '1970-06-02', ministries: ['Hospitality'], shares: ['shareHousehold'] },
   { firstName: 'Emma', lastName: 'Mitchell', isMinor: true, birthday: '2014-11-20', ministries: [], shares: ['shareHousehold', 'shareBirthday'] },
   { firstName: 'Robert', lastName: 'Hayes', title: 'Elder', isSpeaker: true, phone: '(269) 555-0102', email: 'rhayes@example.org', address: '456 Maple Ave, Eau Claire, MI', birthday: '1959-07-04', ministries: ['Teacher (Sunday School)', 'Elder Board'], shares: ['shareEmail'] },
   { firstName: 'Linda', lastName: 'Hayes', phone: '(269) 555-0112', email: 'lhayes@example.org', address: '456 Maple Ave, Eau Claire, MI', birthday: '1962-01-27', ministries: ['Visitation'], shares: ['shareHousehold'] },
   { firstName: 'Patricia', lastName: 'Summers', phone: '(269) 555-0103', email: 'psummers@example.org', address: '789 Pine Road, Eau Claire, MI', birthday: '1981-10-22', ministries: ['Nursery', 'Decoration'], shares: [] },
   { firstName: 'Thomas', lastName: 'Olson', phone: '(269) 555-0104', email: 'tolson@example.org', address: '321 Elm Street, Eau Claire, MI', birthday: '1975-02-08', ministries: ['Hospitality', 'Dinners'], shares: ['sharePhone', 'shareAddress'] },
-  { firstName: 'Dorothy', lastName: 'Perkins', phone: '(269) 555-0105', email: 'dperkins@example.org', address: '654 Cedar Lane, Eau Claire, MI', birthday: '1948-08-30', ministries: ['Music', 'Missions'], shares: ['sharePhone', 'shareBirthday'] },
+  { firstName: 'Dorothy', lastName: 'Perkins', phone: '(269) 555-0105', email: 'dperkins@example.org', address: '654 Cedar Lane, Eau Claire, MI', birthday: '1948-08-30', ministries: ['Music', 'Missions'], leads: ['Missions'], shares: ['sharePhone', 'shareBirthday'] },
   { firstName: 'Michael', lastName: 'Torres', phone: '(269) 555-0106', email: 'mtorres@example.org', address: '987 Birch Blvd, Eau Claire, MI', birthday: '1990-12-12', ministries: ['Evangelism', 'IT (Information Technology)'], shares: ['shareEmail', 'sharePhone'] },
   { firstName: 'Lucas', lastName: 'Torres', isMinor: true, birthday: '2016-04-09', ministries: [], shares: [] },
   { firstName: 'William', lastName: 'Carter', title: 'Deacon', phone: '(269) 555-0107', email: 'wcarter@example.org', address: '147 Willow Way, Eau Claire, MI', birthday: '1963-05-19', ministries: ['Grounds & Facilities', 'Deacons'], shares: [] },
@@ -62,7 +63,7 @@ const ministryIds = new Map(db.select({ id: ministries.id, name: ministries.name
 if (!hasPeople) db.transaction((tx) => {
   const idOf = new Map<string, string>()
 
-  for (const { ministries: serving, shares, ...fields } of demo) {
+  for (const { ministries: serving, leads = [], shares, ...fields } of demo) {
     const { id } = tx.insert(people).values({
       ...fields,
       ...Object.fromEntries(shares.map(share => [share, true])),
@@ -74,7 +75,7 @@ if (!hasPeople) db.transaction((tx) => {
       if (!ministryId) throw new Error(`Unknown ministry "${name}" -- run npm run db:migrate first`)
       return ministryId
     })
-    setMinistries(tx, id, ids)
+    setMinistries(tx, id, ids, leads.map(name => ministryIds.get(name)!))
   }
 
   // One of each kind of household.

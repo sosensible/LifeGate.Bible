@@ -21,7 +21,7 @@
     </template>
 
     <template #footer>
-      <UButton v-if="organization" color="error" variant="ghost" icon="i-lucide-trash-2" @click="confirmingDelete = true">Remove</UButton>
+      <UButton v-if="organization" color="neutral" variant="ghost" icon="i-lucide-archive" @click="confirmingDelete = true">Archive</UButton>
       <span v-else />
       <div class="flex gap-2">
         <UButton color="neutral" variant="outline" @click="open = false">Cancel</UButton>
@@ -30,10 +30,10 @@
     </template>
   </USlideover>
 
-  <UModal v-model:open="confirmingDelete" title="Remove this organization?" :description="organization ? `${organization.name} will be removed. Missionaries who serve with it are kept, with no organization.` : ''">
+  <UModal v-model:open="confirmingDelete" title="Archive this organization?" :description="organization ? `${organization.name} will be hidden from members. Staff and administrators can restore it or remove it permanently.` : ''">
     <template #footer>
       <UButton color="neutral" variant="outline" @click="confirmingDelete = false">Keep</UButton>
-      <UButton color="error" :loading="deleting" @click="remove">Remove</UButton>
+      <UButton :loading="deleting" icon="i-lucide-archive" @click="remove">Archive</UButton>
     </template>
   </UModal>
 </template>
@@ -42,7 +42,7 @@
 import { organizationSchema, type OrganizationView } from '#shared/missions'
 
 const props = defineProps<{ organization: OrganizationView | null }>()
-const emit = defineEmits<{ saved: [organization: OrganizationView], removed: [id: string] }>()
+const emit = defineEmits<{ saved: [organization: OrganizationView], archived: [id: string] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
@@ -84,14 +84,14 @@ const remove = async () => {
   if (!props.organization) return
   deleting.value = true
   try {
-    await $fetch(`/api/missions/organizations/${props.organization.id}`, { method: 'DELETE' })
-    emit('removed', props.organization.id)
-    toast.add({ title: `${props.organization.name} removed`, color: 'success' })
+    await $fetch(`/api/missions/organizations/${props.organization.id}/archive`, { method: 'POST' })
+    emit('archived', props.organization.id)
+    toast.add({ title: `${props.organization.name} archived`, color: 'success', icon: 'i-lucide-archive' })
     confirmingDelete.value = false
     open.value = false
   }
   catch (error) {
-    toast.add({ title: 'Not removed', description: apiErrorMessage(error), color: 'error' })
+    toast.add({ title: 'Not archived', description: apiErrorMessage(error), color: 'error' })
   }
   finally {
     deleting.value = false

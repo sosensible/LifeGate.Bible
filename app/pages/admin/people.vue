@@ -45,7 +45,7 @@
                 </div>
               </template>
               <template #ministries-cell="{ row }">
-                <span class="text-xs text-toned">{{ row.original.ministries.map(m => m.name).join(', ') || '—' }}</span>
+                <span class="text-xs text-toned">{{ row.original.ministries.map(m => m.isLeader ? `${m.name} (Leader)` : m.name).join(', ') || '—' }}</span>
               </template>
               <template #access-cell="{ row }">
                 <UBadge v-if="row.original.account" variant="subtle" color="primary" icon="i-lucide-key-round">Signs in</UBadge>

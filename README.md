@@ -167,13 +167,18 @@ not an account; an account can be linked to one person.
 - **Privacy rules** (`shared/privacy.ts`, enforced on the server):
   - Members see adults' names, titles and ministries. Minors are never listed to members.
   - Phone, email and address: staff (`people:viewContact`) always; members only if the person shares them.
-  - Birthday (month and day only), household and photo: only if shared, staff included.
+  - Birthday (month and day only), household and photo: only if shared, staff included. "Everyone" in the sharing labels means everyone signed in to the members area, never the public.
 - **`/directory`**: `GET /api/directory` returns each entry already filtered for the viewer, in two lists:
   - **Members**: church members only;
-  - **Speakers**: people marked as speakers, each labeled Member or Guest speaker. Their contact details follow the same sharing rules, so a speaker's contact shows only if they choose to share it.
+  - **Speakers** (`/directory?tab=speakers`): people marked as speakers, each labeled Member or Guest speaker. Their contact details follow the same sharing rules, so a speaker's contact shows only if they choose to share it.
+    - `speakers:update` (content editor, staff, admin) adds a guest speaker or a church member, edits guest speakers (a member's details stay on their profile) and archives.
+    - `speakers:delete` (pastor, directory manager, admin) sees the archive, restores, and removes permanently: a guest's record is deleted; a member simply stops being a speaker.
 - **Guests** (`people.kind = 'guest'`, e.g. guest speakers) are kept as records but are not in the members list, ministry rosters or households.
-- **`/ministries`**: names and descriptions are public; rosters come from the server only for members.
-- **`/profile`**: a person edits their own phone, email, address, birthday and sharing, with a live preview of what members and staff see.
+- **`/ministries`**: names and descriptions are public. Rosters list church members who serve, leaders first (marked by the office under People), by each person's own choice per ministry (`ministry_members`):
+  - **members** see them unless they opt out on `/profile` (default on); an opted-out ministry is also left off their directory entry, for staff too;
+  - **the public** sees them only if they opt in (default off), and only while members see them too: name, title and leader badge only (never a photo, birthday or contact details). Minors are never shown publicly. There is no public directory.
+  - Staff still see every assignment under People, with a note when someone has opted out or in.
+- **`/profile`**: a person edits their own phone, email, address, birthday and sharing, and chooses per ministry whether members and everyone see them on its roster, with a live preview of what members and staff see.
 - **`/admin/people`** (`people:update`):
   - add, edit and remove people (`people:create` and `people:delete` for those two); assign ministries;
   - manage households (`shared/households.ts`), which record who runs the house and whether they are the children's family or guardians:
@@ -201,6 +206,7 @@ Members only, and not indexed by search engines. Some countries make being known
   - stored outside the public folder (`UPLOADS_PATH`, default `uploads/` beside the database) and served only to members;
   - accepted only as JPEG, PNG or WebP, judged by file contents, up to 5 MB;
   - previewed before saving, and deleted when replaced or removed.
+- **Archive**: "Remove" archives an entry, hiding it from members. Archived entries are 404 for everyone except staff and admins (`missions:delete`: pastor, directory manager, admin), who get a collapsed Archived section on `/missions` to restore entries or remove them permanently, and a banner with Restore on an archived entry's page. Only archived entries can be removed permanently. A missionary keeps an organization that was archived after it was chosen, but members no longer see it named.
 - Every change is in the audit log.
 
 ### 9. Accounts and audit log (`/admin/accounts`, `/admin/audit`)

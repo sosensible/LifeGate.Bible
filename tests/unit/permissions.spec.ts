@@ -35,3 +35,16 @@ describe('roles', () => {
     expect(allows('contentEditor', { people: ['update'] })).toBe(false)
   })
 })
+
+describe('archives', () => {
+  it('lets staff and admins restore and remove, but content editors only archive speakers', () => {
+    for (const role of ['pastor', 'directoryManager', 'admin'] as const) {
+      expect(allows(role, { missions: ['delete'] })).toBe(true)
+      expect(allows(role, { speakers: ['delete'] })).toBe(true)
+    }
+    expect(allows('contentEditor', { speakers: ['update'] })).toBe(true)
+    expect(allows('contentEditor', { speakers: ['delete'] })).toBe(false)
+    expect(allows('member', { missions: ['update'] })).toBe(false)
+    expect(allows('member', { speakers: ['update'] })).toBe(false)
+  })
+})

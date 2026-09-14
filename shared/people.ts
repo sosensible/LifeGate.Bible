@@ -27,7 +27,18 @@ export const PRIVACY_FIELDS = Object.keys(privacyFields) as PrivacyField[]
 
 // What a person may change about themselves on /profile. Names, title,
 // household and ministries are kept by the church office.
-export const profileUpdateSchema = z.object({ ...contactFields, ...privacyFields }).partial()
+// Roster choices, one per ministry the person serves in.
+export const rosterChoiceSchema = z.object({
+  ministryId: z.string().min(1),
+  showToMembers: z.boolean(),
+  showPublicly: z.boolean(),
+})
+
+export const profileUpdateSchema = z.object({
+  ...contactFields,
+  ...privacyFields,
+  rosters: z.array(rosterChoiceSchema).max(50),
+}).partial()
 
 export const privacyUpdateSchema = z.object(privacyFields).partial()
 
@@ -46,6 +57,8 @@ export const personSchema = z.object({
   isSpeaker: z.boolean(),
   // Household membership is set in the household editor, with a role.
   ministryIds: z.array(z.string().min(1)).max(50),
+  // Which of those ministries they lead. Set by the church office.
+  leaderMinistryIds: z.array(z.string().min(1)).max(50).optional(),
   phone: contactFields.phone,
   email: contactFields.email,
   address: contactFields.address,
@@ -76,7 +89,7 @@ export interface AdminPersonView {
   householdId: string | null
   householdName: string | null
   householdRole: 'husband' | 'wife' | 'father' | 'mother' | 'guardian' | 'child' | null
-  ministries: Array<{ id: string, slug: string, name: string }>
+  ministries: Array<{ id: string, slug: string, name: string, isLeader: boolean, showToMembers: boolean, showPublicly: boolean }>
   // Birthday and photo are only sent when the person shares them. Whether an
   // unshared one exists is not revealed either.
   birthday: string | null

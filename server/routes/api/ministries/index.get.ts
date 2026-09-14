@@ -21,6 +21,6 @@ export default defineEventHandler(async (event) => {
     slug,
     name,
     description,
-    memberCount: visible.filter(person => person.ministries.some(m => m.id === id)).length,
+    memberCount: visible.filter(person => person.ministries.some(m => m.id === id && m.showToMembers)).length,
   }))
 })

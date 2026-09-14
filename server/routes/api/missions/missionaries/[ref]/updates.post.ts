@@ -1,18 +1,15 @@
 // Add a prayer request or prayer letter to a missionary.
-import { eq } from 'drizzle-orm'
 import { missionUpdateSchema } from '../../../../../../shared/missions.ts'
 import { emptyToNull } from '../../../../../../shared/people.ts'
-import { missionaries, missionUpdates } from '../../../../../database/schema/index.ts'
+import { missionUpdates } from '../../../../../database/schema/index.ts'
 import { recordAudit } from '../../../../../lib/audit.ts'
 import { db } from '../../../../../lib/db.ts'
-import { loadMissionaries } from '../../../../../lib/missions.ts'
+import { findMissionary, loadMissionaries } from '../../../../../lib/missions.ts'
 
 export default defineEventHandler(async (event) => {
   const viewer = await requireMissionsEditor(event)
   const id = getRouterParam(event, 'ref')!
-  if (!db.select({ id: missionaries.id }).from(missionaries).where(eq(missionaries.id, id)).get()) {
-    throw createError({ statusCode: 404, statusMessage: 'Missionary not found' })
-  }
+  findMissionary(id, viewer.canDelete)
 
   const values = emptyToNull(await readValidatedBody(event, missionUpdateSchema.parse))
   db.transaction((tx) => {
@@ -21,5 +18,5 @@ export default defineEventHandler(async (event) => {
   })
 
   setResponseStatus(event, 201)
-  return { missionary: loadMissionaries({ canEdit: true, id })[0] }
+  return { missionary: loadMissionaries({ canEdit: true, canSeeArchived: viewer.canDelete, id })[0] }
 })

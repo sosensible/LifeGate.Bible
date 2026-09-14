@@ -17,5 +17,5 @@ export default defineEventHandler(async (event) => {
   })
 
   setResponseStatus(event, 201)
-  return { organization: loadOrganizations().find(o => o.id === id) }
+  return { organization: loadOrganizations({ id })[0] }
 })

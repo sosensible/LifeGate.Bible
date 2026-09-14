@@ -31,7 +31,7 @@
               <UInput v-model="state.focus" class="w-full" />
             </UFormField>
             <UFormField label="Organization" name="organizationId">
-              <USelectMenu v-model="state.organizationId" :items="organizations" value-key="id" label-key="name" placeholder="None" clear class="w-full" />
+              <USelectMenu v-model="state.organizationId" :items="organizationItems" value-key="id" label-key="name" placeholder="None" clear class="w-full" />
             </UFormField>
             <UFormField label="Status" name="status">
               <USelect v-model="state.status" :items="statusItems" class="w-full" />
@@ -90,7 +90,7 @@
     </template>
 
     <template #footer>
-      <UButton v-if="missionary" color="error" variant="ghost" icon="i-lucide-trash-2" @click="confirmingDelete = true">Remove</UButton>
+      <UButton v-if="missionary" color="neutral" variant="ghost" icon="i-lucide-archive" @click="confirmingDelete = true">Archive</UButton>
       <span v-else />
       <div class="flex gap-2">
         <UButton color="neutral" variant="outline" @click="open = false">Cancel</UButton>
@@ -99,10 +99,10 @@
     </template>
   </USlideover>
 
-  <UModal v-model:open="confirmingDelete" title="Remove this missionary?" :description="missionary ? `${missionary.name} will be removed, with their prayer requests and letters.` : ''">
+  <UModal v-model:open="confirmingDelete" title="Archive this missionary?" :description="missionary ? `${missionary.name} will be hidden from members. Staff and administrators can restore it or remove it permanently.` : ''">
     <template #footer>
       <UButton color="neutral" variant="outline" @click="confirmingDelete = false">Keep</UButton>
-      <UButton color="error" :loading="deleting" @click="remove">Remove</UButton>
+      <UButton :loading="deleting" icon="i-lucide-archive" @click="remove">Archive</UButton>
     </template>
   </UModal>
 </template>
@@ -121,12 +121,20 @@ const props = defineProps<{
   missionary: MissionaryView | null
   organizations: Array<{ id: string, name: string }>
 }>()
-const emit = defineEmits<{ saved: [missionary: MissionaryView], removed: [id: string] }>()
+const emit = defineEmits<{ saved: [missionary: MissionaryView], archived: [id: string] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
 const kindItems = (Object.keys(MISSIONARY_KIND_LABELS) as MissionaryKind[]).map(value => ({ value, label: MISSIONARY_KIND_LABELS[value] }))
 const statusItems = (Object.keys(MISSIONARY_STATUS_LABELS) as MissionaryStatus[]).map(value => ({ value, label: MISSIONARY_STATUS_LABELS[value] }))
+
+// An organization archived since it was chosen still shows, so saving does not drop it.
+const organizationItems = computed(() => {
+  const current = props.missionary?.organization
+  return current && !props.organizations.some(o => o.id === current.id)
+    ? [...props.organizations, { id: current.id, name: `${current.name} (archived)` }]
+    : props.organizations
+})
 
 const blank = () => ({
   kind: 'family' as MissionaryKind,
@@ -198,14 +206,14 @@ const remove = async () => {
   if (!props.missionary) return
   deleting.value = true
   try {
-    await $fetch(`/api/missions/missionaries/${props.missionary.id}`, { method: 'DELETE' })
-    emit('removed', props.missionary.id)
-    toast.add({ title: `${props.missionary.name} removed`, color: 'success' })
+    await $fetch(`/api/missions/missionaries/${props.missionary.id}/archive`, { method: 'POST' })
+    emit('archived', props.missionary.id)
+    toast.add({ title: `${props.missionary.name} archived`, color: 'success', icon: 'i-lucide-archive' })
     confirmingDelete.value = false
     open.value = false
   }
   catch (error) {
-    toast.add({ title: 'Not removed', description: apiErrorMessage(error), color: 'error' })
+    toast.add({ title: 'Not archived', description: apiErrorMessage(error), color: 'error' })
   }
   finally {
     deleting.value = false

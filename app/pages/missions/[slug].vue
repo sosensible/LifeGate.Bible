@@ -17,6 +17,19 @@
       </div>
     </div>
 
+    <!-- Archived: only staff and admins reach this page -->
+    <div v-if="missionary.archivedAt" class="bg-default px-6 pt-8">
+      <UAlert
+        class="max-w-6xl mx-auto"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-archive"
+        :title="`Archived ${formatRelative(missionary.archivedAt)}`"
+        description="Members cannot see this. Restore it, or remove it permanently from the archive on the Missions page."
+        :actions="[{ label: 'Restore', icon: 'i-lucide-archive-restore', color: 'neutral', variant: 'outline', loading: restoring, onClick: restore }]"
+      />
+    </div>
+
     <div class="bg-default py-10 px-6">
       <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
         <!-- Main -->
@@ -113,7 +126,7 @@
     </div>
 
     <template v-if="canEdit">
-      <MissionsMissionarySlideover v-model:open="editing" :missionary="missionary" :organizations="organizations" @saved="refresh()" @removed="navigateTo('/missions')" />
+      <LazyMissionsMissionarySlideover v-model:open="editing" :missionary="missionary" :organizations="organizations" @saved="refresh()" @archived="data?.canDelete ? refresh() : navigateTo('/missions')" />
 
       <UModal v-model:open="addingUpdate" :title="updateState.kind === 'prayer' ? 'Add a prayer request' : 'Add a prayer letter'">
         <template #body>
@@ -174,6 +187,24 @@ if (error.value) {
 
 const missionary = computed(() => data.value?.missionary)
 const canEdit = computed(() => Boolean(data.value?.canEdit))
+// Staff and admins, on an archived entry.
+const restoring = ref(false)
+const restore = async () => {
+  if (!missionary.value) return
+  restoring.value = true
+  try {
+    await $fetch(`/api/missions/missionaries/${missionary.value.id}/restore`, { method: 'POST' })
+    await refresh()
+    toast.add({ title: `${missionary.value?.name} restored`, color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (error) {
+    toast.add({ title: 'Not restored', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    restoring.value = false
+  }
+}
+
 useSeoMeta({ title: () => `${missionary.value?.name ?? 'Missions'} | Lifegate Baptist Church`, robots: 'noindex, nofollow' })
 
 const hasContact = computed(() => Boolean(missionary.value?.email || missionary.value?.phone || missionary.value?.website || missionary.value?.mailingAddress))

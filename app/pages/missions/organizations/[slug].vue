@@ -18,6 +18,19 @@
       </div>
     </div>
 
+    <!-- Archived: only staff and admins reach this page -->
+    <div v-if="organization.archivedAt" class="bg-default px-6 pt-8">
+      <UAlert
+        class="max-w-6xl mx-auto"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-archive"
+        :title="`Archived ${formatRelative(organization.archivedAt)}`"
+        description="Members cannot see this. Restore it, or remove it permanently from the archive on the Missions page."
+        :actions="[{ label: 'Restore', icon: 'i-lucide-archive-restore', color: 'neutral', variant: 'outline', loading: restoring, onClick: restore }]"
+      />
+    </div>
+
     <div v-if="organization.photoUrl || organization.writeup || organization.website" class="bg-default py-10 px-6">
       <div class="max-w-6xl mx-auto flex flex-col sm:flex-row gap-8 items-start">
         <img v-if="organization.photoUrl" :src="organization.photoUrl" :alt="organization.name" class="w-40 h-40 rounded-lg object-cover border border-default shrink-0">
@@ -38,7 +51,7 @@
       </div>
     </div>
 
-    <MissionsOrganizationSlideover v-if="data?.canEdit" v-model:open="editing" :organization="organization" @saved="refresh()" @removed="navigateTo('/missions')" />
+    <LazyMissionsOrganizationSlideover v-if="data?.canEdit" v-model:open="editing" :organization="organization" @saved="refresh()" @archived="data?.canDelete ? refresh() : navigateTo('/missions')" />
   </div>
 </template>
 
@@ -49,6 +62,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const toast = useToast()
 const { data, error, refresh } = await useFetch(() => `/api/missions/organizations/${encodeURIComponent(String(route.params.slug))}`)
 
 if (error.value) {
@@ -60,6 +74,24 @@ if (error.value) {
 }
 
 const organization = computed(() => data.value?.organization)
+// Staff and admins, on an archived entry.
+const restoring = ref(false)
+const restore = async () => {
+  if (!organization.value) return
+  restoring.value = true
+  try {
+    await $fetch(`/api/missions/organizations/${organization.value.id}/restore`, { method: 'POST' })
+    await refresh()
+    toast.add({ title: `${organization.value?.name} restored`, color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (error) {
+    toast.add({ title: 'Not restored', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    restoring.value = false
+  }
+}
+
 useSeoMeta({ title: () => `${organization.value?.name ?? 'Missions'} | Lifegate Baptist Church`, robots: 'noindex, nofollow' })
 
 const editing = ref(false)

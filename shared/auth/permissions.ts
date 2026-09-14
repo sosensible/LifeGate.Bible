@@ -26,9 +26,14 @@ export const statement = {
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
   ministry: ['update'],
-  // The members-only Missions pages. Also granted, outside roles, to anyone who
-  // serves in the Missions ministry (server/lib/missions.ts).
-  missions: ['update'],
+  // The members-only Missions pages. `update` is also granted, outside roles, to
+  // anyone who serves in the Missions ministry (server/lib/missions.ts); they
+  // can archive entries. Only `delete` (staff and admins) sees the archive,
+  // restores from it, or removes entries for good.
+  missions: ['update', 'delete'],
+  // The Speakers list in the directory. `update` adds, edits and archives;
+  // `delete` (staff and admins) sees the archive, restores and removes.
+  speakers: ['update', 'delete'],
   contactMessage: ['view'],
   // Deliberately granted to Search Committee only -- not even to admins.
   pastoralApplication: ['view'],
@@ -47,16 +52,19 @@ export const member = ac.newRole({
 export const contentEditor = ac.newRole({
   sermon: ['create', 'update', 'delete', 'publish'],
   ministry: ['update'],
+  speakers: ['update'],
 })
 
 export const directoryManager = ac.newRole({
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
-  missions: ['update'],
+  missions: ['update', 'delete'],
+  speakers: ['update', 'delete'],
 })
 
 export const pastor = ac.newRole({
   people: ['viewContact'],
-  missions: ['update'],
+  missions: ['update', 'delete'],
+  speakers: ['update', 'delete'],
   contactMessage: ['view'],
 })
 
@@ -69,7 +77,8 @@ export const admin = ac.newRole({
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
   ministry: ['update'],
-  missions: ['update'],
+  missions: ['update', 'delete'],
+  speakers: ['update', 'delete'],
   contactMessage: ['view'],
   audit: ['view'],
 })

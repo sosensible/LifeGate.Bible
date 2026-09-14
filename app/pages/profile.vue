@@ -31,7 +31,7 @@
                 </div>
                 <div>
                   <dt class="text-gold-600 text-[10px] tracking-[0.15em] uppercase">Ministries</dt>
-                  <dd class="text-toned">{{ person.ministries.map(m => m.name).join(', ') || 'None yet' }}</dd>
+                  <dd class="text-toned">{{ person.ministries.map(m => m.isLeader ? `${m.name} (Leader)` : m.name).join(', ') || 'None yet' }}</dd>
                 </div>
               </dl>
               <p class="text-muted text-xs mt-4">Your name, title, household and ministries are kept by the church office. Contact them to change these.</p>
@@ -59,7 +59,7 @@
             <!-- Sharing -->
             <section class="bg-elevated rounded-lg border border-default p-6">
               <h2 class="font-serif text-xl font-bold text-highlighted mb-1">Who can see what</h2>
-              <p class="text-toned text-sm mb-5">Everyone signed in as a member sees your name, title and ministries. Everything below is your choice.</p>
+              <p class="text-toned text-sm mb-5">Everyone signed in as a member sees your name, title and ministries (see Ministry rosters to hide one). Everything below is your choice.</p>
               <ul class="divide-y divide-default">
                 <li v-for="row in sharingRows" :key="row.key" class="py-3.5 flex items-center justify-between gap-4">
                   <div>
@@ -67,6 +67,21 @@
                     <p class="text-muted text-xs">{{ row.note }}</p>
                   </div>
                   <USwitch v-model="state[row.key]" :aria-label="`Share ${row.label.toLowerCase()}`" />
+                </li>
+              </ul>
+            </section>
+
+            <!-- Ministry rosters -->
+            <section v-if="person.ministries.length" class="bg-elevated rounded-lg border border-default p-6">
+              <h2 class="font-serif text-xl font-bold text-highlighted mb-1">Ministry rosters</h2>
+              <p class="text-toned text-sm mb-5">Each ministry's page lists who serves in it. Members see you unless you turn that off. Visitors who are not signed in see you only if you turn that on.</p>
+              <ul class="divide-y divide-default">
+                <li v-for="choice in state.rosters" :key="choice.ministryId" class="py-3.5 flex flex-wrap items-center justify-between gap-4">
+                  <p class="font-bold text-highlighted text-sm">{{ ministryLabel(choice.ministryId) }}</p>
+                  <div class="flex flex-wrap gap-5">
+                    <USwitch v-model="choice.showToMembers" label="Members" @update:model-value="value => { if (!value) choice.showPublicly = false }" />
+                    <USwitch v-model="choice.showPublicly" label="Everyone" :disabled="!choice.showToMembers" />
+                  </div>
                 </li>
               </ul>
             </section>
@@ -113,7 +128,8 @@ const person = computed(() => data.value?.person ?? null)
 
 const schema = z.object({ ...contactFields, ...privacyFields })
 
-type FormState = { phone: string, email: string, address: string, birthday: string } & Record<PrivacyField, boolean>
+type RosterChoice = { ministryId: string, showToMembers: boolean, showPublicly: boolean }
+type FormState = { phone: string, email: string, address: string, birthday: string, rosters: RosterChoice[] } & Record<PrivacyField, boolean>
 
 const fromPerson = (p: NonNullable<typeof person.value>): FormState => ({
   phone: p.phone ?? '',
@@ -126,18 +142,24 @@ const fromPerson = (p: NonNullable<typeof person.value>): FormState => ({
   shareBirthday: p.shareBirthday,
   sharePhoto: p.sharePhoto,
   shareHousehold: p.shareHousehold,
+  rosters: p.ministries.map(m => ({ ministryId: m.id, showToMembers: m.showToMembers, showPublicly: m.showPublicly })),
 })
 
 const state = reactive<FormState>(person.value
   ? fromPerson(person.value)
-  : { phone: '', email: '', address: '', birthday: '', sharePhone: false, shareEmail: false, shareAddress: false, shareBirthday: false, sharePhoto: false, shareHousehold: false })
+  : { phone: '', email: '', address: '', birthday: '', rosters: [], sharePhone: false, shareEmail: false, shareAddress: false, shareBirthday: false, sharePhoto: false, shareHousehold: false })
 
 const reset = () => {
   if (person.value) Object.assign(state, fromPerson(person.value))
 }
 
+const ministryLabel = (id: string) => {
+  const ministry = person.value?.ministries.find(m => m.id === id)
+  return ministry ? `${ministry.name}${ministry.isLeader ? ' (Leader)' : ''}` : 'Ministry'
+}
+
 const dirty = computed(() =>
-  person.value !== null && JSON.stringify(fromPerson(person.value)) !== JSON.stringify({ ...state }),
+  person.value !== null && JSON.stringify(fromPerson(person.value)) !== JSON.stringify(state),
 )
 
 const sharingRows: Array<{ key: Exclude<PrivacyField, 'sharePhoto'>, label: string, note: string }> = [
@@ -156,6 +178,7 @@ const previewRecord = computed(() => person.value && {
   email: state.email || null,
   address: state.address || null,
   birthday: state.birthday || null,
+  ministries: person.value.ministries.map(m => ({ ...m, ...state.rosters.find(r => r.ministryId === m.id) })),
 })
 const memberPreview = computed(() => previewRecord.value && presentPerson(previewRecord.value, MEMBER_VIEW))
 const staffPreview = computed(() => previewRecord.value && presentPerson(previewRecord.value, STAFF_VIEW))
@@ -164,7 +187,7 @@ const saving = ref(false)
 const save = async () => {
   saving.value = true
   try {
-    const result = await $fetch('/api/profile', { method: 'PATCH', body: { ...state } })
+    const result = await $fetch('/api/profile', { method: 'PATCH', body: state })
     data.value = result
     reset()
     toast.add({ title: 'Your profile is saved', color: 'success', icon: 'i-lucide-circle-check' })

@@ -1,0 +1,1 @@
+ALTER TABLE `people` ADD `speaker_archived_at` integer;
