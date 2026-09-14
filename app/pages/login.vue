@@ -108,7 +108,8 @@ const sendEmail = async () => {
   errorMessage.value = ''
   const { error } = mode.value === 'magic'
     ? await authClient.signIn.magicLink({ email: state.email, callbackURL: redirectTo.value })
-    : await authClient.requestPasswordReset({ email: state.email, redirectTo: '/auth/reset-password' })
+    // Absolute, so the reset link returns to this site rather than BETTER_AUTH_URL.
+    : await authClient.requestPasswordReset({ email: state.email, redirectTo: `${window.location.origin}/auth/reset-password` })
   busy.value = false
 
   if (error) {

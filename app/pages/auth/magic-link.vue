@@ -29,10 +29,14 @@ const going = ref(false)
 
 const confirm = () => {
   going.value = true
+  // Absolute, on the site this page is open on. Better Auth resolves relative
+  // callbacks against BETTER_AUTH_URL, which would send someone who signed in
+  // through new.lifegate.bible to localhost. It accepts only trusted origins.
+  const { origin } = window.location
   const params = new URLSearchParams({
     token: token.value,
-    callbackURL: '/members',
-    errorCallbackURL: '/login',
+    callbackURL: `${origin}/members`,
+    errorCallbackURL: `${origin}/login`,
   })
   // Full navigation so the session cookie set by the verify redirect is sent
   // with the next server-rendered page.

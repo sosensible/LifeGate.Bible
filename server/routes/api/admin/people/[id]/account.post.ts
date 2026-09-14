@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { accountLinkSchema } from '../../../../../../shared/people.ts'
 import { people, user } from '../../../../../database/schema/index.ts'
-import { auth } from '../../../../../lib/auth.ts'
+import { auth, linkOrigin } from '../../../../../lib/auth.ts'
 import { db } from '../../../../../lib/db.ts'
 import { loadPerson, presentForAdmin, recordAudit } from '../../../../../lib/people.ts'
 
@@ -50,7 +50,8 @@ export default defineEventHandler(async (event) => {
     recordAudit(tx, { actorUserId: session.user.id, action: 'account.create', entityType: 'person', entityId: id })
   })
 
-  await auth.api.requestPasswordReset({ body: { email, redirectTo: '/auth/reset-password' } })
+  // The admin's request headers, so the emailed link opens the site they are using.
+  await auth.api.requestPasswordReset({ body: { email, redirectTo: `${linkOrigin(event.headers)}/auth/reset-password` }, headers: event.headers })
 
   setResponseStatus(event, 201)
   return { person: presentForAdmin(loadPerson(id)!), created: true }

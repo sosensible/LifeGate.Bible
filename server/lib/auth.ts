@@ -19,6 +19,19 @@ const trustedOrigins = (process.env.BETTER_AUTH_TRUSTED_ORIGINS || baseURL)
   .map(origin => origin.trim())
   .filter(Boolean)
 
+// Which site an emailed link should open: the one the request came from
+// (e.g. https://new.lifegate.bible through the tunnel, or localhost), but only
+// if it is a trusted origin. Anything else falls back to BETTER_AUTH_URL, so a
+// forged Origin header cannot put someone else's site in the email.
+export const linkOrigin = (headers?: Headers | null) => {
+  const origin = headers?.get('origin')
+  return origin && trustedOrigins.includes(origin) ? origin : baseURL
+}
+
+// Better Auth builds reset links on BETTER_AUTH_URL; move them to linkOrigin.
+const onOrigin = (url: string, headers?: Headers | null) =>
+  url.startsWith(baseURL) ? linkOrigin(headers) + url.slice(baseURL.length) : url
+
 export const auth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
@@ -32,7 +45,7 @@ export const auth = betterAuth({
     minPasswordLength: 12,
     // Better Auth only calls this for an existing account. Not awaited, so the
     // response time does not reveal whether the address has one.
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, url }, request) => {
       sendMailInBackground({
         to: user.email,
         subject: 'Set your Lifegate password',
@@ -40,7 +53,7 @@ export const auth = betterAuth({
           heading: 'Set your password',
           intro: `Hello ${user.name}, use the button below to choose a password for your Lifegate account.`,
           actionLabel: 'Choose a password',
-          actionUrl: url,
+          actionUrl: onOrigin(url, request?.headers),
           footnote: 'This link expires in one hour. If you did not ask for this, you can ignore this email.',
         }),
       })
@@ -58,7 +71,7 @@ export const auth = betterAuth({
     magicLink({
       disableSignUp: true,
       expiresIn: 60 * 15,
-      sendMagicLink: async ({ email, token }) => {
+      sendMagicLink: async ({ email, token }, ctx) => {
         // Better Auth calls this for ANY address, so its response cannot reveal
         // whether an account exists. Left alone, that lets anyone make the
         // church email arbitrary addresses. Skip strangers silently: the HTTP
@@ -74,7 +87,7 @@ export const auth = betterAuth({
         // Link to our own confirmation page, NOT straight to the verify
         // endpoint. Email security scanners open links automatically; a link
         // that signs in on load would be spent before the person clicks it.
-        const confirmUrl = `${baseURL}/auth/magic-link?token=${encodeURIComponent(token)}`
+        const confirmUrl = `${linkOrigin(ctx?.headers)}/auth/magic-link?token=${encodeURIComponent(token)}`
         sendMailInBackground({
           to: email,
           subject: 'Your Lifegate sign-in link',

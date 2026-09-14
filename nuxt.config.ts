@@ -16,6 +16,28 @@ export default defineNuxtConfig({
       // production Nitro server does no host checking.
       allowedHosts: ['.lifegate.bible'],
     },
+    plugins: [
+      {
+        // Dev server only (configureServer never runs in a build).
+        //
+        // Vite serves the same URL, e.g. /_nuxt/assets/css/main.css, as CSS for a
+        // <link> and as JavaScript for an import, with `Cache-Control: no-cache`.
+        // Through the Cloudflare Tunnel that header is rewritten to
+        // `max-age=14400` (the zone's Browser Cache TTL), so the browser reuses
+        // the CSS copy for the import, rejects it ("MIME type text/css"), and the
+        // app never starts. Cloudflare leaves `no-store` alone, so force it.
+        name: 'lifegate:dev-no-store-through-tunnel',
+        configureServer(server) {
+          server.middlewares.use((_req, res, next) => {
+            const setHeader = res.setHeader.bind(res)
+            res.setHeader = (name, value) =>
+              setHeader(name, name.toLowerCase() === 'cache-control' ? 'no-store' : value)
+            setHeader('Cache-Control', 'no-store')
+            next()
+          })
+        },
+      },
+    ],
     optimizeDeps: {
       // Pre-bundle client dependencies Vite would otherwise discover on first
       // use. Discovery triggers a full page reload in dev, which silently wiped
