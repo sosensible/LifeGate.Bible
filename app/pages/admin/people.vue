@@ -60,28 +60,27 @@
 
         <!-- Households -->
         <section>
-          <h2 class="font-serif text-2xl font-bold text-highlighted mb-1">Households</h2>
-          <p class="text-toned text-sm mb-4">Create a household from a person's form. Removing one keeps its people.</p>
+          <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <div>
+              <h2 class="font-serif text-2xl font-bold text-highlighted mb-1">Households</h2>
+              <p class="text-toned text-sm">Who runs the house (a married couple, a single parent or guardian, or two guardians), and their children. Listed by last name. Removing a household keeps its people.</p>
+            </div>
+            <UButton variant="outline" icon="i-lucide-house-plus" @click="openHousehold(null)">Add household</UButton>
+          </div>
           <ul class="bg-elevated rounded-lg border border-default divide-y divide-default">
             <li v-if="!households.length" class="p-4 text-muted text-sm">No households yet.</li>
             <li v-for="household in households" :key="household.id" class="p-4 flex flex-wrap items-center justify-between gap-3">
-              <template v-if="renaming?.id === household.id">
-                <UInput v-model="renaming.name" class="flex-1 min-w-48" autofocus @keydown.enter.prevent="saveRename" @keydown.esc="renaming = null" />
-                <div class="flex gap-2">
-                  <UButton size="sm" :loading="householdBusy" @click="saveRename">Save</UButton>
-                  <UButton size="sm" variant="ghost" color="neutral" @click="renaming = null">Cancel</UButton>
-                </div>
-              </template>
-              <template v-else>
-                <div>
-                  <p class="font-bold text-highlighted">{{ household.name }}</p>
-                  <p class="text-muted text-xs">{{ household.memberCount }} {{ household.memberCount === 1 ? 'person' : 'people' }}</p>
-                </div>
-                <div class="flex gap-1">
-                  <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" :aria-label="`Rename ${household.name}`" @click="renaming = { id: household.id, name: household.name }" />
-                  <UButton size="xs" variant="ghost" color="error" icon="i-lucide-trash-2" :aria-label="`Remove ${household.name}`" @click="removing = household" />
-                </div>
-              </template>
+              <button type="button" class="text-left group flex-1 min-w-60" @click="openHousehold(household)">
+                <span class="flex items-center gap-2">
+                  <span class="font-bold text-highlighted group-hover:text-primary">{{ household.name }}</span>
+                  <UBadge v-if="household.problems.length" size="sm" variant="subtle" color="warning" icon="i-lucide-triangle-alert">Needs setup</UBadge>
+                </span>
+                <span class="block text-muted text-xs mt-0.5">
+                  {{ householdSummary(household.kind, household.relationship, household.adults) }}
+                  <template v-if="childCount(household)"> · {{ childCount(household) }} {{ childCount(household) === 1 ? 'child' : 'children' }}</template>
+                </span>
+              </button>
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" :aria-label="`Edit ${household.name}`" @click="openHousehold(household)" />
             </li>
           </ul>
         </section>
@@ -91,30 +90,25 @@
     <AdminPersonSlideover
       v-model:open="editorOpen"
       :person="editing"
-      :households="households"
       :ministries="ministries"
       @saved="onSaved"
       @removed="onRemoved"
-      @household-created="households.push($event)"
     />
 
-    <UModal
-      :open="removing !== null"
-      title="Remove this household?"
-      :description="removing ? `${removing.name} will be removed. Its ${removing.memberCount} ${removing.memberCount === 1 ? 'person is' : 'people are'} kept, with no household.` : ''"
-      @update:open="value => { if (!value) removing = null }"
-    >
-      <template #footer>
-        <UButton color="neutral" variant="outline" @click="removing = null">Keep</UButton>
-        <UButton color="error" :loading="householdBusy" @click="removeHousehold">Remove</UButton>
-      </template>
-    </UModal>
+    <AdminHouseholdSlideover
+      v-model:open="householdOpen"
+      :household="editingHousehold"
+      :people="people"
+      @saved="onHouseholdChanged"
+      @removed="onHouseholdChanged"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { AdminPersonView, HouseholdView } from '#shared/people'
+import { householdSummary, type HouseholdView } from '#shared/households'
+import type { AdminPersonView } from '#shared/people'
 
 definePageMeta({
   middleware: 'auth',
@@ -124,10 +118,9 @@ definePageMeta({
 useSeoMeta({ title: 'People | Lifegate Baptist Church' })
 
 const auth = useAuthStore()
-const toast = useToast()
 const canCreate = computed(() => auth.can({ people: ['create'] }))
 
-const [{ data: peopleData, error }, { data: householdData, refresh: refreshHouseholds }, { data: ministryData }] = await Promise.all([
+const [{ data: peopleData, error, refresh: refreshPeople }, { data: householdData, refresh: refreshHouseholds }, { data: ministryData }] = await Promise.all([
   useFetch('/api/admin/people'),
   useFetch('/api/admin/households'),
   useFetch('/api/ministries'),
@@ -183,42 +176,18 @@ const onRemoved = (id: string) => {
 }
 
 // Households
-const renaming = ref<{ id: string, name: string } | null>(null)
-const householdBusy = ref(false)
-const removing = ref<HouseholdView | null>(null)
-
-const saveRename = async () => {
-  if (!renaming.value) return
-  householdBusy.value = true
-  try {
-    const { household } = await $fetch(`/api/admin/households/${renaming.value.id}`, { method: 'PATCH', body: { name: renaming.value.name } })
-    people.value = people.value.map(p => p.householdId === household.id ? { ...p, householdName: household.name } : p)
-    renaming.value = null
-    await refreshHouseholds()
-  }
-  catch (err) {
-    toast.add({ title: 'Not renamed', description: apiErrorMessage(err), color: 'error' })
-  }
-  finally {
-    householdBusy.value = false
-  }
+const householdOpen = ref(false)
+const editingHousehold = ref<HouseholdView | null>(null)
+const openHousehold = (household: HouseholdView | null) => {
+  editingHousehold.value = household
+  householdOpen.value = true
 }
 
-const removeHousehold = async () => {
-  const household = removing.value
-  if (!household) return
-  householdBusy.value = true
-  try {
-    await $fetch(`/api/admin/households/${household.id}`, { method: 'DELETE' })
-    people.value = people.value.map(p => p.householdId === household.id ? { ...p, householdId: null, householdName: null } : p)
-    removing.value = null
-    await refreshHouseholds()
-  }
-  catch (err) {
-    toast.add({ title: 'Not removed', description: apiErrorMessage(err), color: 'error' })
-  }
-  finally {
-    householdBusy.value = false
-  }
+// People without a role yet (older households) are not counted as children.
+const childCount = (household: HouseholdView) => household.children.filter(c => c.role === 'child').length
+
+// Saving or removing a household changes people's household and role too.
+const onHouseholdChanged = async () => {
+  await Promise.all([refreshHouseholds(), refreshPeople()])
 }
 </script>

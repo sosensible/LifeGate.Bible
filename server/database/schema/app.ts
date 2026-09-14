@@ -11,9 +11,17 @@ const id = () => text('id').primaryKey().$defaultFn(() => crypto.randomUUID())
 const createdAt = () => integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 const updatedAt = () => integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date())
 
+// Who runs the house (a married couple, one adult, or two guardians) and
+// whether they are the children's family or guardians. The rules and naming
+// live in shared/households.ts.
 export const households = sqliteTable('households', {
   id: id(),
+  kind: text('kind', { enum: ['married', 'singleParent', 'guardians'] }).notNull().default('married'),
+  // Father and mother, or guardians.
+  relationship: text('relationship', { enum: ['family', 'guardian'] }).notNull().default('family'),
+  // Built from the adults' names unless someone typed their own.
   name: text('name').notNull(),
+  nameIsCustom: integer('name_is_custom', { mode: 'boolean' }).notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -21,6 +29,8 @@ export const households = sqliteTable('households', {
 export const people = sqliteTable('people', {
   id: id(),
   householdId: text('household_id').references(() => households.id, { onDelete: 'set null' }),
+  // Set only through the household editor, together with householdId.
+  householdRole: text('household_role', { enum: ['husband', 'wife', 'father', 'mother', 'guardian', 'child'] }),
   userId: text('user_id').unique().references(() => user.id, { onDelete: 'set null' }),
 
   firstName: text('first_name').notNull(),

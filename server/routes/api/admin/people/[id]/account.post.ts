@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { accountLinkSchema } from '../../../../../../shared/people.ts'
 import { people, user } from '../../../../../database/schema/index.ts'
-import { auth, linkOrigin } from '../../../../../lib/auth.ts'
+import { ADMIN_CREATED, auth, linkOrigin } from '../../../../../lib/auth.ts'
 import { db } from '../../../../../lib/db.ts'
 import { loadPerson, presentForAdmin, recordAudit } from '../../../../../lib/people.ts'
 
@@ -42,6 +42,8 @@ export default defineEventHandler(async (event) => {
       // or sign in with an emailed link.
       password: randomBytes(32).toString('base64url'),
       role: 'member',
+      // See ADMIN_CREATED in server/lib/auth.ts.
+      data: ADMIN_CREATED,
     },
   })
 

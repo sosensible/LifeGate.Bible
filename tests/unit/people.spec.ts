@@ -78,8 +78,7 @@ describe('people records', () => {
     expect(() => lib.assertStaffCanReview({ ...person, shareBirthday: true }, ['birthday'])).not.toThrow()
   })
 
-  it('rejects references to households or ministries that do not exist', () => {
-    expect(() => lib.assertReferencesExist({ householdId: 'missing' })).toThrow(/household/)
+  it('rejects references to ministries that do not exist', () => {
     expect(() => lib.assertReferencesExist({ ministryIds: [musicId, 'missing'] })).toThrow(/ministries/)
     expect(() => lib.assertReferencesExist({ ministryIds: [musicId, musicId] })).not.toThrow()
   })
@@ -108,12 +107,12 @@ describe('validation', () => {
   })
 
   it('does not accept a birthday when staff create a person', () => {
-    const base = { firstName: 'Dorothy', lastName: 'Perkins', title: null, isMinor: false, householdId: null, ministryIds: [], phone: null, email: null, address: null }
+    const base = { firstName: 'Dorothy', lastName: 'Perkins', title: null, isMinor: false, ministryIds: [], phone: null, email: null, address: null }
     expect(personSchema.parse({ ...base, birthday: '1948-08-30' })).not.toHaveProperty('birthday')
   })
 
   it('requires a first and last name for a person', () => {
-    const base = { title: null, isMinor: false, householdId: null, ministryIds: [], phone: null, email: null, address: null }
+    const base = { title: null, isMinor: false, ministryIds: [], phone: null, email: null, address: null }
     expect(personSchema.safeParse({ ...base, firstName: ' ', lastName: 'Perkins' }).success).toBe(false)
     expect(personSchema.safeParse({ ...base, firstName: 'Dorothy', lastName: 'Perkins' }).success).toBe(true)
   })

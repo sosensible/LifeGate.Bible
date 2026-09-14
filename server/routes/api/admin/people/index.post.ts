@@ -6,7 +6,7 @@ import { assertReferencesExist, loadPerson, presentForAdmin, recordAudit, setMin
 export default defineEventHandler(async (event) => {
   const session = await requirePermission(event, { people: ['create'] })
   const { ministryIds, ...values } = emptyToNull(await readValidatedBody(event, personSchema.parse))
-  assertReferencesExist({ householdId: values.householdId, ministryIds })
+  assertReferencesExist({ ministryIds })
 
   // Everything the person has not chosen to share starts hidden (schema defaults).
   const id = db.transaction((tx) => {

@@ -42,6 +42,8 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => [
     ...(auth.isMember ? [{ label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
     ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
     ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Sermons', icon: 'i-lucide-video', to: '/admin/sermons' }] : []),
+    ...(auth.can({ user: ['list'] }) ? [{ label: 'Accounts', icon: 'i-lucide-key-round', to: '/admin/accounts' }] : []),
+    ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
   ],
   [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
 ].filter(group => group.length))

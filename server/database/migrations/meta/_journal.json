@@ -29,6 +29,20 @@
       "when": 1789397652131,
       "tag": "0003_sermons",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789399604966,
+      "tag": "0004_mark_admin_created_emails_verified",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789407990037,
+      "tag": "0005_household_structure",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@
 // The account gets a random password nobody knows. Sign in with "Email me a
 // sign-in link", then set a real password with "Forgot password?" if wanted.
 import { randomBytes } from 'node:crypto'
-import { auth } from '../server/lib/auth.ts'
+import { ADMIN_CREATED, auth } from '../server/lib/auth.ts'
 
 const [email, ...nameParts] = process.argv.slice(2)
 const name = nameParts.join(' ').trim()
@@ -22,6 +22,8 @@ const { user } = await auth.api.createUser({
     name,
     password: randomBytes(32).toString('base64url'),
     role: ['admin', 'member'],
+    // See ADMIN_CREATED in server/lib/auth.ts.
+    data: ADMIN_CREATED,
   },
 })
 

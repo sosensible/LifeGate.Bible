@@ -41,7 +41,7 @@ export const personSchema = z.object({
   lastName: z.string().trim().min(1, 'Enter a last name').max(80),
   title: optionalText(80),
   isMinor: z.boolean(),
-  householdId: z.string().min(1).nullable(),
+  // Household membership is set in the household editor, with a role.
   ministryIds: z.array(z.string().min(1)).max(50),
   phone: contactFields.phone,
   email: contactFields.email,
@@ -52,10 +52,6 @@ export const personSchema = z.object({
 // the server refuses it otherwise.
 export const personUpdateSchema = personSchema.partial().extend({
   birthday: contactFields.birthday.optional(),
-})
-
-export const householdSchema = z.object({
-  name: z.string().trim().min(1, 'Enter a household name').max(120),
 })
 
 export const accountLinkSchema = z.object({
@@ -74,6 +70,7 @@ export interface AdminPersonView {
   address: string | null
   householdId: string | null
   householdName: string | null
+  householdRole: 'husband' | 'wife' | 'father' | 'mother' | 'guardian' | 'child' | null
   ministries: Array<{ id: string, slug: string, name: string }>
   // Birthday and photo are only sent when the person shares them. Whether an
   // unshared one exists is not revealed either.
@@ -86,12 +83,6 @@ export interface AdminPersonView {
   sharePhoto: boolean
   shareHousehold: boolean
   account: { email: string, role: string | null } | null
-}
-
-export interface HouseholdView {
-  id: string
-  name: string
-  memberCount: number
 }
 
 // Empty strings from form fields are stored as NULL.

@@ -14,18 +14,13 @@
             <UFormField label="Title" name="title" hint="e.g. Deacon">
               <UInput v-model="state.title" class="w-full" />
             </UFormField>
-            <UFormField label="Household" name="householdId">
-              <USelectMenu
-                v-model="state.householdId"
-                :items="householdItems"
-                value-key="id"
-                label-key="name"
-                placeholder="None"
-                create-item
-                clear
-                class="w-full"
-                @create="createHousehold"
-              />
+            <UFormField label="Household" description="Set under Households on this page.">
+              <p class="text-sm text-toned py-1.5">
+                <template v-if="person?.householdName">
+                  {{ person.householdName }}<span v-if="householdRoleLabel" class="text-muted"> · {{ householdRoleLabel }}</span>
+                </template>
+                <span v-else class="text-muted">None</span>
+              </p>
             </UFormField>
           </div>
           <UFormField name="isMinor">
@@ -116,18 +111,17 @@
 </template>
 
 <script setup lang="ts">
-import { contactFields, personSchema, type AdminPersonView, type HouseholdView, type PrivacyField } from '#shared/people'
+import { HOUSEHOLD_ROLE_LABELS } from '#shared/households'
+import { contactFields, personSchema, type AdminPersonView, type PrivacyField } from '#shared/people'
 
 const props = defineProps<{
   person: AdminPersonView | null
-  households: HouseholdView[]
   ministries: Array<{ id: string, name: string }>
 }>()
 
 const emit = defineEmits<{
   saved: [person: AdminPersonView]
   removed: [id: string]
-  householdCreated: [household: HouseholdView]
 }>()
 
 const open = defineModel<boolean>('open', { required: true })
@@ -148,7 +142,7 @@ const sharingFields: Array<{ key: PrivacyField, label: string }> = [
 
 const blank = () => ({
   firstName: '', lastName: '', title: '', isMinor: false,
-  householdId: null as string | null, ministryIds: [] as string[],
+  ministryIds: [] as string[],
   phone: '', email: '', address: '', birthday: '',
 })
 const blankPrivacy = (): Record<PrivacyField, boolean> => ({
@@ -172,7 +166,7 @@ const load = () => {
   Object.assign(state, p
     ? {
         firstName: p.firstName, lastName: p.lastName, title: p.title ?? '', isMinor: p.isMinor,
-        householdId: p.householdId, ministryIds: p.ministries.map(m => m.id),
+        ministryIds: p.ministries.map(m => m.id),
         phone: p.phone ?? '', email: p.email ?? '', address: p.address ?? '', birthday: p.birthday ?? '',
       }
     : blank())
@@ -185,18 +179,8 @@ watch(open, (isOpen) => {
   if (isOpen) load()
 }, { immediate: true })
 
-const householdItems = computed(() => props.households.map(({ id, name }) => ({ id, name })))
-
-const createHousehold = async (name: string) => {
-  try {
-    const { household } = await $fetch('/api/admin/households', { method: 'POST', body: { name } })
-    emit('householdCreated', household)
-    state.householdId = household.id
-  }
-  catch (error) {
-    toast.add({ title: 'Household not created', description: apiErrorMessage(error), color: 'error' })
-  }
-}
+// "Husband", "Mother", "Guardian", "Child".
+const householdRoleLabel = computed(() => props.person?.householdRole ? HOUSEHOLD_ROLE_LABELS[props.person.householdRole] : null)
 
 const saving = ref(false)
 const save = async () => {

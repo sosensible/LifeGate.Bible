@@ -9,6 +9,7 @@ import { admin, magicLink } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 import { ac, roles } from '../../shared/auth/permissions.ts'
 import { user as userTable } from '../database/schema/index.ts'
+import { recordAudit } from './audit.ts'
 import { db } from './db.ts'
 import { renderActionEmail, sendMailInBackground } from './mail.ts'
 
@@ -32,12 +33,30 @@ export const linkOrigin = (headers?: Headers | null) => {
 const onOrigin = (url: string, headers?: Headers | null) =>
   url.startsWith(baseURL) ? linkOrigin(headers) + url.slice(baseURL.length) : url
 
+// Extra fields for every account an administrator creates. Nobody can sign up
+// here, so an address an administrator enters is the church's own record, not
+// a stranger's claim. Marking it verified stops Better Auth from deleting the
+// account's password on its first magic-link sign-in (see onPasswordReset).
+export const ADMIN_CREATED = { emailVerified: true }
+
 export const auth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,
 
   database: drizzleAdapter(db, { provider: 'sqlite' }),
+
+  // Every successful sign-in (password, magic link) creates a session; record
+  // it so the audit log and the accounts page can show sign-in activity.
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (session) => {
+          recordAudit(db, { actorUserId: session.userId, action: 'auth.signIn', entityType: 'user', entityId: session.userId })
+        },
+      },
+    },
+  },
 
   emailAndPassword: {
     enabled: true,
@@ -57,6 +76,17 @@ export const auth = betterAuth({
           footnote: 'This link expires in one hour. If you did not ask for this, you can ignore this email.',
         }),
       })
+    },
+    // Using the emailed reset link proves the person owns the address. Without
+    // this, Better Auth treats the email as unverified and DELETES the password
+    // the first time they sign in with a magic link (its guard against someone
+    // pre-registering another person's email, which cannot happen here because
+    // sign-up is disabled). Verified with a probe against Better Auth 1.7.4.
+    onPasswordReset: async ({ user: resetUser }) => {
+      if (!resetUser.emailVerified) {
+        const ctx = await auth.$context
+        await ctx.internalAdapter.updateUser(resetUser.id, { emailVerified: true })
+      }
     },
   },
 

@@ -12,6 +12,7 @@ export type PersonRow = typeof people.$inferSelect
 export interface FullPerson extends PersonRecord {
   title: string | null
   householdName: string | null
+  householdRole: PersonRow['householdRole']
   ministries: Array<{ id: string, slug: string, name: string }>
   userId: string | null
   account: { email: string, role: string | null } | null
@@ -65,6 +66,7 @@ export const presentForAdmin = (person: FullPerson): AdminPersonView => ({
   address: person.address,
   householdId: person.householdId,
   householdName: person.householdName,
+  householdRole: person.householdRole,
   ministries: person.ministries,
   birthday: person.shareBirthday ? person.birthday : null,
   photoUrl: person.sharePhoto ? person.photoUrl : null,
@@ -92,11 +94,7 @@ export const assertStaffCanReview = (person: Pick<PersonRecord, 'firstName' | 's
 }
 
 // A clear 400 instead of a foreign-key failure when a form sends a stale id.
-export const assertReferencesExist = (values: { householdId?: string | null, ministryIds?: string[] }) => {
-  if (values.householdId) {
-    const found = db.select({ id: households.id }).from(households).where(eq(households.id, values.householdId)).get()
-    if (!found) throw createError({ statusCode: 400, statusMessage: 'That household no longer exists' })
-  }
+export const assertReferencesExist = (values: { ministryIds?: string[] }) => {
   if (values.ministryIds?.length) {
     const unique = [...new Set(values.ministryIds)]
     const found = db.select({ id: ministries.id }).from(ministries).where(inArray(ministries.id, unique)).all()

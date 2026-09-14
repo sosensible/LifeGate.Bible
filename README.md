@@ -172,12 +172,32 @@ not an account; an account can be linked to one person.
 - **`/ministries`**: names and descriptions are public; rosters come from the server only for members.
 - **`/profile`**: a person edits their own phone, email, address, birthday and sharing, with a live preview of what members and staff see.
 - **`/admin/people`** (`people:update`):
-  - add, edit and remove people (`people:create` and `people:delete` for those two); manage households and ministries;
+  - add, edit and remove people (`people:create` and `people:delete` for those two); assign ministries;
+  - manage households (`shared/households.ts`), which record who runs the house and whether they are the children's family or guardians:
+    - a married couple (husband and wife) who are father and mother, or guardians (e.g. foster care); children optional;
+    - a single adult who is the children's father, mother or guardian; at least one child;
+    - two guardians (any two adults, e.g. grandparents); at least one child.
+    - A single adult with no children is not a household. Children are simply listed.
+    - Names are generated from the adults' first names in alphabetical order plus the husband's last name (or, otherwise, the first-listed adult's), e.g. "James & Sarah Mitchell Household", and can be replaced with a custom name.
+    - Households are listed by last name, then first names. A person belongs to at most one household.
+    - Households that do not meet the rules are flagged "Needs setup".
   - change sharing on someone's behalf (`people:managePrivacy`);
   - give sign-in access by linking an account, or creating a member account and emailing a set-password link (`user:create`).
   - Nobody edits what they cannot see: staff cannot set or change a birthday (or, later, a photo) until the person shares it. Titles are a separate field shown beside the name, never part of it.
 - **Audit log**: every change records who, what and which fields, never the values.
 - **Dev data**: `npm run db:migrate`, then `npm run db:seed-demo -- <account email> <first name>` adds fictional people to an empty local database and optionally links an account.
+
+### 8. Accounts and audit log (`/admin/accounts`, `/admin/audit`)
+
+- **Accounts** (`user:list`):
+  - create accounts (always email-verified; optional set-password email);
+  - assign roles, block and unblock, email a password link, sign out everywhere, delete.
+  - Roles are defined in `shared/auth/permissions.ts`; the page describes each one (`shared/auth/role-info.ts`).
+- **Safeguards** (`server/lib/accounts.ts`): nobody can block, delete or remove the administrator role from their own account, and the last active administrator cannot be demoted, blocked or deleted.
+- Better Auth's own `/api/auth/admin/*` endpoints return 404 over HTTP, so every account change goes through these guarded, audited routes.
+- **Audit log** (`audit:view`): filter by item type, action, person and dates, optionally hiding sign-ins. Entries show names, which fields changed and a note (e.g. `member → member, admin`), never personal values.
+- **Sign-ins** are recorded from Better Auth's session hook.
+- **Magic links and passwords:** Better Auth deletes the password of an account whose email is unverified the first time it signs in with a magic link. Accounts created here are marked verified, completing a password reset marks the email verified, and migration `0004` marks existing accounts verified. See `tests/unit/magic-link.spec.ts`.
 
 ## Database Schema
 
