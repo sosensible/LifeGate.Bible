@@ -84,6 +84,9 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/google-fonts',
     '@pinia/nuxt',
+    // YouTube player facade: nothing loads from YouTube until someone presses
+    // play, and it uses the privacy-enhanced youtube-nocookie.com host.
+    '@nuxt/scripts',
   ],
   // @nuxt/ui v4 requires this CSS entry; color aliases live in app.config.ts.
   css: ['~/assets/css/main.css'],

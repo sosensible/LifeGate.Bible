@@ -155,14 +155,18 @@ secret; it authenticates the connector to your account.
 
 ## What does NOT work on this target
 
-The remaining legacy handlers -- `/api/sermons*`, `/api/contact`, `/api/giving`,
+The remaining legacy handlers -- `/api/contact`, `/api/giving`,
 `/api/pastoral-candidates` -- still read `event.context.cloudflare.env.db`, the
 Cloudflare **D1** binding, which does not exist on Node, so they return **500**.
 `server/utils/email.ts` has the same dependency on the `EMAIL` binding. They are
 being moved to SQLite phase by phase.
 
-Accounts, the directory, ministries, profiles and people admin already use
-SQLite and work on this target once the database and environment are set up.
+Accounts, the directory, ministries, profiles, people admin and sermons already
+use SQLite and work on this target once the database and environment are set up.
+
+The box needs outbound HTTPS to YouTube for sermon thumbnails and the admin
+"Check" button. The build needs network access too: Nuxt Scripts downloads the
+YouTube player loader during `nuxi build`.
 
 ## Sitemap
 

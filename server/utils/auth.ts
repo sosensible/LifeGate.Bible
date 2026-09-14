@@ -49,6 +49,17 @@ export const getViewer = async (event: H3Event) => {
   return { session, isMember, isStaff }
 }
 
+// Who is looking, for sermon visibility. Never throws.
+export const getSermonViewer = async (event: H3Event) => {
+  const session = await getAuthSession(event)
+  if (!session) return { session: null, isMember: false, canManage: false }
+  const [isMember, canManage] = await Promise.all([
+    hasPermission(session.user.id, { memberArea: ['view'] }),
+    hasPermission(session.user.id, { sermon: ['update'] }),
+  ])
+  return { session, isMember, canManage }
+}
+
 export const requirePermission = async (event: H3Event, permissions: Permissions) => {
   const session = await requireSession(event)
   if (!(await hasPermission(session.user.id, permissions))) {

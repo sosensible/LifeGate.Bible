@@ -34,7 +34,8 @@ app/
   pages/
     index.vue                    # Landing/main portal
     login.vue                    # Auth
-    sermons.vue                  # Sermon library
+    teaching/                    # Sermon archive and single message pages
+    admin/sermons.vue            # Sermon and series management
     giving.vue                   # Donations
     contact.vue                  # Contact form
     pastoral-candidates.vue      # Job applications
@@ -58,9 +59,9 @@ server/
       profile.get.ts / .patch.ts # GET/PATCH /api/profile (own record)
       admin/people/              # people CRUD, privacy, sign-in access
       admin/households/          # household CRUD
-      sermons/
-        upload.ts                # POST /api/sermons/upload (file handling)
-        index.ts                 # GET /api/sermons
+      sermons/                   # GET /api/sermons, /api/sermons/[slug], .../thumbnail
+      admin/sermons/             # sermon CRUD + YouTube lookup
+      admin/sermon-series/       # series CRUD
       giving.ts                  # POST /api/giving (donations)
       contact.ts                 # POST /api/contact (contact form)
       pastoral-candidates.ts     # POST /api/pastoral-candidates (job apps)
@@ -96,15 +97,25 @@ nuxt.config.ts                   # Cloudflare bindings (D1, EMAIL)
   - Redirects to `/` (landing) on success
 - **Error handling**: Invalid credentials, expired codes
 
-### 3. Sermons (`/sermons`)
-- **Purpose**: Browse and stream sermon library
-- **Data fetched from**: `GET /api/sermons`
-- **Features**:
-  - Search by title/speaker
-  - Video/audio/PDF playback
-  - Recent sermons grid
-  - Upload form (admin only, shows on page)
-- **Upload endpoint**: `POST /api/sermons/upload` with file validation
+### 3. Teaching (`/teaching`, `/teaching/[slug]`, `/admin/sermons`)
+
+Sermons live in SQLite (`sermons`, `sermon_series`). Video is stored as provider +
+id; today the only provider is YouTube (unlisted is fine).
+
+- **Who sees what** (`server/lib/sermons.ts`):
+  - public + published: everyone;
+  - members + published: members only (and people who manage sermons);
+  - drafts: only people with `sermon:update`.
+  - Signed-out visitors get a count of members-only messages, never their titles or video ids.
+- **`/teaching`**: latest message with player, the archive with search and filters (series, book, topic, dates). Filters can come from the link, e.g. `/teaching?series=Gospel%20of%20John`.
+- **`/teaching/[slug]`**: one message. Members-only sends signed-out visitors to sign in; drafts are 404 to everyone else. Slugs are set once from date and title and never change.
+- **Privacy**: the player is Nuxt Scripts' `ScriptYouTubePlayer`, which uses `youtube-nocookie.com` and loads nothing from YouTube until someone presses play. Thumbnails come from `/api/sermons/[slug]/thumbnail`, which checks access and caches YouTube's image, so no Google request happens on page load and members-only video ids never reach the public.
+- **`/admin/sermons`**:
+  - add, edit and remove messages (`sermon:create`, `sermon:update`, `sermon:delete`); manage series.
+  - Publishing or unpublishing needs `sermon:publish`; others save drafts.
+  - "Check" confirms a YouTube link through YouTube's oEmbed endpoint and offers its title.
+- Audit log: `sermon.create`, `sermon.update`, `sermon.publish`, `sermon.unpublish`, `sermon.delete`, `series.*`.
+- Not yet: audio files, PDF notes, live stream.
 
 ### 4. Giving (`/giving`)
 - **Purpose**: One-time, monthly, and pledge donations
@@ -293,12 +304,11 @@ CREATE TABLE pastoral_applications (
    - Sends admin notification
 4. Success message shown; form clears
 
-### Sermon Upload (Admin)
-1. Admin visits `/sermons` while logged in as pastor/admin
-2. Upload form visible: title, speaker, date, files (video/audio/PDF)
-3. Submits → `POST /api/sermons/upload`
-4. Backend validates file types, stores metadata to D1
-5. TODO: Store files to R2 or CDN; return streaming URLs
+### Adding a sermon (Admin)
+1. Upload the video to YouTube as Unlisted (or Public), with embedding allowed.
+2. Account menu → Sermons → Add message; paste the Share link and press Check.
+3. Fill in date, speaker, passage, books and topics; choose Members only or Everyone.
+4. Save as a draft, or turn on Published (needs `sermon:publish`).
 
 ## Design Tokens
 

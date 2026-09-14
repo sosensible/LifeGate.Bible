@@ -1,14 +1,11 @@
-// Reading directory records and writing the audit trail.
+// Reading and writing directory records.
 import { asc, eq, inArray } from 'drizzle-orm'
 import { createError } from 'h3'
 import type { AdminPersonView } from '../../shared/people.ts'
 import type { PersonRecord } from '../../shared/privacy.ts'
-import { auditLog, households, ministries, ministryMembers, people, user } from '../database/schema/index.ts'
+import { households, ministries, ministryMembers, people, user } from '../database/schema/index.ts'
+import type { Tx } from './audit.ts'
 import { db } from './db.ts'
-
-type Db = typeof db
-// A transaction handle has the same query API as `db`.
-type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 
 export type PersonRow = typeof people.$inferSelect
 
@@ -116,17 +113,4 @@ export const setMinistries = (tx: Tx, personId: string, ministryIds: string[]) =
   }
 }
 
-// Records WHICH fields changed, never their values, so the audit trail does
-// not become a second copy of everyone's personal information.
-export const recordAudit = (
-  tx: Tx | Db,
-  entry: { actorUserId: string, action: string, entityType: string, entityId: string | null, fields?: string[], note?: string },
-) => {
-  tx.insert(auditLog).values({
-    actorUserId: entry.actorUserId,
-    action: entry.action,
-    entityType: entry.entityType,
-    entityId: entry.entityId,
-    details: { fields: entry.fields, note: entry.note },
-  }).run()
-}
+export { recordAudit } from './audit.ts'

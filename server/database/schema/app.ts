@@ -74,6 +74,49 @@ export const ministryMembers = sqliteTable('ministry_members', {
   index('ministry_members_person_idx').on(table.personId),
 ])
 
+export const sermonSeries = sqliteTable('sermon_series', {
+  id: id(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const SERMON_VISIBILITY = ['public', 'members'] as const
+export const SERMON_STATUS = ['draft', 'published'] as const
+export const VIDEO_PROVIDERS = ['youtube'] as const
+
+export const sermons = sqliteTable('sermons', {
+  id: id(),
+  // Set once from the date and title so shared links never break.
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  preachedOn: text('preached_on').notNull(), // YYYY-MM-DD
+  speaker: text('speaker').notNull(),
+  seriesId: text('series_id').references(() => sermonSeries.id, { onDelete: 'set null' }),
+  scripture: text('scripture'), // as written, e.g. "John 10:1–18"
+  books: text('books', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  description: text('description'),
+
+  // Media is provider + id, so where videos live can change later. For an
+  // unlisted YouTube video the id is effectively the key to watching it, so it
+  // is only ever sent to someone allowed to see the sermon.
+  videoProvider: text('video_provider', { enum: VIDEO_PROVIDERS }),
+  videoId: text('video_id'),
+
+  // New sermons start members-only and unpublished.
+  visibility: text('visibility', { enum: SERMON_VISIBILITY }).notNull().default('members'),
+  status: text('status', { enum: SERMON_STATUS }).notNull().default('draft'),
+  publishedAt: integer('published_at', { mode: 'timestamp' }),
+
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('sermons_listing_idx').on(table.status, table.preachedOn),
+  index('sermons_series_idx').on(table.seriesId),
+])
+
 // Who changed what, and when. Written for changes to people, privacy
 // settings, roles and accounts.
 export const auditLog = sqliteTable('audit_log', {
@@ -101,6 +144,14 @@ export const peopleRelations = relations(people, ({ one, many }) => ({
 
 export const ministryRelations = relations(ministries, ({ many }) => ({
   members: many(ministryMembers),
+}))
+
+export const sermonRelations = relations(sermons, ({ one }) => ({
+  series: one(sermonSeries, { fields: [sermons.seriesId], references: [sermonSeries.id] }),
+}))
+
+export const sermonSeriesRelations = relations(sermonSeries, ({ many }) => ({
+  sermons: many(sermons),
 }))
 
 export const ministryMemberRelations = relations(ministryMembers, ({ one }) => ({
