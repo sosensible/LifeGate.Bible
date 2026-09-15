@@ -60,6 +60,31 @@ describe('stewardship', () => {
   })
 })
 
+describe('ministries', () => {
+  it('lets the church secretary, content editors and admins edit ministries, and not deacons or members', () => {
+    for (const role of ['churchSecretary', 'contentEditor', 'admin'] as const) expect(allows(role, { ministry: ['update'] })).toBe(true)
+    for (const role of ['deacon', 'member', 'treasurer', 'counter'] as const) expect(allows(role, { ministry: ['update'] })).toBe(false)
+  })
+})
+
+describe('giving', () => {
+  it('lets the treasurer keep giving and counters only enter gifts', () => {
+    expect(allows('treasurer', { giving: ['record', 'view', 'manage'] })).toBe(true)
+    expect(allows('counter', { giving: ['record'] })).toBe(true)
+    expect(allows('counter', { giving: ['view'] })).toBe(false)
+    expect(allows('counter', { giving: ['manage'] })).toBe(false)
+    expect(allows('counter', { stewardship: ['view'] })).toBe(false)
+  })
+
+  it('keeps donor-level giving from admins, pastors, deacons and the finance committee', () => {
+    for (const role of ['admin', 'pastor', 'deacon', 'churchSecretary', 'financeCommittee', 'member', 'directoryManager'] as const) {
+      expect(allows(role, { giving: ['record'] })).toBe(false)
+      expect(allows(role, { giving: ['view'] })).toBe(false)
+      expect(allows(role, { giving: ['manage'] })).toBe(false)
+    }
+  })
+})
+
 describe('archives', () => {
   it('lets staff and admins restore and remove, but content editors only archive speakers', () => {
     for (const role of ['pastor', 'directoryManager', 'admin'] as const) {

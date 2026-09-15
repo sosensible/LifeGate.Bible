@@ -20,6 +20,9 @@ export const ACTION_LABELS: Record<string, string> = {
   'household.create': 'Added household',
   'household.update': 'Edited household',
   'household.delete': 'Removed household',
+  'ministry.create': 'Added ministry',
+  'ministry.update': 'Edited ministry',
+  'ministry.delete': 'Removed ministry',
   'sermon.create': 'Added sermon',
   'sermon.update': 'Edited sermon',
   'sermon.publish': 'Published sermon',
@@ -82,12 +85,32 @@ export const ACTION_LABELS: Record<string, string> = {
   'recurring.restore': 'Restored recurring transaction',
   'recurring.delete': 'Removed recurring transaction',
   'recurring.skip': 'Skipped a recurring transaction',
+  // Giving. Never amounts, giver names or email addresses.
+  'giver.create': 'Added giving record',
+  'giver.update': 'Edited giving record',
+  'giver.archive': 'Archived giving record',
+  'giver.restore': 'Restored giving record',
+  'giver.delete': 'Removed giving record',
+  'count.open': 'Started offering count',
+  'count.update': 'Edited offering count',
+  'count.close': 'Closed offering count',
+  'count.reopen': 'Reopened offering count',
+  'count.linkDeposit': 'Linked count to its deposit',
+  'count.unlinkDeposit': 'Unlinked count from its deposit',
+  'gift.add': 'Entered a gift',
+  'gift.update': 'Edited a gift',
+  'gift.remove': 'Removed a gift',
+  'statementSettings.update': 'Edited statement settings',
+  'statement.send': 'Emailed giving statements',
+  'statement.print': 'Printed giving statements',
+  'report.export': 'Downloaded a semi-annual report',
 }
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   user: 'Accounts',
   person: 'People',
   household: 'Households',
+  ministry: 'Ministries',
   sermon: 'Sermons',
   sermonSeries: 'Sermon series',
   missionary: 'Missionaries',
@@ -100,6 +123,10 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
   category: 'Categories',
   budget: 'Budget',
   recurring: 'Recurring transactions',
+  giver: 'Giving records',
+  count: 'Offering counts',
+  statement: 'Giving statements',
+  report: 'Reports',
 }
 
 export const actionLabel = (action: string) => ACTION_LABELS[action] ?? action

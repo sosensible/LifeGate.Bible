@@ -72,11 +72,19 @@ export const accountUpdateSchema = z.object({
   archived: z.boolean(),
 }).partial()
 
+// In semi-annual reports: each category, or only the group's total.
+export const REPORT_DETAILS = ['categories', 'total'] as const
+export type ReportDetail = typeof REPORT_DETAILS[number]
+
 export const categoryGroupSchema = z.object({
   name: name('a group name'),
+  reportDetail: z.enum(REPORT_DETAILS).default('categories'),
 })
 
-export const categoryGroupUpdateSchema = categoryGroupSchema.extend({
+// Spelled out rather than extended: a default here would reset the setting on every other change.
+export const categoryGroupUpdateSchema = z.object({
+  name: name('a group name'),
+  reportDetail: z.enum(REPORT_DETAILS),
   sortOrder: z.number().int(),
   archived: z.boolean(),
 }).partial()
@@ -180,6 +188,7 @@ export interface CategoryView {
 export interface CategoryGroupView {
   id: string
   name: string
+  reportDetail: ReportDetail
   sortOrder: number
   archivedAt: string | null
   categories: CategoryView[]
@@ -433,4 +442,76 @@ export interface FundPlansResult {
   totalCents: number
   shortfallCents: number
   availableToFundCents: number
+}
+
+// ---- Semi-annual reports ------------------------------------------------------
+
+export const reportPeriodSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  half: z.coerce.number().int().min(1).max(2).transform(value => value as 1 | 2),
+})
+
+export type ReportPeriod = z.infer<typeof reportPeriodSchema>
+
+// The six months of a half: 1 is January–June, 2 is July–December.
+export const reportMonths = ({ year, half }: ReportPeriod) =>
+  Array.from({ length: 6 }, (_, i) => `${year}-${String((half === 1 ? 1 : 7) + i).padStart(2, '0')}`)
+
+export const reportPeriodLabel = ({ year, half }: ReportPeriod) =>
+  `${half === 1 ? 'January–June' : 'July–December'} ${year}`
+
+export interface ReportTotals {
+  carriedInCents: number
+  fundedCents: number
+  activityCents: number
+  // Reset categories return what is left to Available to Fund each month.
+  returnedCents: number
+  remainingCents: number
+  monthlyActivityCents: number[]
+}
+
+export interface ReportRow extends ReportTotals {
+  id: string
+  name: string
+  isSensitive: boolean
+  rollover: boolean
+}
+
+export interface ReportSummary {
+  cashStartCents: number
+  cashEndCents: number
+  availableToFundStartCents: number
+  availableToFundEndCents: number
+  undesignatedOfferingsCents: number
+  designatedOfferingsCents: number
+  otherInCents: number
+  outCents: number
+  // Net of transfers to and from accounts outside the budget, e.g. a credit card payment.
+  transfersCents: number
+  uncategorizedCents: number
+}
+
+export interface SemiAnnualReport {
+  period: ReportPeriod
+  label: string
+  months: string[]
+  // The half isn't over yet.
+  toDate: boolean
+  summary: ReportSummary
+  // A group reported as a total has no categories listed.
+  groups: Array<{ id: string, name: string, reportDetail: ReportDetail, categories: ReportRow[], totals: ReportTotals }>
+  totals: ReportTotals
+  showReturned: boolean
+  uncategorizedCount: number
+}
+
+export interface ReportTransaction {
+  postedOn: string
+  account: string
+  group: string | null
+  category: string | null
+  payee: string | null
+  memo: string | null
+  amountCents: number
+  isTransfer: boolean
 }

@@ -1,7 +1,7 @@
 // Reading the audit log for the viewer: filtered, paged, with names instead of ids.
 import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizzle-orm'
 import type { AuditEntryView } from '../../shared/audit.ts'
-import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, households, missionaries, missionOrganizations, people, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
+import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, givers, households, ministries, offeringCounts, missionaries, missionOrganizations, people, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
 import { db } from './db.ts'
 
 export interface AuditQuery {
@@ -30,6 +30,9 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
     case 'household':
       return new Map(db.select({ id: households.id, name: households.name }).from(households)
         .where(inArray(households.id, ids)).all().map(r => [r.id, r.name]))
+    case 'ministry':
+      return new Map(db.select({ id: ministries.id, name: ministries.name }).from(ministries)
+        .where(inArray(ministries.id, ids)).all().map(r => [r.id, r.name]))
     case 'sermon':
       return new Map(db.select({ id: sermons.id, title: sermons.title }).from(sermons)
         .where(inArray(sermons.id, ids)).all().map(r => [r.id, r.title]))
@@ -65,6 +68,13 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
         .leftJoin(categories, eq(categories.id, recurringTransactions.categoryId))
         .where(inArray(recurringTransactions.id, ids)).all()
         .map(r => [r.id, r.isSensitive ? 'Recurring transaction (sensitive category)' : r.name]))
+    // Giving: admins read this log and must not learn who gives.
+    case 'giver':
+      return new Map(db.select({ id: givers.id }).from(givers)
+        .where(inArray(givers.id, ids)).all().map(r => [r.id, 'Giving record']))
+    case 'count':
+      return new Map(db.select({ id: offeringCounts.id, countedOn: offeringCounts.countedOn, label: offeringCounts.label }).from(offeringCounts)
+        .where(inArray(offeringCounts.id, ids)).all().map(r => [r.id, r.label ? `${r.label}, ${r.countedOn}` : r.countedOn]))
     case 'user':
       return new Map(db.select({ id: user.id, email: user.email }).from(user)
         .where(inArray(user.id, ids)).all().map(r => [r.id, r.email]))

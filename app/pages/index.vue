@@ -122,7 +122,13 @@
         </div>
       </div>
       <div class="max-w-5xl mx-auto mt-8 pt-6 border-t border-white/10">
-        <p class="text-white/40 text-xs font-bold">© 2026 Lifegate Baptist Church · Eau Claire, Michigan · All Rights Reserved</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-white/40 text-xs font-bold">© 2026 Lifegate Baptist Church · Eau Claire, Michigan · All Rights Reserved</p>
+          <div class="flex gap-4">
+            <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
+            <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
+          </div>
+        </div>
       </div>
     </footer>
   </div>

@@ -29,6 +29,8 @@ const STATIC_PATHS = [
   '/pastoral-candidates',
   '/giving',
   '/contact',
+  '/privacy',
+  '/terms',
 ]
 
 const escapeXml = (s: string) =>

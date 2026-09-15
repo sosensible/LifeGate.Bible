@@ -7,7 +7,10 @@
           All Messages
         </NuxtLink>
         <p v-if="sermon.series" class="text-white/60 text-xs uppercase tracking-wide mt-4">{{ sermon.series.name }}</p>
-        <h1 class="text-4xl font-bold font-serif text-white mt-1">{{ sermon.title }}</h1>
+        <div class="flex flex-wrap items-start justify-between gap-4 mt-1">
+          <h1 class="text-4xl font-bold font-serif text-white">{{ sermon.title }}</h1>
+          <UButton v-if="isTeacher" variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-pencil" :loading="opening" @click="openEditor">Edit your message</UButton>
+        </div>
         <p class="text-white/70 mt-2">
           <span v-if="sermon.scripture" class="text-gold-300 font-semibold">{{ sermon.scripture }} · </span>
           {{ formatSermonDate(sermon.preachedOn) }} · {{ sermon.speaker }}
@@ -23,7 +26,7 @@
           variant="subtle"
           icon="i-lucide-eye-off"
           title="Draft preview"
-          description="Only people who manage sermons can see this. It is not on the Teaching page yet."
+          :description="isTeacher ? 'Only you and the people who manage sermons can see this. It is not on the Teaching page yet.' : 'Only people who manage sermons can see this. It is not on the Teaching page yet.'"
         />
         <SermonPlayer :sermon="sermon" />
       </div>
@@ -56,10 +59,12 @@
         </aside>
       </div>
     </div>
+    <TeachingEditor v-model:open="editorOpen" :sermon="editing" :series="mine?.series ?? []" @saved="refreshNuxtData()" />
   </div>
 </template>
-
 <script setup lang="ts">
+import type { AdminSermonView } from '#shared/sermons'
+
 definePageMeta({
   layout: 'default',
 })
@@ -68,6 +73,23 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const { data, error } = await useFetch(() => `/api/sermons/${encodeURIComponent(slug.value)}`)
 const sermon = computed(() => data.value?.sermon ?? null)
+const isTeacher = computed(() => Boolean(data.value?.isTeacher))
+
+// The message's own teacher edits its details here.
+const editorOpen = ref(false)
+const opening = ref(false)
+const mine = ref<{ sermons: AdminSermonView[], series: Array<{ id: string, name: string }> } | null>(null)
+const editing = computed(() => mine.value?.sermons.find(s => s.slug === slug.value) ?? null)
+const openEditor = async () => {
+  opening.value = true
+  try {
+    mine.value = await $fetch('/api/teaching/mine')
+    editorOpen.value = true
+  }
+  finally {
+    opening.value = false
+  }
+}
 
 // A members-only message: send signed-out visitors to sign in and back here.
 if (error.value?.statusCode === 401) {

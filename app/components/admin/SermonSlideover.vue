@@ -30,8 +30,13 @@
             <UFormField label="Date preached" name="preachedOn" required>
               <UInput v-model="state.preachedOn" type="date" class="w-full" />
             </UFormField>
-            <UFormField label="Speaker" name="speaker" required>
-              <UInputMenu v-model="state.speaker" :items="speakers" create-item placeholder="Who preached" class="w-full" @create="state.speaker = $event" />
+            <UFormField
+              label="Speaker"
+              name="speaker"
+              required
+              :help="state.speakerPersonId ? 'On the Speakers list. If they have an account, they can edit this message’s details.' : state.speaker ? 'A typed name, not linked to the Speakers list.' : 'Pick from the Speakers list, or type a guest’s name.'"
+            >
+              <USelectMenu v-model="speakerChoice" :items="speakerItems" value-key="value" create-item placeholder="Who preached" class="w-full" @create="addGuest" />
             </UFormField>
             <UFormField label="Series" name="seriesId">
               <USelectMenu
@@ -100,13 +105,16 @@
 
 <script setup lang="ts">
 import { BIBLE_BOOKS, type BibleBook } from '#shared/bible'
-import { sermonSchema, type AdminSermonView, type SeriesView } from '#shared/sermons'
+import { sermonSchema, type AdminSermonView, type SeriesView, type SpeakerChoice } from '#shared/sermons'
 import { youTubeWatchUrl } from '#shared/youtube'
 
 const props = defineProps<{
   sermon: AdminSermonView | null
   series: SeriesView[]
+  // Names used on past messages, most recent first.
   speakers: string[]
+  // The Speakers list; picking one links the message to that person.
+  speakerChoices: SpeakerChoice[]
 }>()
 
 const emit = defineEmits<{
@@ -132,7 +140,9 @@ const today = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD, local 
 const blank = () => ({
   title: '',
   preachedOn: today(),
+  // The most recent speaker, linked if they are on the Speakers list.
   speaker: props.speakers[0] ?? '',
+  speakerPersonId: props.speakerChoices.find(c => c.name === props.speakers[0])?.id ?? null,
   seriesId: null as string | null,
   scripture: '',
   books: [] as BibleBook[],
@@ -154,11 +164,40 @@ const load = () => {
   lookup.value = null
   Object.assign(state, s
     ? {
-        title: s.title, preachedOn: s.preachedOn, speaker: s.speaker, seriesId: s.series?.id ?? null,
+        title: s.title, preachedOn: s.preachedOn, speaker: s.speaker, speakerPersonId: s.speakerPersonId, seriesId: s.series?.id ?? null,
         scripture: s.scripture ?? '', books: [...s.books] as BibleBook[], tags: [...s.tags], description: s.description ?? '',
         video: s.videoId ? youTubeWatchUrl(s.videoId) : '', visibility: s.visibility, status: s.status,
       }
     : blank())
+}
+
+// Speakers: the list's people by id, and typed guest names as `guest:Name`.
+const guestNames = ref<string[]>([])
+const speakerItems = computed(() => {
+  const listed = new Set(props.speakerChoices.map(c => c.name))
+  const guests = [...new Set([...props.speakers, ...guestNames.value, ...(state.speaker && !state.speakerPersonId ? [state.speaker] : [])])]
+    .filter(name => name && !listed.has(name))
+  return [
+    props.speakerChoices.map(c => ({ value: c.id, label: c.name, icon: 'i-lucide-user-round-check' })),
+    guests.map(name => ({ value: `guest:${name}`, label: name, icon: 'i-lucide-user-round' })),
+  ].filter(group => group.length)
+})
+const speakerChoice = computed({
+  get: () => state.speakerPersonId ?? (state.speaker ? `guest:${state.speaker}` : undefined),
+  set: (value: string | undefined) => {
+    if (!value) return
+    if (value.startsWith('guest:')) {
+      state.speakerPersonId = null
+      state.speaker = value.slice('guest:'.length)
+      return
+    }
+    state.speakerPersonId = value
+    state.speaker = props.speakerChoices.find(c => c.id === value)?.name ?? state.speaker
+  },
+})
+const addGuest = (name: string) => {
+  guestNames.value.push(name)
+  speakerChoice.value = `guest:${name}`
 }
 
 const lookup = ref<{ title: string | null, channel: string | null } | null>(null)

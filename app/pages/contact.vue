@@ -53,7 +53,7 @@
                 </div>
                 <div>
                   <h4 class="font-bold text-highlighted mb-1">Email</h4>
-                  <p class="text-toned text-sm"><a href="mailto:info@lifegate.church" class="hover:text-primary">info@lifegate.church</a></p>
+                  <p class="text-toned text-sm"><a :href="`mailto:${LEGAL_CONTACT_EMAIL}`" class="hover:text-primary">{{ LEGAL_CONTACT_EMAIL }}</a></p>
                   <p class="text-muted text-xs mt-1">We'll respond within 24 hours</p>
                 </div>
               </div>

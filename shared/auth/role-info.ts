@@ -4,7 +4,7 @@ import { roles, type RoleName } from './permissions.ts'
 
 // Roles an administrator can assign, in the order they are shown. `user` is not
 // listed: it is what an account has when it has none of these.
-export const ASSIGNABLE_ROLES = ['member', 'pastor', 'deacon', 'churchSecretary', 'directoryManager', 'contentEditor', 'treasurer', 'financeCommittee', 'admin'] as const satisfies readonly RoleName[]
+export const ASSIGNABLE_ROLES = ['member', 'pastor', 'deacon', 'churchSecretary', 'directoryManager', 'contentEditor', 'treasurer', 'counter', 'financeCommittee', 'admin'] as const satisfies readonly RoleName[]
 export type AssignableRole = typeof ASSIGNABLE_ROLES[number]
 
 export const ROLE_INFO: Record<RoleName, { label: string, description: string }> = {
@@ -14,8 +14,9 @@ export const ROLE_INFO: Record<RoleName, { label: string, description: string }>
   directoryManager: { label: 'Directory manager', description: 'Keeps the directory: people, households, ministries, and sharing on someone’s behalf.' },
   contentEditor: { label: 'Content editor', description: 'Adds, edits and publishes sermons.' },
   deacon: { label: 'Deacon', description: 'Decides what each ministry can see of its budget. Sees no amounts.' },
-  churchSecretary: { label: 'Church secretary', description: 'Decides what each ministry can see of its budget. Sees no amounts.' },
-  treasurer: { label: 'Treasurer', description: 'Keeps Stewardship: accounts, transactions, categories and the budget.' },
+  churchSecretary: { label: 'Church secretary', description: 'Keeps the list of ministries, and decides what each ministry can see of its budget. Sees no amounts.' },
+  treasurer: { label: 'Treasurer', description: 'Keeps Stewardship: accounts, transactions, categories, the budget, offerings and giving statements.' },
+  counter: { label: 'Counter', description: 'Enters gifts in open offering counts. Sees no giving history.' },
   financeCommittee: { label: 'Finance committee', description: 'Reads Stewardship: accounts, transactions, the budget and reports.' },
   admin: { label: 'Administrator', description: 'Accounts, roles and the audit log, plus every other area except Stewardship.' },
   // Defined for pastoral applications, which the church does not take through
@@ -45,6 +46,9 @@ const PERMISSION_LABELS: Record<string, string> = {
   'stewardship.view': 'See the church budget and transactions',
   'stewardship.manage': 'Keep the church budget and transactions',
   'stewardship.grantAccess': 'Decide what ministries see of the budget',
+  'giving.record': 'Enter gifts in open offering counts',
+  'giving.view': 'See giving records, counts and statements',
+  'giving.manage': 'Keep giving records, close counts and send statements',
   'user.list': 'Manage accounts',
   'user.set-role': 'Assign roles',
   'user.ban': 'Block accounts',

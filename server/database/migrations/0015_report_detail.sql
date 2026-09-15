@@ -1,0 +1,1 @@
+ALTER TABLE `category_groups` ADD `report_detail` text DEFAULT 'categories' NOT NULL;

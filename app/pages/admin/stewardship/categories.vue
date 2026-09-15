@@ -9,7 +9,7 @@
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 class="font-serif text-2xl font-bold text-highlighted">Category groups</h2>
-            <p class="text-toned text-sm max-w-2xl">Groups organize the budget and are the sections of the semi-annual reports. Add a group, then add its categories.</p>
+            <p class="text-toned text-sm max-w-2xl">Groups organize the budget and are the sections of the semi-annual reports, which list each category or only the group’s total. Add a group, then add its categories.</p>
           </div>
           <div class="flex items-center gap-4">
             <USwitch v-model="showArchived" label="Show archived" />
@@ -22,6 +22,7 @@
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <h2 class="font-serif text-xl font-bold text-highlighted">{{ group.name }}</h2>
+                <UBadge v-if="group.reportDetail === 'total'" color="neutral" variant="subtle" icon="i-lucide-sigma">Reported as a total</UBadge>
                 <UBadge v-if="group.archivedAt" color="warning" variant="subtle">Archived</UBadge>
               </div>
               <div v-if="canManage" class="flex gap-1">
@@ -93,6 +94,15 @@
         <UForm id="group-form" :schema="categoryGroupSchema" :state="groupState" class="space-y-4" @submit="saveGroup">
           <UFormField label="Name" name="name" required>
             <UInput v-model="groupState.name" class="w-full" autofocus />
+          </UFormField>
+          <UFormField label="In semi-annual reports" name="reportDetail">
+            <URadioGroup
+              v-model="groupState.reportDetail"
+              :items="[
+                { value: 'categories', label: 'Each category', description: 'List every category in the group, with the group total.' },
+                { value: 'total', label: 'Group total only', description: 'One line for the whole group, e.g. staff pay. Transaction exports show the group, not payees.' },
+              ]"
+            />
           </UFormField>
           <USwitch v-if="editingGroup" v-model="groupState.archived" label="Archived" description="Hidden from the budget once its categories are empty." />
         </UForm>
@@ -167,7 +177,7 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import { categoryGroupSchema, categorySchema, payeeRuleSchema, type CategoryGroupView, type CategoryView, type PayeeRuleView } from '#shared/stewardship'
+import { categoryGroupSchema, categorySchema, payeeRuleSchema, type CategoryGroupView, type ReportDetail, type CategoryView, type PayeeRuleView } from '#shared/stewardship'
 
 definePageMeta({
   middleware: 'auth',
@@ -225,18 +235,18 @@ const run = async (work: () => Promise<unknown>, failure: string) => {
 // Groups
 const groupEditorOpen = ref(false)
 const editingGroup = ref<CategoryGroupView | null>(null)
-const groupState = reactive({ name: '', archived: false })
+const groupState = reactive({ name: '', reportDetail: 'categories' as ReportDetail, archived: false })
 const openGroupEditor = (group: CategoryGroupView | null) => {
   editingGroup.value = group
-  Object.assign(groupState, { name: group?.name ?? '', archived: Boolean(group?.archivedAt) })
+  Object.assign(groupState, { name: group?.name ?? '', reportDetail: group?.reportDetail ?? 'categories', archived: Boolean(group?.archivedAt) })
   groupEditorOpen.value = true
 }
 const saveGroup = async () => {
   const group = editingGroup.value
   const ok = await run(async () => {
     const result = group
-      ? await $fetch(`/api/admin/stewardship/category-groups/${group.id}`, { method: 'PATCH', body: { name: groupState.name, archived: groupState.archived } })
-      : await $fetch('/api/admin/stewardship/category-groups', { method: 'POST', body: { name: groupState.name } })
+      ? await $fetch(`/api/admin/stewardship/category-groups/${group.id}`, { method: 'PATCH', body: { name: groupState.name, reportDetail: groupState.reportDetail, archived: groupState.archived } })
+      : await $fetch('/api/admin/stewardship/category-groups', { method: 'POST', body: { name: groupState.name, reportDetail: groupState.reportDetail } })
     groups.value = result.groups
   }, 'Group not saved')
   if (ok) groupEditorOpen.value = false

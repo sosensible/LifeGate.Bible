@@ -9,6 +9,8 @@ export const sermonSchema = z.object({
   title: z.string().trim().min(1, 'Enter a title').max(200),
   preachedOn: z.iso.date('Enter the date it was preached'),
   speaker: z.string().trim().min(1, 'Enter who preached').max(120),
+  // Set when the speaker was picked from the Speakers list; null for a typed guest name.
+  speakerPersonId: z.string().min(1).nullable().optional(),
   seriesId: z.string().min(1).nullable(),
   scripture: optionalText(200),
   books: z.array(z.enum(BIBLE_BOOKS)).max(66),
@@ -24,6 +26,20 @@ export const sermonSchema = z.object({
 })
 
 export const sermonUpdateSchema = sermonSchema.partial()
+
+// What a teacher may change on their own messages: not the video, the speaker,
+// who can watch or whether it is published. Other fields are refused, not ignored.
+export const teacherSermonSchema = sermonSchema.pick({
+  title: true,
+  preachedOn: true,
+  seriesId: true,
+  scripture: true,
+  books: true,
+  tags: true,
+  description: true,
+}).partial().strict()
+
+export type TeacherSermonInput = z.infer<typeof teacherSermonSchema>
 
 export type SermonInput = z.infer<typeof sermonSchema>
 
@@ -66,9 +82,16 @@ export interface SermonView {
 
 // What the sermon admin receives: everything, including drafts.
 export interface AdminSermonView extends SermonView {
+  speakerPersonId: string | null
   status: 'draft' | 'published'
   publishedAt: string | null
   updatedAt: string
+}
+
+// A speaker to pick in the sermon form.
+export interface SpeakerChoice {
+  id: string
+  name: string
 }
 
 export interface SeriesView {

@@ -117,6 +117,10 @@ export const sermons = sqliteTable('sermons', {
   title: text('title').notNull(),
   preachedOn: text('preached_on').notNull(), // YYYY-MM-DD
   speaker: text('speaker').notNull(),
+  // The person on the Speakers list who taught it, when they are on it (guests
+  // can be typed without one). A teacher with an account may edit their own
+  // messages' details, but not the video, speaker, audience or status.
+  speakerPersonId: text('speaker_person_id').references(() => people.id, { onDelete: 'set null' }),
   seriesId: text('series_id').references(() => sermonSeries.id, { onDelete: 'set null' }),
   scripture: text('scripture'), // as written, e.g. "John 10:1–18"
   books: text('books', { mode: 'json' }).$type<string[]>().notNull().default([]),
@@ -139,6 +143,7 @@ export const sermons = sqliteTable('sermons', {
 }, table => [
   index('sermons_listing_idx').on(table.status, table.preachedOn),
   index('sermons_series_idx').on(table.seriesId),
+  index('sermons_speaker_person_idx').on(table.speakerPersonId),
 ])
 
 // Missions: members-only pages about the organizations Lifegate works with and
@@ -254,9 +259,14 @@ export const syncRuns = sqliteTable('sync_runs', {
   index('sync_runs_started_idx').on(table.startedAt),
 ])
 
+// How a group appears in semi-annual reports: each of its categories, or one
+// line with the group's total (e.g. staff pay, so no one's salary is itemized).
+export const REPORT_DETAILS = ['categories', 'total'] as const
+
 export const categoryGroups = sqliteTable('category_groups', {
   id: id(),
   name: text('name').notNull(),
+  reportDetail: text('report_detail', { enum: REPORT_DETAILS }).notNull().default('categories'),
   sortOrder: integer('sort_order').notNull().default(0),
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
   createdAt: createdAt(),
@@ -425,6 +435,118 @@ export const recurringOccurrences = sqliteTable('recurring_occurrences', {
   handledAt: integer('handled_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, table => [
   primaryKey({ columns: [table.recurringId, table.dueOn] }),
+])
+
+// Giving: offerings and year-end statements. Donor-level, so only the Treasurer
+// and counters reach these tables (see shared/auth/permissions.ts). The rules
+// live in server/lib/giving.ts and server/lib/statements.ts.
+
+// A giving record: who a statement goes to. Usually a household. It keeps its
+// own name, address and email, entered by the Treasurer, so it survives the
+// directory record being removed and never exposes the directory's contact
+// details to someone who cannot review them.
+export const GIVER_DELIVERY = ['email', 'mail'] as const
+
+export const givers = sqliteTable('givers', {
+  id: id(),
+  householdId: text('household_id').references(() => households.id, { onDelete: 'set null' }),
+  personId: text('person_id').references(() => people.id, { onDelete: 'set null' }),
+  statementName: text('statement_name').notNull(),
+  mailingAddress: text('mailing_address'),
+  email: text('email'),
+  delivery: text('delivery', { enum: GIVER_DELIVERY }).notNull().default('mail'),
+  notes: text('notes'),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('givers_name_idx').on(table.statementName),
+  index('givers_household_idx').on(table.householdId),
+  index('givers_person_idx').on(table.personId),
+])
+
+// One counting of an offering, e.g. Sunday morning. Counters enter gifts while
+// it is open; the Treasurer closes it once it matches the count sheet.
+export const COUNT_STATUS = ['open', 'closed'] as const
+
+export const offeringCounts = sqliteTable('offering_counts', {
+  id: id(),
+  countedOn: text('counted_on').notNull(), // YYYY-MM-DD
+  label: text('label'),
+  status: text('status', { enum: COUNT_STATUS }).notNull().default('open'),
+  // The count sheet's totals, which the entered gifts must match to close.
+  expectedCashCents: integer('expected_cash_cents').notNull().default(0),
+  expectedCheckCents: integer('expected_check_cents').notNull().default(0),
+  counterNames: text('counter_names'),
+  notes: text('notes'),
+  openedByUserId: text('opened_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  closedByUserId: text('closed_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  closedAt: integer('closed_at', { mode: 'timestamp' }),
+  // The bank (or cash box) transaction this count was deposited as.
+  depositTransactionId: text('deposit_transaction_id').references(() => financeTransactions.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('offering_counts_counted_idx').on(table.countedOn),
+])
+
+export const GIFT_METHODS = ['cash', 'check', 'online', 'bankTransfer', 'other'] as const
+
+// A gift with no category is undesignated: it goes to Available to Fund when
+// the count's deposit is linked. A designated gift names the budget category it
+// was given for. A check split between the two is two gifts. A gift with no
+// giver is loose or anonymous: counted, never on a statement.
+export const gifts = sqliteTable('gifts', {
+  id: id(),
+  countId: text('count_id').notNull().references(() => offeringCounts.id, { onDelete: 'cascade' }),
+  giverId: text('giver_id').references(() => givers.id, { onDelete: 'restrict' }),
+  categoryId: text('category_id').references(() => categories.id, { onDelete: 'restrict' }),
+  amountCents: integer('amount_cents').notNull(),
+  method: text('method', { enum: GIFT_METHODS }).notNull(),
+  checkNumber: text('check_number'),
+  // The count's date unless changed, e.g. a check mailed by December 31.
+  receivedOn: text('received_on').notNull(), // YYYY-MM-DD
+  // What a designated gift is for when the category alone doesn't say, e.g.
+  // "VBS snacks". Kept with the gift: it is not copied to the deposit's budget
+  // lines, which ministries can see.
+  memo: text('memo'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('gifts_giver_idx').on(table.giverId, table.receivedOn),
+  index('gifts_count_idx').on(table.countId),
+])
+
+// The church's details printed on statements. One row, id 'church'.
+export const statementSettings = sqliteTable('statement_settings', {
+  id: text('id').primaryKey(),
+  legalName: text('legal_name').notNull(),
+  mailingAddress: text('mailing_address'),
+  ein: text('ein'),
+  signerName: text('signer_name'),
+  signerTitle: text('signer_title'),
+  closingMessage: text('closing_message'),
+  emailSubject: text('email_subject'),
+  updatedAt: updatedAt(),
+})
+
+// Statements sent or printed, so the Treasurer can see what went out and
+// notice when a statement changed afterward.
+export const STATEMENT_DELIVERY_METHODS = ['email', 'print'] as const
+
+export const statementDeliveries = sqliteTable('statement_deliveries', {
+  id: id(),
+  giverId: text('giver_id').notNull().references(() => givers.id, { onDelete: 'cascade' }),
+  year: integer('year').notNull(),
+  method: text('method', { enum: STATEMENT_DELIVERY_METHODS }).notNull(),
+  sentTo: text('sent_to'),
+  status: text('status', { enum: ['sent', 'failed'] }).notNull(),
+  error: text('error'),
+  totalCents: integer('total_cents').notNull(),
+  sentByUserId: text('sent_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, table => [
+  index('statement_deliveries_giver_idx').on(table.giverId, table.year),
 ])
 
 // Who changed what, and when. Written for changes to people, privacy

@@ -1,10 +1,10 @@
 // Reading sermons and deciding who may see each one.
-import { desc, eq, like, or } from 'drizzle-orm'
+import { and, asc, desc, eq, like, or } from 'drizzle-orm'
 import { createError } from 'h3'
 import { byBibleOrder } from '../../shared/bible.ts'
-import { sermonSlug, type AdminSermonView, type SermonInput, type SermonView } from '../../shared/sermons.ts'
+import { sermonSlug, type AdminSermonView, type SermonInput, type SermonView, type SpeakerChoice } from '../../shared/sermons.ts'
 import { parseYouTubeId } from '../../shared/youtube.ts'
-import { sermonSeries, sermons } from '../database/schema/index.ts'
+import { people, sermonSeries, sermons } from '../database/schema/index.ts'
 import { db } from './db.ts'
 
 export type SermonRow = typeof sermons.$inferSelect & { seriesName: string | null }
@@ -55,6 +55,7 @@ export const presentSermon = (sermon: SermonRow): SermonView => ({
 
 export const presentAdminSermon = (sermon: SermonRow): AdminSermonView => ({
   ...presentSermon(sermon),
+  speakerPersonId: sermon.speakerPersonId,
   status: sermon.status,
   publishedAt: sermon.publishedAt?.toISOString() ?? null,
   updatedAt: sermon.updatedAt.toISOString(),
@@ -96,6 +97,45 @@ export const uniqueSermonSlug = (preachedOn: string, title: string) => {
   let n = 2
   while (taken.has(`${base}-${n}`)) n++
   return `${base}-${n}`
+}
+
+// A speaker picked in the sermon form must be on the Speakers list.
+export const assertSpeakerPerson = (personId: string | null | undefined) => {
+  if (!personId) return
+  if (!db.select({ id: people.id }).from(people).where(and(eq(people.id, personId), eq(people.isSpeaker, true))).get()) {
+    throw createError({ statusCode: 400, statusMessage: 'That speaker is not on the Speakers list' })
+  }
+}
+
+// Active speakers for the sermon form, plus any archived one a message still names.
+export const speakerChoices = (): SpeakerChoice[] => {
+  const linked = new Set(db.select({ id: sermons.speakerPersonId }).from(sermons).all().map(r => r.id).filter(Boolean))
+  return db.select({ id: people.id, first: people.firstName, last: people.lastName, archivedAt: people.speakerArchivedAt })
+    .from(people)
+    .where(eq(people.isSpeaker, true))
+    .orderBy(asc(people.lastName), asc(people.firstName))
+    .all()
+    .filter(p => !p.archivedAt || linked.has(p.id))
+    .map(p => ({ id: p.id, name: `${p.first} ${p.last}` }))
+}
+
+// ---- Teachers ----------------------------------------------------------------
+// A teacher is the person linked to a signed-in account whom a message names as
+// its speaker. They may edit that message's details (teacherSermonSchema).
+
+export const teacherPersonId = (userId: string) =>
+  db.select({ id: people.id }).from(people).where(eq(people.userId, userId)).get()?.id ?? null
+
+export const isTeacherOf = (sermon: Pick<SermonRow, 'speakerPersonId'>, userId: string | null | undefined) => {
+  if (!userId || !sermon.speakerPersonId) return false
+  return teacherPersonId(userId) === sermon.speakerPersonId
+}
+
+// A teacher's own messages, drafts included.
+export const loadTeacherSermons = (userId: string) => {
+  const personId = teacherPersonId(userId)
+  if (!personId) return []
+  return loadSermons().filter(sermon => sermon.speakerPersonId === personId)
 }
 
 export const assertSeriesExists = (seriesId: string | null | undefined) => {

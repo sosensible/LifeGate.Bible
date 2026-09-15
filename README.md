@@ -114,6 +114,9 @@ id; today the only provider is YouTube (unlisted is fine).
   - add, edit and remove messages (`sermon:create`, `sermon:update`, `sermon:delete`); manage series.
   - Publishing or unpublishing needs `sermon:publish`; others save drafts.
   - "Check" confirms a YouTube link through YouTube's oEmbed endpoint and offers its title.
+- **Teachers** edit their own messages. In the sermon form the speaker is picked from the directory's Speakers list, which links the message to that person (`sermons.speakerPersonId`); a guest's name can still be typed without a link. Migration 0016 linked existing messages whose speaker matched exactly one person on the list.
+  - A signed-in account whose person is a message's linked speaker gets **My teaching** (`/my-teaching`) and an **Edit your message** button on `/teaching/[slug]`, including drafts, which they can also open.
+  - They may change the title, date, series (existing ones), passage, books, topics and notes (`teacherSermonSchema`, `PATCH /api/teaching/mine/[id]`). The video, speaker, who can watch and publishing are refused, not ignored. Audit entries are `sermon.update` noted "By its teacher".
 - Audit log: `sermon.create`, `sermon.update`, `sermon.publish`, `sermon.unpublish`, `sermon.delete`, `series.*`.
 - Not yet: audio files, PDF notes, live stream.
 
@@ -178,6 +181,7 @@ not an account; an account can be linked to one person.
   - **members** see them unless they opt out on `/profile` (default on); an opted-out ministry is also left off their directory entry, for staff too;
   - **the public** sees them only if they opt in (default off), and only while members see them too: name, title and leader badge only (never a photo, birthday or contact details). Minors are never shown publicly. There is no public directory.
   - Staff still see every assignment under People, with a note when someone has opted out or in.
+- **`/admin/ministries`** (`ministry:update`: church secretary, content editors and admins): add ministries, edit names and descriptions, and remove ones nobody serves in and no budget is shared with (`server/lib/ministries.ts`). A ministry's web address is set from its first name and kept on rename. The Missions ministry can be renamed but not removed, because it decides who edits the Missions pages. Audit: `ministry.create`, `ministry.update`, `ministry.delete`.
 - **`/profile`**: a person edits their own phone, email, address, birthday and sharing, and chooses per ministry whether members and everyone see them on its roster, with a live preview of what members and staff see.
 - **`/admin/people`** (`people:update`):
   - add, edit and remove people (`people:create` and `people:delete` for those two); assign ministries;
@@ -223,7 +227,7 @@ Members only, and not indexed by search engines. Some countries make being known
 
 ### 10. Stewardship (`/admin/stewardship/*`, `/ministry-budget`)
 
-The church's accounts, transactions and budget. Phase 1 of Stewardship; offerings with year-end giving statements, then semi-annual reports, come next.
+The church's accounts, transactions and budget (Phase 1), offerings with year-end giving statements (Phase 2), and semi-annual reports (Phase 3).
 
 - **Who** (`shared/auth/permissions.ts`, resource `stewardship`):
   - **Treasurer** (`view`, `manage`) keeps it.
@@ -270,7 +274,25 @@ The church's accounts, transactions and budget. Phase 1 of Stewardship; offering
   - Handled occurrences (paid, entered, skipped) are stored, so nothing is matched or entered twice.
   - They are listed on Transactions → Recurring, and in the budget's Activity popup.
 - **Scripture** in the Stewardship header rotates through `shared/stewardship-verses.ts` (KJV). Add verses there.
-- Tests: `budget.spec.ts`, `plans.spec.ts`, `recurring.spec.ts`, `simplefin.spec.ts`, `stewardship-access.spec.ts`, `permissions.spec.ts`.
+- **Offerings** (`/admin/stewardship/offerings`, `server/lib/giving.ts`, resource `giving`):
+  - **Who:** the **Treasurer** has `record`, `view` and `manage`. A **Counter** has `record` only: they start counts, enter gifts in open counts, search givers by name and add a new giver by name. Counters never see closed counts, giving history, totals by giver or addresses. Nobody else has `giving`: not admins, pastors, deacons or the finance committee.
+  - **Counts:** one per offering, with the cash and check totals from the paper count sheet. A gift has a giver (or none, for loose cash), a method (cash, check, online, bank transfer, other) and an amount, optionally split into designated lines. It is dated with the count unless given its own date, e.g. a check mailed by December 31. A count closes only when its cash and checks match the sheet; reopening needs a reason, kept in the count's notes.
+  - **Undesignated by default:** a gift is just an amount, and goes to Available to Fund for budgeting. A gift given for something in particular is **designated** to a budget category (e.g. Missions); there is no separate list of funds. When the category alone doesn't say what a designated gift is for, a **memo** records it (e.g. "VBS snacks"); the memo stays with the gift and is not copied to the deposit's budget lines, which ministries can see. Counters choose from spending categories in use, by name only. A category with designated gifts can be archived, not removed.
+  - After a count is closed, **Link deposit** splits the matching bank deposit (exact total, within a week, not yet categorized): undesignated giving to Available to Fund, designated gifts to their categories. It can instead record the deposit in a manual cash account. The deposit's lines name categories, never givers. Linking needs `stewardship:manage` too.
+- **Giving records** (`/admin/stewardship/givers`): usually a household. The name, mailing address and email are the Treasurer's own, not copied from the directory; linking to a household or person only offers its name. Removing that directory record leaves the giving record. A record with gifts can be archived, not removed.
+- **Statements** (`/admin/stewardship/statements`, `server/lib/statements.ts`, `server/lib/statement-pdf.ts`):
+  - A giver's gifts on **closed** counts, received in the year, with undesignated and designated subtotals (the "Given to" column appears only when something was designated) and the IRS wording, which is fixed in `shared/giving.ts`. Loose cash is never on a statement. Open counts in the year are flagged.
+  - PDFs are rendered with pdfmake using the standard PDF fonts (nothing loaded from disk or network). **Preview** opens one; **Print mailed statements** makes one PDF of everyone who gets theirs by mail; **Email statements** sends each emailed giver their own PDF.
+  - Every print or email is recorded, and a statement whose total changed since it went out is flagged so a corrected one can be sent.
+  - Church name, address, EIN, signer and closing message are in **Statement settings**.
+  - Audit entries say "Giving record" and give counts ("12 sent, 1 failed"), never names, amounts or email addresses.
+- **Reports** (`/admin/stewardship/reports`, `server/lib/reports.ts`, `server/lib/report-pdf.ts`), for `stewardship:view`:
+  - January–June and July–December. Category figures come from the budget itself (`monthView`), so a report always agrees with the Budget page. Each category shows Carried in, Funded, Activity, Returned (what a reset category gave back to Available to Fund; shown only when non-zero) and Remaining, with group and grand totals.
+  - Each category group is set (Categories → edit group) to report **each category** or the **group total only**, e.g. staff pay. A total-only group is one line on screen, in the PDF and in the CSV, and the transaction CSV shows its lines under the group name with no category, payee or memo. The Budget page is unchanged.
+  - A cash summary opens the report: cash at start, undesignated and designated offerings (lines of deposits linked to counts), other money in, money out, transfers to or from accounts outside the budget, not yet categorized, cash at end, and Available to Fund at start and end. It reconciles to the cent.
+  - **PDF** (pdfmake, shared setup in `server/lib/pdf.ts`) shows totals only. **CSV** (papaparse, formula-escaped) adds month-by-month activity; **CSV with transactions** lists every line, with sensitive categories showing the category name instead of the payee and no memo, and never bank wording.
+  - No period lock: reports reflect current data. Downloads are recorded in the audit log as `report.export` with the period only.
+- Tests: `budget.spec.ts`, `plans.spec.ts`, `recurring.spec.ts`, `simplefin.spec.ts`, `stewardship-access.spec.ts`, `giving.spec.ts`, `statements.spec.ts`, `reports.spec.ts`, `mail.spec.ts`, `permissions.spec.ts`.
 
 ## Database Schema
 

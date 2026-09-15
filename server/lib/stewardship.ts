@@ -2,7 +2,7 @@
 import { and, asc, count, eq, sql } from 'drizzle-orm'
 import { createError } from 'h3'
 import { CASH_ACCOUNT_KINDS, type AccountView, type CategoryGroupView, type CategoryView } from '../../shared/stewardship.ts'
-import { categories, categoryGroups, categoryMonths, financeAccounts, financeTransactions, payeeRules, transactionSplits } from '../database/schema/index.ts'
+import { categories, categoryGroups, categoryMonths, financeAccounts, financeTransactions, gifts, payeeRules, transactionSplits } from '../database/schema/index.ts'
 import type { Tx } from './audit.ts'
 import { db } from './db.ts'
 
@@ -57,6 +57,7 @@ export const loadCategoryGroups = (reader: Reader = db): CategoryGroupView[] => 
     .map(group => ({
       id: group.id,
       name: group.name,
+      reportDetail: group.reportDetail,
       sortOrder: group.sortOrder,
       archivedAt: group.archivedAt?.toISOString() ?? null,
       categories: cats.filter(c => c.groupId === group.id).map(presentCategory),
@@ -90,14 +91,16 @@ export const changedFields = <T extends Record<string, unknown>>(current: T, cha
 export const categoryIsUsed = (reader: Reader, id: string) => {
   const splits = reader.select({ n: count() }).from(transactionSplits).where(eq(transactionSplits.categoryId, id)).get()?.n ?? 0
   const months = reader.select({ n: count() }).from(categoryMonths).where(eq(categoryMonths.categoryId, id)).get()?.n ?? 0
-  return splits + months > 0
+  // Gifts designated for it.
+  const given = reader.select({ n: count() }).from(gifts).where(eq(gifts.categoryId, id)).get()?.n ?? 0
+  return splits + months + given > 0
 }
 
 export const deleteCategory = (tx: Tx, id: string) => {
   const category = findCategory(tx, id)
   assertNotSystemCategory(category)
   if (categoryIsUsed(tx, id)) {
-    throw createError({ statusCode: 400, statusMessage: 'This category has transactions or funding. Archive it instead.' })
+    throw createError({ statusCode: 400, statusMessage: 'This category has transactions, funding or designated gifts. Archive it instead.' })
   }
   tx.delete(payeeRules).where(eq(payeeRules.categoryId, id)).run()
   tx.delete(categories).where(eq(categories.id, id)).run()

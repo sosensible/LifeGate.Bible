@@ -119,6 +119,19 @@ export const getStewardshipViewer = async (event: H3Event) => {
   return { session, canView, canManage, canGrant }
 }
 
+// Giving: what the signed-in person may do with offerings and statements.
+// Throws unless they can at least record gifts.
+export const getGivingViewer = async (event: H3Event) => {
+  const session = await requireSession(event)
+  const [canRecord, canView, canManage] = await Promise.all([
+    hasPermission(session.user.id, { giving: ['record'] }),
+    hasPermission(session.user.id, { giving: ['view'] }),
+    hasPermission(session.user.id, { giving: ['manage'] }),
+  ])
+  if (!canRecord && !canView && !canManage) throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+  return { session, canRecord, canView, canManage }
+}
+
 // Passes if the person has ANY of the listed permission sets.
 export const requireAnyPermission = async (event: H3Event, options: Permissions[]) => {
   const session = await requireSession(event)

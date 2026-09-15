@@ -48,8 +48,17 @@ const items = computed<NavigationMenuItem[]>(() => [
         // exact: the budget's path is a prefix of every other Stewardship page.
         { label: 'Budget', icon: 'i-lucide-wallet', to: '/admin/stewardship', exact: true },
         { label: 'Categories', icon: 'i-lucide-folder-tree', to: '/admin/stewardship/categories' },
-        { label: 'Reports', icon: 'i-lucide-file-chart-column', to: '/admin/stewardship/reports' },
       ]
+    : []),
+  ...(auth.can({ giving: ['record'] }) ? [{ label: 'Offerings', icon: 'i-lucide-hand-coins', to: '/admin/stewardship/offerings' }] : []),
+  ...(auth.can({ giving: ['view'] })
+    ? [
+        { label: 'Givers', icon: 'i-lucide-users-round', to: '/admin/stewardship/givers' },
+        { label: 'Statements', icon: 'i-lucide-file-text', to: '/admin/stewardship/statements' },
+      ]
+    : []),
+  ...(auth.can({ stewardship: ['view'] })
+    ? [{ label: 'Reports', icon: 'i-lucide-file-chart-column', to: '/admin/stewardship/reports' }]
     : []),
   ...(auth.can({ stewardship: ['grantAccess'] })
     ? [{ label: 'Ministry access', icon: 'i-lucide-shield-check', to: '/admin/stewardship/ministry-access' }]

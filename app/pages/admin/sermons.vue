@@ -93,6 +93,7 @@
       :sermon="editing"
       :series="series"
       :speakers="speakers"
+      :speaker-choices="speakerChoices"
       @saved="onSaved"
       @removed="onRemoved"
       @series-created="series.push($event)"
@@ -127,10 +128,12 @@ const auth = useAuthStore()
 const toast = useToast()
 const canCreate = computed(() => auth.can({ sermon: ['create'] }))
 
-const [{ data: sermonData, error }, { data: seriesData, refresh: refreshSeries }] = await Promise.all([
+const [{ data: sermonData, error }, { data: seriesData, refresh: refreshSeries }, { data: speakerData }] = await Promise.all([
   useFetch('/api/admin/sermons'),
   useFetch('/api/admin/sermon-series'),
+  useFetch('/api/admin/sermons/speakers'),
 ])
+const speakerChoices = computed(() => speakerData.value?.speakers ?? [])
 
 const sermons = ref<AdminSermonView[]>(sermonData.value?.sermons ?? [])
 const series = ref<SeriesView[]>(seriesData.value?.series ?? [])

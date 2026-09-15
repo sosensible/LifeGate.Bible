@@ -2,9 +2,12 @@
   <div>
     <!-- Header -->
     <div class="bg-primary-800 py-10 px-6">
-      <div class="max-w-6xl mx-auto">
-        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Members Area</p>
-        <h1 class="text-4xl font-bold font-serif text-white">Ministries</h1>
+      <div class="max-w-6xl mx-auto flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Members Area</p>
+          <h1 class="text-4xl font-bold font-serif text-white">Ministries</h1>
+        </div>
+        <UButton v-if="auth.can({ ministry: ['update'] })" to="/admin/ministries" variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-pencil">Manage ministries</UButton>
       </div>
     </div>
 
@@ -83,6 +86,7 @@ definePageMeta({
   layout: 'default',
 })
 
+const auth = useAuthStore()
 const { data } = await useFetch('/api/ministries')
 
 // "One body, many members" — KJV (public domain). Interleaved between cards.

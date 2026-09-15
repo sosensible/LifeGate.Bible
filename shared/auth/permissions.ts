@@ -45,6 +45,13 @@ export const statement = {
   // Ministry leaders get their own view from those grants, not from a role
   // (server/lib/stewardship-access.ts).
   stewardship: ['view', 'manage', 'grantAccess'],
+  // Giving: offerings and year-end statements. Donor-level giving, so granted
+  // to the Treasurer and counters only: not admins, pastors or the finance
+  // committee (they see offering totals through the budget). `record` enters gifts
+  // in open counts and sees nothing else; `view` reads counts, giving records
+  // and statements; `manage` keeps giving records, closes counts and sends
+  // statements.
+  giving: ['record', 'view', 'manage'],
 } as const
 
 export const ac = createAccessControl(statement)
@@ -78,6 +85,12 @@ export const pastor = ac.newRole({
 
 export const treasurer = ac.newRole({
   stewardship: ['view', 'manage'],
+  giving: ['record', 'view', 'manage'],
+})
+
+// Enters gifts on Sunday. Sees only counts that are still open.
+export const counter = ac.newRole({
+  giving: ['record'],
 })
 
 export const financeCommittee = ac.newRole({
@@ -92,6 +105,7 @@ export const deacon = ac.newRole({
 
 export const churchSecretary = ac.newRole({
   stewardship: ['grantAccess'],
+  ministry: ['update'],
 })
 
 export const searchCommittee = ac.newRole({
@@ -117,6 +131,7 @@ export const roles = {
   pastor,
   searchCommittee,
   treasurer,
+  counter,
   financeCommittee,
   deacon,
   churchSecretary,

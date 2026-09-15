@@ -35,7 +35,12 @@
           <UButton v-if="mode === 'password'" variant="link" color="neutral" @click="switchMode('forgot')">Forgot password?</UButton>
         </div>
 
-        <p class="text-center mt-6">
+        <p class="text-center text-muted text-xs mt-6">
+          By signing in you agree to our <NuxtLink to="/terms" class="underline hover:text-primary">Terms of Use</NuxtLink>
+          and <NuxtLink to="/privacy" class="underline hover:text-primary">Privacy Policy</NuxtLink>.
+        </p>
+
+        <p class="text-center mt-4">
           <NuxtLink to="/" class="text-toned text-sm hover:underline">← Back to main site</NuxtLink>
         </p>
       </div>

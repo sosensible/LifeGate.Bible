@@ -133,6 +133,28 @@ image or the database. The container checks the bank at 05:00, 11:00, 17:00 and
 23:00 (container time), and the Treasurer can check once every 30 minutes from
 Stewardship -> Transactions.
 
+### Giving statements by email
+
+Statements are emailed through Cloudflare Email Service's REST API, which also
+sends sign-in links in production.
+
+1. In Cloudflare, onboard `lifegate.bible` for Email Sending (or run
+   `npx wrangler email sending enable lifegate.bible`).
+2. Create an API token with email sending permission.
+3. Add to the container's environment, then restart:
+   `MAIL_TRANSPORT=cloudflare`, `CLOUDFLARE_ACCOUNT_ID=...`,
+   `CLOUDFLARE_EMAIL_API_TOKEN=...`, and `MAIL_FROM` with an address on that domain.
+
+The Cloudflare transport refuses to run unless `NODE_ENV=production`. Statement
+PDFs use pdfmake's built-in fonts, so the image needs no font files.
+
+### Database migrations
+
+Stewardship adds migrations `0010`–`0014`. The image does not run migrations
+yet. Until it does: stop the app, copy the database file off the box and keep a
+backup, run `DATABASE_PATH=<copy> npm run db:migrate` from a checkout, copy it
+back, and start the app.
+
 ## 4. Point the tunnel at it
 
 Add an ingress rule to the tunnel's public hostname:

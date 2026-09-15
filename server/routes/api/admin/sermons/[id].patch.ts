@@ -3,7 +3,7 @@ import { sermonUpdateSchema } from '../../../../../shared/sermons.ts'
 import { sermons } from '../../../../database/schema/index.ts'
 import { db } from '../../../../lib/db.ts'
 import { recordAudit } from '../../../../lib/audit.ts'
-import { assertSeriesExists, loadSermon, presentAdminSermon, toSermonValues } from '../../../../lib/sermons.ts'
+import { assertSeriesExists, assertSpeakerPerson, loadSermon, presentAdminSermon, toSermonValues } from '../../../../lib/sermons.ts'
 
 export default defineEventHandler(async (event) => {
   const session = await requirePermission(event, { sermon: ['update'] })
@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
   const statusChange = input.status !== undefined && input.status !== current.status
   if (statusChange) await requirePermission(event, { sermon: ['publish'] })
   assertSeriesExists(input.seriesId)
+  assertSpeakerPerson(input.speakerPersonId)
 
   // The slug is kept even if the title or date change, so shared links keep working.
   const values = toSermonValues(input)

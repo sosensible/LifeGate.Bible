@@ -3,7 +3,7 @@
 // Two reasons not to link i.ytimg.com directly: the thumbnail URL contains the
 // video id, which must not reach people who may not watch a members-only
 // sermon; and visitors' browsers make no request to Google until they press play.
-import { canViewSermon, loadSermon } from '../../../../lib/sermons.ts'
+import { canViewSermon, isTeacherOf, loadSermon } from '../../../../lib/sermons.ts'
 
 const fetchThumbnail = defineCachedFunction(async (videoId: string) => {
   const response = await fetch(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
@@ -18,7 +18,7 @@ const fetchThumbnail = defineCachedFunction(async (videoId: string) => {
 export default defineEventHandler(async (event) => {
   const sermon = loadSermon({ slug: getRouterParam(event, 'slug') ?? '' })
   const viewer = await getSermonViewer(event)
-  if (!sermon?.videoId || sermon.videoProvider !== 'youtube' || !canViewSermon(sermon, viewer)) {
+  if (!sermon?.videoId || sermon.videoProvider !== 'youtube' || !(canViewSermon(sermon, viewer) || isTeacherOf(sermon, viewer.session?.user.id))) {
     throw createError({ statusCode: 404, statusMessage: 'Not found' })
   }
 

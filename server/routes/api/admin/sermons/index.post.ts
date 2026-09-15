@@ -2,7 +2,7 @@ import { sermonSchema } from '../../../../../shared/sermons.ts'
 import { sermons } from '../../../../database/schema/index.ts'
 import { db } from '../../../../lib/db.ts'
 import { recordAudit } from '../../../../lib/audit.ts'
-import { assertSeriesExists, loadSermon, presentAdminSermon, toSermonValues, uniqueSermonSlug } from '../../../../lib/sermons.ts'
+import { assertSeriesExists, assertSpeakerPerson, loadSermon, presentAdminSermon, toSermonValues, uniqueSermonSlug } from '../../../../lib/sermons.ts'
 
 export default defineEventHandler(async (event) => {
   const session = await requirePermission(event, { sermon: ['create'] })
@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
   // Going straight to published is publishing.
   if (input.status === 'published') await requirePermission(event, { sermon: ['publish'] })
   assertSeriesExists(input.seriesId)
+  assertSpeakerPerson(input.speakerPersonId)
 
   const values = toSermonValues(input)
   const id = db.transaction((tx) => {
