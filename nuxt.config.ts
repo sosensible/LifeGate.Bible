@@ -59,6 +59,17 @@ export default defineNuxtConfig({
     // Pinned rather than auto-detected so the artifact never depends on which machine
     // or CI provider happens to run the build.
     preset: process.env.NITRO_PRESET || 'node-server',
+    // Stewardship's bank sync (server/tasks/stewardship/sync.ts) runs four times
+    // a day, well under SimpleFIN's ~24 requests a day. It does nothing until
+    // SIMPLEFIN_ACCESS_URL is set. Recurring transactions set to be entered
+    // automatically are entered each morning (server/tasks/stewardship/recurring.ts).
+    experimental: {
+      tasks: true,
+    },
+    scheduledTasks: {
+      '0 5,11,17,23 * * *': ['stewardship:sync'],
+      '0 6 * * *': ['stewardship:recurring'],
+    },
     prerender: {
       crawlLinks: false,
       // Nothing is prerendered. /sitemap.xml and /robots.txt are served live by

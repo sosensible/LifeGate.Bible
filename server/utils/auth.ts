@@ -106,6 +106,28 @@ export const requireSpeakersDeleter = async (event: H3Event) => {
   return viewer
 }
 
+// Stewardship: what the signed-in person may do with the church budget.
+// Ministry leaders' access comes from grants, not roles; see
+// server/lib/stewardship-access.ts.
+export const getStewardshipViewer = async (event: H3Event) => {
+  const session = await requireSession(event)
+  const [canView, canManage, canGrant] = await Promise.all([
+    hasPermission(session.user.id, { stewardship: ['view'] }),
+    hasPermission(session.user.id, { stewardship: ['manage'] }),
+    hasPermission(session.user.id, { stewardship: ['grantAccess'] }),
+  ])
+  return { session, canView, canManage, canGrant }
+}
+
+// Passes if the person has ANY of the listed permission sets.
+export const requireAnyPermission = async (event: H3Event, options: Permissions[]) => {
+  const session = await requireSession(event)
+  for (const permissions of options) {
+    if (await hasPermission(session.user.id, permissions)) return session
+  }
+  throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+}
+
 export const requirePermission = async (event: H3Event, permissions: Permissions) => {
   const session = await requireSession(event)
   if (!(await hasPermission(session.user.id, permissions))) {

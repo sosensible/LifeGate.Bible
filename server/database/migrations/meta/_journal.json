@@ -71,6 +71,27 @@
       "when": 1789412499737,
       "tag": "0009_ministry_leaders_and_roster_choices",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789415018003,
+      "tag": "0010_stewardship_budget",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789415018317,
+      "tag": "0011_seed_available_to_fund",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789419273578,
+      "tag": "0012_plans_and_recurring",
+      "breakpoints": true
     }
   ]
 }

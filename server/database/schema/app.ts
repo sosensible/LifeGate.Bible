@@ -4,7 +4,7 @@
 // without ever signing in (children, homebound members, a spouse who never
 // logs in). An account may link to at most one person via `people.userId`.
 import { relations } from 'drizzle-orm'
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { user } from './auth.ts'
 
 const id = () => text('id').primaryKey().$defaultFn(() => crypto.randomUUID())
@@ -207,6 +207,224 @@ export const missionUpdates = sqliteTable('mission_updates', {
   createdAt: createdAt(),
 }, table => [
   index('mission_updates_missionary_idx').on(table.missionaryId, table.postedOn),
+])
+
+// Stewardship: the church's accounts, transactions, categories and budget.
+//
+// Amounts are integer cents; negative is money out. Only cash accounts
+// (checking, savings, cash) make up the budget: their combined balance is the
+// money categories are funded from. Other accounts are tracked, not budgeted.
+// The budget math lives in server/lib/budget.ts.
+export const ACCOUNT_KINDS = ['checking', 'savings', 'cash', 'credit', 'other'] as const
+export const ACCOUNT_SOURCES = ['simplefin', 'manual'] as const
+
+export const financeAccounts = sqliteTable('finance_accounts', {
+  id: id(),
+  name: text('name').notNull(),
+  kind: text('kind', { enum: ACCOUNT_KINDS }).notNull().default('checking'),
+  source: text('source', { enum: ACCOUNT_SOURCES }).notNull().default('manual'),
+  // SimpleFIN's account id; null for manual accounts.
+  externalId: text('external_id').unique(),
+  institution: text('institution'),
+  // SimpleFIN accounts: the balance the bank last reported.
+  balanceCents: integer('balance_cents'),
+  balanceDate: integer('balance_date', { mode: 'timestamp' }),
+  // Manual accounts: the balance before their first transaction.
+  openingBalanceCents: integer('opening_balance_cents').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const SYNC_STATUS = ['running', 'succeeded', 'failed'] as const
+
+export const syncRuns = sqliteTable('sync_runs', {
+  id: id(),
+  startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+  status: text('status', { enum: SYNC_STATUS }).notNull().default('running'),
+  accountsSeen: integer('accounts_seen').notNull().default(0),
+  transactionsAdded: integer('transactions_added').notNull().default(0),
+  // Messages from SimpleFIN's errlist (e.g. a bank needing to be reconnected).
+  messages: text('messages', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  // Null when the schedule started it.
+  triggeredByUserId: text('triggered_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+}, table => [
+  index('sync_runs_started_idx').on(table.startedAt),
+])
+
+export const categoryGroups = sqliteTable('category_groups', {
+  id: id(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+// `availableToFund` is the one system category that income is assigned to when
+// it is not for a particular category. Everything else is `spending`.
+export const CATEGORY_KINDS = ['spending', 'availableToFund'] as const
+
+export const categories = sqliteTable('categories', {
+  id: id(),
+  groupId: text('group_id').notNull().references(() => categoryGroups.id, { onDelete: 'restrict' }),
+  name: text('name').notNull(),
+  kind: text('kind', { enum: CATEGORY_KINDS }).notNull().default('spending'),
+  // Rollover: what is left carries into next month. Otherwise it returns to
+  // Available to Fund at the end of each month.
+  rollover: integer('rollover', { mode: 'boolean' }).notNull().default(true),
+  // e.g. Benevolence: transactions name the people helped. Ministries can be
+  // shown its totals only, never its ledger.
+  isSensitive: integer('is_sensitive', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('categories_group_idx').on(table.groupId),
+])
+
+// How much was put into a category in a month. Negative moves money back out.
+export const categoryMonths = sqliteTable('category_months', {
+  categoryId: text('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  month: text('month').notNull(), // YYYY-MM
+  fundedCents: integer('funded_cents').notNull().default(0),
+  updatedAt: updatedAt(),
+}, table => [
+  primaryKey({ columns: [table.categoryId, table.month] }),
+])
+
+export const financeTransactions = sqliteTable('finance_transactions', {
+  id: id(),
+  accountId: text('account_id').notNull().references(() => financeAccounts.id, { onDelete: 'restrict' }),
+  // SimpleFIN's transaction id, stable within an account; null when manual.
+  externalId: text('external_id'),
+  postedOn: text('posted_on').notNull(), // YYYY-MM-DD
+  amountCents: integer('amount_cents').notNull(),
+  // The bank's own wording. Can name people, so only managers see it.
+  bankDescription: text('bank_description'),
+  payee: text('payee'),
+  memo: text('memo'),
+  // Money moved between the church's own accounts: not spending or income.
+  isTransfer: integer('is_transfer', { mode: 'boolean' }).notNull().default(false),
+  source: text('source', { enum: ACCOUNT_SOURCES }).notNull().default('manual'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  uniqueIndex('finance_transactions_external_idx').on(table.accountId, table.externalId),
+  index('finance_transactions_posted_idx').on(table.postedOn),
+])
+
+// Every transaction has at least one split; together they add up to its amount.
+// A split with no category is uncategorized.
+export const transactionSplits = sqliteTable('transaction_splits', {
+  id: id(),
+  transactionId: text('transaction_id').notNull().references(() => financeTransactions.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').references(() => categories.id, { onDelete: 'restrict' }),
+  amountCents: integer('amount_cents').notNull(),
+  memo: text('memo'),
+  sortOrder: integer('sort_order').notNull().default(0),
+}, table => [
+  index('transaction_splits_transaction_idx').on(table.transactionId),
+  index('transaction_splits_category_idx').on(table.categoryId),
+])
+
+// Applied to newly imported transactions: the first rule whose text appears in
+// the bank's description sets the payee and category.
+export const payeeRules = sqliteTable('payee_rules', {
+  id: id(),
+  matchText: text('match_text').notNull(),
+  payee: text('payee'),
+  categoryId: text('category_id').references(() => categories.id, { onDelete: 'cascade' }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+// What a ministry may see of a category, decided by pastors, deacons and the
+// church secretary. `totals`: funded, activity and remaining. `ledger`: those
+// plus the transactions. `audience`: the ministry's leaders, or everyone in it.
+export const MINISTRY_ACCESS_LEVELS = ['totals', 'ledger'] as const
+export const MINISTRY_ACCESS_AUDIENCES = ['leaders', 'members'] as const
+
+export const ministryCategoryAccess = sqliteTable('ministry_category_access', {
+  ministryId: text('ministry_id').notNull().references(() => ministries.id, { onDelete: 'cascade' }),
+  categoryId: text('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  level: text('level', { enum: MINISTRY_ACCESS_LEVELS }).notNull(),
+  audience: text('audience', { enum: MINISTRY_ACCESS_AUDIENCES }).notNull().default('leaders'),
+  grantedByUserId: text('granted_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  updatedAt: updatedAt(),
+}, table => [
+  primaryKey({ columns: [table.ministryId, table.categoryId] }),
+  index('ministry_category_access_category_idx').on(table.categoryId),
+])
+
+// A category's plan: what it should be funded. The math is in server/lib/plans.ts.
+//   kind:     fillUpTo (reach an amount) or add (set aside an amount)
+//   cadence:  monthly, or byDate (by dueOn)
+//   deadline: byMonth (funded before the due month starts) or byDate (the due month counts)
+//   source:   custom, or recurring (built from the category's recurring bills)
+export const PLAN_SOURCES = ['custom', 'recurring'] as const
+export const PLAN_KINDS = ['fillUpTo', 'add'] as const
+export const PLAN_CADENCES = ['monthly', 'byDate'] as const
+export const PLAN_DEADLINES = ['byMonth', 'byDate'] as const
+export const PLAN_REPEATS = ['none', 'monthly', 'quarterly', 'yearly'] as const
+
+export const categoryPlans = sqliteTable('category_plans', {
+  categoryId: text('category_id').primaryKey().references(() => categories.id, { onDelete: 'cascade' }),
+  source: text('source', { enum: PLAN_SOURCES }).notNull().default('custom'),
+  kind: text('kind', { enum: PLAN_KINDS }).notNull().default('add'),
+  cadence: text('cadence', { enum: PLAN_CADENCES }).notNull().default('monthly'),
+  amountCents: integer('amount_cents').notNull().default(0),
+  dueOn: text('due_on'), // YYYY-MM-DD
+  deadline: text('deadline', { enum: PLAN_DEADLINES }).notNull().default('byDate'),
+  repeat: text('repeat', { enum: PLAN_REPEATS }).notNull().default('none'),
+  startMonth: text('start_month').notNull(), // YYYY-MM
+  updatedAt: updatedAt(),
+})
+
+// Bills and other transactions that repeat. Each can be a reminder, feed its
+// category's plan, be matched to bank imports, and/or be entered automatically
+// in a manual account. See server/lib/recurring.ts.
+export const RECURRING_FREQUENCIES = ['weekly', 'every2Weeks', 'monthly', 'quarterly', 'yearly'] as const
+
+export const recurringTransactions = sqliteTable('recurring_transactions', {
+  id: id(),
+  name: text('name').notNull(),
+  payee: text('payee'),
+  memo: text('memo'),
+  amountCents: integer('amount_cents').notNull(), // negative is money out
+  amountVaries: integer('amount_varies', { mode: 'boolean' }).notNull().default(false),
+  frequency: text('frequency', { enum: RECURRING_FREQUENCIES }).notNull(),
+  anchorOn: text('anchor_on').notNull(), // YYYY-MM-DD, the first occurrence
+  endOn: text('end_on'),
+  accountId: text('account_id').references(() => financeAccounts.id, { onDelete: 'restrict' }),
+  categoryId: text('category_id').references(() => categories.id, { onDelete: 'set null' }),
+  feedsPlan: integer('feeds_plan', { mode: 'boolean' }).notNull().default(false),
+  matchBank: integer('match_bank', { mode: 'boolean' }).notNull().default(false),
+  // When set, a bank transaction must contain this text to match.
+  matchText: text('match_text'),
+  autoEnter: integer('auto_enter', { mode: 'boolean' }).notNull().default(false),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('recurring_transactions_category_idx').on(table.categoryId),
+])
+
+// Occurrences that have been dealt with, so none is matched or entered twice.
+export const OCCURRENCE_STATUS = ['paid', 'entered', 'skipped'] as const
+
+export const recurringOccurrences = sqliteTable('recurring_occurrences', {
+  recurringId: text('recurring_id').notNull().references(() => recurringTransactions.id, { onDelete: 'cascade' }),
+  dueOn: text('due_on').notNull(),
+  status: text('status', { enum: OCCURRENCE_STATUS }).notNull(),
+  transactionId: text('transaction_id').references(() => financeTransactions.id, { onDelete: 'set null' }),
+  handledAt: integer('handled_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, table => [
+  primaryKey({ columns: [table.recurringId, table.dueOn] }),
 ])
 
 // Who changed what, and when. Written for changes to people, privacy

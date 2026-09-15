@@ -38,11 +38,25 @@ const handleLogout = async () => {
   await navigateTo('/')
 }
 
+// Ministry budgets shared with this person (through the ministries they serve in).
+const { data: ministryBudgets, refresh: refreshMinistryBudgets } = useLazyFetch('/api/stewardship/ministries', {
+  server: false,
+  immediate: auth.isAuthenticated,
+  default: () => ({ ministries: [] }),
+})
+watch(() => auth.user?.id, (id) => {
+  if (id) refreshMinistryBudgets()
+  else ministryBudgets.value = { ministries: [] }
+})
+
 const accountMenu = computed<DropdownMenuItem[][]>(() => [
   [
     ...(auth.isMember ? [{ label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
+    ...(ministryBudgets.value.ministries.length ? [{ label: 'Ministry budget', icon: 'i-lucide-wallet', to: '/ministry-budget' }] : []),
     ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
     ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Sermons', icon: 'i-lucide-video', to: '/admin/sermons' }] : []),
+    ...(auth.can({ stewardship: ['view'] }) ? [{ label: 'Stewardship', icon: 'i-lucide-hand-coins', to: '/admin/stewardship' }] : []),
+    ...(auth.can({ stewardship: ['grantAccess'] }) && !auth.can({ stewardship: ['view'] }) ? [{ label: 'Ministry budget access', icon: 'i-lucide-shield-check', to: '/admin/stewardship/ministry-access' }] : []),
     ...(auth.can({ user: ['list'] }) ? [{ label: 'Accounts', icon: 'i-lucide-key-round', to: '/admin/accounts' }] : []),
     ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
   ],

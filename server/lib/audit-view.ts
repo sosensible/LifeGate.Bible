@@ -1,7 +1,7 @@
 // Reading the audit log for the viewer: filtered, paged, with names instead of ids.
 import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizzle-orm'
 import type { AuditEntryView } from '../../shared/audit.ts'
-import { auditLog, households, missionaries, missionOrganizations, people, sermonSeries, sermons, user } from '../database/schema/index.ts'
+import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, households, missionaries, missionOrganizations, people, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
 import { db } from './db.ts'
 
 export interface AuditQuery {
@@ -42,6 +42,29 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
     case 'missionOrganization':
       return new Map(db.select({ id: missionOrganizations.id, name: missionOrganizations.name }).from(missionOrganizations)
         .where(inArray(missionOrganizations.id, ids)).all().map(r => [r.id, r.name]))
+    // Stewardship: names and dates only. Admins read this log and have no
+    // financial access, so no amounts, payees or bank wording.
+    case 'financeAccount':
+      return new Map(db.select({ id: financeAccounts.id, name: financeAccounts.name }).from(financeAccounts)
+        .where(inArray(financeAccounts.id, ids)).all().map(r => [r.id, r.name]))
+    case 'transaction':
+      return new Map(db.select({ id: financeTransactions.id, postedOn: financeTransactions.postedOn, account: financeAccounts.name })
+        .from(financeTransactions)
+        .innerJoin(financeAccounts, eq(financeAccounts.id, financeTransactions.accountId))
+        .where(inArray(financeTransactions.id, ids)).all().map(r => [r.id, `${r.account}, ${r.postedOn}`]))
+    case 'categoryGroup':
+      return new Map(db.select({ id: categoryGroups.id, name: categoryGroups.name }).from(categoryGroups)
+        .where(inArray(categoryGroups.id, ids)).all().map(r => [r.id, r.name]))
+    case 'category':
+      return new Map(db.select({ id: categories.id, name: categories.name }).from(categories)
+        .where(inArray(categories.id, ids)).all().map(r => [r.id, r.name]))
+    case 'recurring':
+      // A recurring payment in a sensitive category (e.g. Benevolence) can name a person.
+      return new Map(db.select({ id: recurringTransactions.id, name: recurringTransactions.name, isSensitive: categories.isSensitive })
+        .from(recurringTransactions)
+        .leftJoin(categories, eq(categories.id, recurringTransactions.categoryId))
+        .where(inArray(recurringTransactions.id, ids)).all()
+        .map(r => [r.id, r.isSensitive ? 'Recurring transaction (sensitive category)' : r.name]))
     case 'user':
       return new Map(db.select({ id: user.id, email: user.email }).from(user)
         .where(inArray(user.id, ids)).all().map(r => [r.id, r.email]))

@@ -221,6 +221,57 @@ Members only, and not indexed by search engines. Some countries make being known
 - **Sign-ins** are recorded from Better Auth's session hook.
 - **Magic links and passwords:** Better Auth deletes the password of an account whose email is unverified the first time it signs in with a magic link. Accounts created here are marked verified, completing a password reset marks the email verified, and migration `0004` marks existing accounts verified. See `tests/unit/magic-link.spec.ts`.
 
+### 10. Stewardship (`/admin/stewardship/*`, `/ministry-budget`)
+
+The church's accounts, transactions and budget. Phase 1 of Stewardship; offerings with year-end giving statements, then semi-annual reports, come next.
+
+- **Who** (`shared/auth/permissions.ts`, resource `stewardship`):
+  - **Treasurer** (`view`, `manage`) keeps it.
+  - **Finance committee** (`view`) reads it.
+  - **Pastor, deacon, church secretary** (`grantAccess`) decide what each ministry sees, and see no amounts.
+  - **Admins get nothing financial**, like pastoral applications.
+- **Money** is integer cents (`shared/money.ts`). Forms use Nuxt UI's `UInputNumber` through `AdminMoneyInput`.
+- **Budget** (`server/lib/budget.ts`):
+  - Only cash accounts (checking, savings, cash) count. Their combined balance is what categories are funded from.
+  - **Available to Fund** = cash − every category's Remaining − uncategorized transactions.
+  - Each category shows Funded, Activity and Remaining per month.
+  - Set per category: **rollover** keeps what is left; **reset** returns it (or the overspending) to Available to Fund at month end.
+  - Transfers between the church's accounts are not activity. Income that is not for a particular category goes to the system category Available to Fund.
+- **Bank data** (`server/lib/simplefin*.ts`):
+  - SimpleFIN Bridge, read-only. Run `npm run simplefin:claim -- <setup token>` and put the printed URL in `SIMPLEFIN_ACCESS_URL`; it is never stored in the database.
+  - The Nitro scheduled task `stewardship:sync` runs at 05:00, 11:00, 17:00 and 23:00. "Check the bank" is limited to once every 30 minutes.
+  - The first sync reads 90 days; later ones start a week before the last good sync. Pending transactions are skipped, and re-reads never duplicate (unique per account + SimpleFIN id).
+  - Payee rules fill in payee and category for new transactions.
+  - Manual accounts (e.g. the cash box) take hand-entered transactions; bank accounts do not.
+- **Privacy**:
+  - The bank's description reaches only `manage`.
+  - For anyone else, a sensitive category's transactions (e.g. Benevolence) show the category name instead of the payee.
+  - Ministries can see a sensitive category's totals only.
+  - Audit entries name accounts, categories and months, never amounts or payees.
+- **Ministry budgets** (`server/lib/stewardship-access.ts`):
+  - A grant gives one ministry `totals` or `ledger` on one category, for its leaders or everyone serving in it.
+  - Access comes from the directory (`people.userId` → `ministry_members`), not a role.
+  - Leaders open `/ministry-budget` from the account menu. The Treasurer and Finance Committee can open any ministry that has grants.
+- **Plans** (`server/lib/plan-math.ts`, `server/lib/plans.ts`):
+  - Each category can have one plan: **fill up to** or **add** an amount, **monthly** or **by a date**.
+  - A dated plan can repeat monthly, quarterly or yearly.
+    - **By the month:** the money must be in before the due month starts.
+    - **By the date:** the due month counts.
+  - A repeating plan asks again the month after it is due, dividing what is still needed by the months left.
+  - A plan can instead be built **from recurring bills**: weekly and monthly bills are needed in the month they fall due, and quarterly or yearly bills are spread evenly until due.
+  - Dated plans need a rollover category.
+  - The Budget page shows each plan's status and what it still needs. **Fund plans** previews, then funds, in budget order until Available to Fund runs out. Nothing is funded automatically.
+- **Recurring transactions** (`server/lib/recurring.ts`, `server/lib/schedule.ts`):
+  - Each one can be any mix of:
+    - a reminder
+    - feeding its category's plan
+    - **matching bank transactions**: new imports within ±5 days of an open due date, with the same amount (or within 25% when it varies) and the match text, get its category and payee before payee rules run
+    - **entering automatically** in a manual account, from the daily `stewardship:recurring` task at 06:00
+  - Handled occurrences (paid, entered, skipped) are stored, so nothing is matched or entered twice.
+  - They are listed on Transactions → Recurring, and in the budget's Activity popup.
+- **Scripture** in the Stewardship header rotates through `shared/stewardship-verses.ts` (KJV). Add verses there.
+- Tests: `budget.spec.ts`, `plans.spec.ts`, `recurring.spec.ts`, `simplefin.spec.ts`, `stewardship-access.spec.ts`, `permissions.spec.ts`.
+
 ## Database Schema
 
 ### `users`

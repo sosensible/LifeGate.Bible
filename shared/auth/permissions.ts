@@ -38,6 +38,13 @@ export const statement = {
   // Deliberately granted to Search Committee only -- not even to admins.
   pastoralApplication: ['view'],
   audit: ['view'],
+  // Stewardship: the church's accounts, transactions, categories and budget.
+  // Deliberately NOT granted to admins, like pastoralApplication. `view` reads
+  // everything; `manage` categorizes, funds and keeps accounts and categories;
+  // `grantAccess` decides what each ministry may see, and sees no amounts at all.
+  // Ministry leaders get their own view from those grants, not from a role
+  // (server/lib/stewardship-access.ts).
+  stewardship: ['view', 'manage', 'grantAccess'],
 } as const
 
 export const ac = createAccessControl(statement)
@@ -66,6 +73,25 @@ export const pastor = ac.newRole({
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],
   contactMessage: ['view'],
+  stewardship: ['grantAccess'],
+})
+
+export const treasurer = ac.newRole({
+  stewardship: ['view', 'manage'],
+})
+
+export const financeCommittee = ac.newRole({
+  stewardship: ['view'],
+})
+
+// Deacons and the church secretary decide what each ministry sees of its
+// budget. A deacon is a role here, not the free-text title on a person.
+export const deacon = ac.newRole({
+  stewardship: ['grantAccess'],
+})
+
+export const churchSecretary = ac.newRole({
+  stewardship: ['grantAccess'],
 })
 
 export const searchCommittee = ac.newRole({
@@ -90,6 +116,10 @@ export const roles = {
   directoryManager,
   pastor,
   searchCommittee,
+  treasurer,
+  financeCommittee,
+  deacon,
+  churchSecretary,
   admin,
 }
 

@@ -36,6 +36,30 @@ describe('roles', () => {
   })
 })
 
+describe('stewardship', () => {
+  it('lets the treasurer keep the budget and the finance committee only read it', () => {
+    expect(allows('treasurer', { stewardship: ['view', 'manage'] })).toBe(true)
+    expect(allows('financeCommittee', { stewardship: ['view'] })).toBe(true)
+    expect(allows('financeCommittee', { stewardship: ['manage'] })).toBe(false)
+  })
+
+  it('lets pastors, deacons and the church secretary grant ministry access without seeing amounts', () => {
+    for (const role of ['pastor', 'deacon', 'churchSecretary'] as const) {
+      expect(allows(role, { stewardship: ['grantAccess'] })).toBe(true)
+      expect(allows(role, { stewardship: ['view'] })).toBe(false)
+      expect(allows(role, { stewardship: ['manage'] })).toBe(false)
+    }
+  })
+
+  it('gives admins and other roles no financial access', () => {
+    for (const role of ['admin', 'member', 'directoryManager', 'contentEditor', 'searchCommittee'] as const) {
+      expect(allows(role, { stewardship: ['view'] })).toBe(false)
+      expect(allows(role, { stewardship: ['manage'] })).toBe(false)
+      expect(allows(role, { stewardship: ['grantAccess'] })).toBe(false)
+    }
+  })
+})
+
 describe('archives', () => {
   it('lets staff and admins restore and remove, but content editors only archive speakers', () => {
     for (const role of ['pastor', 'directoryManager', 'admin'] as const) {

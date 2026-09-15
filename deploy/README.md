@@ -117,6 +117,22 @@ curl -I http://<zima-ip>:3007/
 Expect `200`. All seven public pages plus all 27 `/sitemap.xml` URLs were
 confirmed serving 200 from this build.
 
+### Stewardship bank sync
+
+Stewardship reads bank data from SimpleFIN Bridge. It is optional; without it
+the budget still works with manual accounts.
+
+1. In SimpleFIN Bridge, create a setup token for the church's bank connection.
+2. On any machine with the repo: `npm run simplefin:claim -- <setup token>`.
+   A token works once. The command prints `SIMPLEFIN_ACCESS_URL=...`.
+3. Add that line (and `CHURCH_TIME_ZONE=America/Detroit`) to the container's
+   environment in the compose file, then restart the app.
+
+The access URL holds credentials: keep it in the environment only, never in the
+image or the database. The container checks the bank at 05:00, 11:00, 17:00 and
+23:00 (container time), and the Treasurer can check once every 30 minutes from
+Stewardship -> Transactions.
+
 ## 4. Point the tunnel at it
 
 Add an ingress rule to the tunnel's public hostname:

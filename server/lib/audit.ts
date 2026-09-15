@@ -10,7 +10,7 @@ export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 // not become a second copy of everyone's personal information.
 export const recordAudit = (
   tx: Tx | Db,
-  entry: { actorUserId: string, action: string, entityType: string, entityId: string | null, fields?: string[], note?: string },
+  entry: { actorUserId: string | null, action: string, entityType: string, entityId: string | null, fields?: string[], note?: string },
 ) => {
   tx.insert(auditLog).values({
     actorUserId: entry.actorUserId,
