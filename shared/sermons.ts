@@ -7,8 +7,8 @@ const optionalText = (max: number) => z.string().trim().max(max, `Keep this unde
 
 export const sermonSchema = z.object({
   title: z.string().trim().min(1, 'Enter a title').max(200),
-  preachedOn: z.iso.date('Enter the date it was preached'),
-  speaker: z.string().trim().min(1, 'Enter who preached').max(120),
+  preachedOn: z.iso.date('Enter the date it was taught'),
+  speaker: z.string().trim().min(1, 'Enter who taught').max(120),
   // Set when the speaker was picked from the Speakers list; null for a typed guest name.
   speakerPersonId: z.string().min(1).nullable().optional(),
   seriesId: z.string().min(1).nullable(),

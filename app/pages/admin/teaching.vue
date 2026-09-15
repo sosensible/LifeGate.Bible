@@ -4,7 +4,7 @@
       <div class="max-w-6xl mx-auto flex flex-wrap items-end justify-between gap-4">
         <div>
           <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Church Office</p>
-          <h1 class="text-4xl font-bold font-serif text-white">Sermons</h1>
+          <h1 class="text-4xl font-bold font-serif text-white">Teaching</h1>
         </div>
         <UButton v-if="canCreate" color="secondary" icon="i-lucide-plus" @click="openEditor(null)">Add message</UButton>
       </div>
@@ -12,7 +12,9 @@
 
     <div class="bg-default py-10 px-6">
       <div class="max-w-6xl mx-auto space-y-12">
-        <UAlert v-if="error" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="apiErrorMessage(error, 'Sermons could not be loaded.')" />
+        <AdminLiveMeetingsSection v-if="canScheduleLive" />
+
+        <UAlert v-if="error" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="apiErrorMessage(error, 'Teaching could not be loaded.')" />
 
         <section v-else>
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -122,11 +124,12 @@ definePageMeta({
   permission: { sermon: ['update'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Sermons | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Teaching | Lifegate Baptist Church' })
 
 const auth = useAuthStore()
 const toast = useToast()
 const canCreate = computed(() => auth.can({ sermon: ['create'] }))
+const canScheduleLive = computed(() => auth.can({ liveMeeting: ['manage'] }))
 
 const [{ data: sermonData, error }, { data: seriesData, refresh: refreshSeries }, { data: speakerData }] = await Promise.all([
   useFetch('/api/admin/sermons'),

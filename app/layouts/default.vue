@@ -80,7 +80,7 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => [
     ...(ministryBudgets.value.ministries.length ? [{ label: 'Ministry budget', icon: 'i-lucide-wallet', to: '/ministry-budget' }] : []),
     ...(myTeaching.value.sermons.length ? [{ label: 'My teaching', icon: 'i-lucide-book-open', to: '/my-teaching' }] : []),
     ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
-    ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Sermons', icon: 'i-lucide-video', to: '/admin/sermons' }] : []),
+    ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Manage teaching', icon: 'i-lucide-video', to: '/admin/teaching' }] : []),
     ...(auth.can({ ministry: ['update'] }) ? [{ label: 'Ministries', icon: 'i-lucide-hand-heart', to: '/admin/ministries' }] : []),
     ...(auth.can({ stewardship: ['view'] })
       ? [{ label: 'Stewardship', icon: 'i-lucide-hand-coins', to: '/admin/stewardship' }]

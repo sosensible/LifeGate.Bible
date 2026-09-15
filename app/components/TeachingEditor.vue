@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 // A teacher editing their own message: details only. The video, speaker, who
-// can watch and publishing are kept by the people who manage sermons.
+// can watch and publishing are kept by the people who manage teaching.
 import { BIBLE_BOOKS, type BibleBook } from '#shared/bible'
 import { teacherSermonSchema, type AdminSermonView } from '#shared/sermons'
 

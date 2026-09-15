@@ -72,9 +72,9 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
   },
   {
     id: 'content',
-    title: 'Sermons and other content',
+    title: 'Teaching and other content',
     paragraphs: [
-      'Sermons, teaching, photos and other content on this site belong to Lifegate Baptist Church or the people who created them. You are welcome to watch, read and share links to them for personal, church and non-commercial use. Please ask before republishing them.',
+      'Teaching, photos and other content on this site belong to Lifegate Baptist Church or the people who created them. You are welcome to watch, read and share links to them for personal, church and non-commercial use. Please ask before republishing them.',
       'Scripture quotations are from the King James Version, which is in the public domain in the United States.',
       'If you teach and edit your own messages, or submit information to the church, you confirm it is accurate and that you may share it, and you allow the church to use it for its ministry.',
     ],

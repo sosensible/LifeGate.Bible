@@ -27,7 +27,7 @@
             <UInput v-model="state.title" class="w-full" />
           </UFormField>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UFormField label="Date preached" name="preachedOn" required>
+            <UFormField label="Date taught" name="preachedOn" required>
               <UInput v-model="state.preachedOn" type="date" class="w-full" />
             </UFormField>
             <UFormField
@@ -36,7 +36,7 @@
               required
               :help="state.speakerPersonId ? 'On the Speakers list. If they have an account, they can edit this message’s details.' : state.speaker ? 'A typed name, not linked to the Speakers list.' : 'Pick from the Speakers list, or type a guest’s name.'"
             >
-              <USelectMenu v-model="speakerChoice" :items="speakerItems" value-key="value" create-item placeholder="Who preached" class="w-full" @create="addGuest" />
+              <USelectMenu v-model="speakerChoice" :items="speakerItems" value-key="value" create-item placeholder="Who taught" class="w-full" @create="addGuest" />
             </UFormField>
             <UFormField label="Series" name="seriesId">
               <USelectMenu
@@ -76,7 +76,7 @@
               v-model="published"
               :disabled="!canPublish"
               label="Published"
-              :description="canPublish ? 'Drafts are only visible to people who manage sermons.' : 'Someone with permission to publish will make it live.'"
+              :description="canPublish ? 'Drafts are only visible to people who manage teaching.' : 'Someone with permission to publish will make it live.'"
             />
           </UFormField>
         </section>

@@ -146,6 +146,28 @@ export const sermons = sqliteTable('sermons', {
   index('sermons_speaker_person_idx').on(table.speakerPersonId),
 ])
 
+// Live meetings: a Google Meet or YouTube Live link shown only at scheduled
+// times. The rules live in shared/live.ts. A members-only link is the key to
+// joining, so it is only ever sent to members.
+export const LIVE_KINDS = ['meet', 'youtube'] as const
+export const LIVE_REPEATS = ['once', 'weekly'] as const
+
+export const liveMeetings = sqliteTable('live_meetings', {
+  id: id(),
+  title: text('title').notNull(),
+  kind: text('kind', { enum: LIVE_KINDS }).notNull(),
+  link: text('link').notNull(),
+  visibility: text('visibility', { enum: SERMON_VISIBILITY }).notNull().default('members'),
+  repeat: text('repeat', { enum: LIVE_REPEATS }).notNull(),
+  startsOn: text('starts_on').notNull(), // YYYY-MM-DD, the date or the first weekly date
+  endsOn: text('ends_on'), // weekly: the last date it may happen
+  startTime: text('start_time').notNull(), // HH:MM, church time
+  endTime: text('end_time').notNull(),
+  skippedDates: text('skipped_dates', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
 // Missions: members-only pages about the organizations Lifegate works with and
 // the families and individuals it supports. Not public: some countries make it
 // dangerous for missionaries to be identified online.

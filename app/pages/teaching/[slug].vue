@@ -26,7 +26,7 @@
           variant="subtle"
           icon="i-lucide-eye-off"
           title="Draft preview"
-          :description="isTeacher ? 'Only you and the people who manage sermons can see this. It is not on the Teaching page yet.' : 'Only people who manage sermons can see this. It is not on the Teaching page yet.'"
+          :description="isTeacher ? 'Only you and the people who manage teaching can see this. It is not on the Teaching page yet.' : 'Only people who manage teaching can see this. It is not on the Teaching page yet.'"
         />
         <SermonPlayer :sermon="sermon" />
       </div>

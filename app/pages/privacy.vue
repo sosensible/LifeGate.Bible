@@ -53,7 +53,8 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     paragraphs: [
       'You can read the public pages without an account. We do not use analytics, advertising or tracking cookies, and our fonts are served from our own site.',
       'Like any web server, ours and Cloudflare (which carries traffic to it and protects it from attacks) handle technical information such as your IP address and browser type to deliver pages securely.',
-      'Sermon videos are hosted on YouTube. Nothing loads from YouTube until you press play, and the player uses YouTube’s privacy-enhanced mode. Once you play a video, YouTube’s own privacy policy applies to that video.',
+      'Teaching videos are hosted on YouTube. Nothing loads from YouTube until you press play, and the player uses YouTube’s privacy-enhanced mode. Once you play a video, YouTube’s own privacy policy applies to that video.',
+      'Live meetings are held on Google Meet or YouTube Live. A Google Meet opens on Google’s own site when you choose to join, and YouTube Live plays only when you press play; Google’s privacy policy applies there.',
     ],
   },
   {
@@ -117,7 +118,7 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     items: [
       'Cloudflare, which carries traffic to our server and sends email for us;',
       'SimpleFIN Bridge, for read-only access to the church’s bank accounts;',
-      'YouTube, only when you choose to play a video.',
+      'Google (YouTube and Google Meet), only when you choose to play a video or join a live meeting.',
     ],
   },
   {

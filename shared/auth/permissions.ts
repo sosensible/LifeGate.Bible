@@ -25,6 +25,8 @@ export const statement = {
   // always see phone, email and address. Everything else stays opt-in.
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
+  // Scheduling Google Meet and YouTube Live links on the Teaching page.
+  liveMeeting: ['manage'],
   ministry: ['update'],
   // The members-only Missions pages. `update` is also granted, outside roles, to
   // anyone who serves in the Missions ministry (server/lib/missions.ts); they
@@ -65,6 +67,7 @@ export const member = ac.newRole({
 
 export const contentEditor = ac.newRole({
   sermon: ['create', 'update', 'delete', 'publish'],
+  liveMeeting: ['manage'],
   ministry: ['update'],
   speakers: ['update'],
 })
@@ -116,6 +119,7 @@ export const admin = ac.newRole({
   ...adminAc.statements,
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
+  liveMeeting: ['manage'],
   ministry: ['update'],
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],

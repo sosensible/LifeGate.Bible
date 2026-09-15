@@ -92,6 +92,10 @@ export default defineNuxtConfig({
       },
     },
   },
+  // The church office's teaching page used to be /admin/sermons.
+  routeRules: {
+    '/admin/sermons': { redirect: { to: '/admin/teaching', statusCode: 301 } },
+  },
   runtimeConfig: {
     public: {
       // Public origin this deployment answers on, used for the absolute <loc>

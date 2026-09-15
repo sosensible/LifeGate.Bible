@@ -120,6 +120,13 @@
       "when": 1789486104067,
       "tag": "0016_sermon_speaker_person",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789489950210,
+      "tag": "0017_live_meetings",
+      "breakpoints": true
     }
   ]
 }

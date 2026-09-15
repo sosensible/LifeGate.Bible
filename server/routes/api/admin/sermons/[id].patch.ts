@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const session = await requirePermission(event, { sermon: ['update'] })
   const id = getRouterParam(event, 'id')!
   const current = loadSermon({ id })
-  if (!current) throw createError({ statusCode: 404, statusMessage: 'Sermon not found' })
+  if (!current) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
 
   const input = await readValidatedBody(event, sermonUpdateSchema.parse)
   const statusChange = input.status !== undefined && input.status !== current.status

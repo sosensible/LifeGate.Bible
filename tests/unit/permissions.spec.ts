@@ -32,6 +32,9 @@ describe('roles', () => {
 
   it('lets content editors publish sermons but not manage people', () => {
     expect(allows('contentEditor', { sermon: ['publish'] })).toBe(true)
+    expect(allows('contentEditor', { liveMeeting: ['manage'] })).toBe(true)
+    expect(allows('admin', { liveMeeting: ['manage'] })).toBe(true)
+    expect(allows('member', { liveMeeting: ['manage'] })).toBe(false)
     expect(allows('contentEditor', { people: ['update'] })).toBe(false)
   })
 })

@@ -34,8 +34,8 @@ app/
   pages/
     index.vue                    # Landing/main portal
     login.vue                    # Auth
-    teaching/                    # Sermon archive and single message pages
-    admin/sermons.vue            # Sermon and series management
+    teaching/                    # Teaching archive and single message pages
+    admin/teaching.vue           # Teaching and series management
     giving.vue                   # Donations
     contact.vue                  # Contact form
     pastoral-candidates.vue      # Job applications
@@ -97,28 +97,36 @@ nuxt.config.ts                   # Cloudflare bindings (D1, EMAIL)
   - Redirects to `/` (landing) on success
 - **Error handling**: Invalid credentials, expired codes
 
-### 3. Teaching (`/teaching`, `/teaching/[slug]`, `/admin/sermons`)
+### 3. Teaching (`/teaching`, `/teaching/[slug]`, `/admin/teaching`)
 
-Sermons live in SQLite (`sermons`, `sermon_series`). Video is stored as provider +
+All preaching and teaching is one kind of record, a **message**, and the site calls it "teaching" throughout. The code keeps its original names: the `sermons` and `sermon_series` tables, the `sermon` permission resource and `/api/sermons` routes. `/admin/sermons` redirects to `/admin/teaching`.
+
+Messages live in SQLite (`sermons`, `sermon_series`). Video is stored as provider +
 id; today the only provider is YouTube (unlisted is fine).
 
 - **Who sees what** (`server/lib/sermons.ts`):
   - public + published: everyone;
-  - members + published: members only (and people who manage sermons);
+  - members + published: members only (and people who manage teaching);
   - drafts: only people with `sermon:update`.
   - Signed-out visitors get a count of members-only messages, never their titles or video ids.
 - **`/teaching`**: latest message with player, the archive with search and filters (series, book, topic, dates). Filters can come from the link, e.g. `/teaching?series=Gospel%20of%20John`.
 - **`/teaching/[slug]`**: one message. Members-only sends signed-out visitors to sign in; drafts are 404 to everyone else. Slugs are set once from date and title and never change.
 - **Privacy**: the player is Nuxt Scripts' `ScriptYouTubePlayer`, which uses `youtube-nocookie.com` and loads nothing from YouTube until someone presses play. Thumbnails come from `/api/sermons/[slug]/thumbnail`, which checks access and caches YouTube's image, so no Google request happens on page load and members-only video ids never reach the public.
-- **`/admin/sermons`**:
+- **`/admin/teaching`**:
   - add, edit and remove messages (`sermon:create`, `sermon:update`, `sermon:delete`); manage series.
   - Publishing or unpublishing needs `sermon:publish`; others save drafts.
   - "Check" confirms a YouTube link through YouTube's oEmbed endpoint and offers its title.
-- **Teachers** edit their own messages. In the sermon form the speaker is picked from the directory's Speakers list, which links the message to that person (`sermons.speakerPersonId`); a guest's name can still be typed without a link. Migration 0016 linked existing messages whose speaker matched exactly one person on the list.
+- **Teachers** edit their own messages. In the message form the speaker is picked from the directory's Speakers list, which links the message to that person (`sermons.speakerPersonId`); a guest's name can still be typed without a link. Migration 0016 linked existing messages whose speaker matched exactly one person on the list.
   - A signed-in account whose person is a message's linked speaker gets **My teaching** (`/my-teaching`) and an **Edit your message** button on `/teaching/[slug]`, including drafts, which they can also open.
   - They may change the title, date, series (existing ones), passage, books, topics and notes (`teacherSermonSchema`, `PATCH /api/teaching/mine/[id]`). The video, speaker, who can watch and publishing are refused, not ignored. Audit entries are `sermon.update` noted "By its teacher".
 - Audit log: `sermon.create`, `sermon.update`, `sermon.publish`, `sermon.unpublish`, `sermon.delete`, `series.*`.
-- Not yet: audio files, PDF notes, live stream.
+- **Live meetings** (`shared/live.ts`, `server/lib/live.ts`, managed on `/admin/teaching` with `liveMeeting:manage`: content editors and admins):
+  - A Google Meet link (opens in a new tab) or YouTube Live (a live video, or a channel link that plays whatever is live, so a weekly meeting keeps one link). Plays in privacy-enhanced mode after the viewer presses play.
+  - Once or weekly, with an optional last date and skipped dates. Times are church time (`CHURCH_TIME_ZONE`, default America/Detroit), so daylight time changes keep 11:00 at 11:00.
+  - Shown only from 15 minutes before a scheduled time until it ends: a section at the top of `/teaching` and a **Join Live Meeting** button under the home page's service times. Nothing shows at other times, so services need not be live and live meetings need not be services. Pages check `GET /api/live` each minute.
+  - Members only: the name and link are sent only to members (and people who manage teaching); others see "Sign in to join".
+  - Audit log: `liveMeeting.create`, `liveMeeting.update` (field names only, never the link), `liveMeeting.delete`.
+- Not yet: audio files, PDF notes.
 
 ### 4. Giving (`/giving`)
 - **Purpose**: One-time, monthly, and pledge donations

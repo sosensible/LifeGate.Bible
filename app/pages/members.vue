@@ -40,7 +40,7 @@ definePageMeta({
 })
 
 const tiles = [
-  { to: '/teaching', icon: 'i-lucide-book-open', title: 'Teaching', description: 'Watch and listen to sermons, lessons, and Bible studies from Lifegate.' },
+  { to: '/teaching', icon: 'i-lucide-book-open', title: 'Teaching', description: 'Watch and listen to preaching, lessons, and Bible studies from Lifegate.' },
   { to: '/calendar', icon: 'i-lucide-calendar-days', title: 'Church Calendar', description: 'Upcoming services, events, and gatherings for the whole church family.' },
   { to: '/directory', icon: 'i-lucide-users', title: 'Members Directory', description: 'Find fellow members of Lifegate and the details they have chosen to share.' },
   { to: '/missions', icon: 'i-lucide-globe', title: 'Missions', description: 'The missionaries we support, their prayer requests and letters.' },

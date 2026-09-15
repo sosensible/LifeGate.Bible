@@ -40,3 +40,24 @@ export const parseYouTubeId = (input: string): string | null => {
 }
 
 export const youTubeWatchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`
+
+// A channel link with its id, https://www.youtube.com/channel/UC..., or the id
+// on its own. Handles (@name) carry no id, so they are not accepted.
+const CHANNEL_ID = /^UC[\w-]{22}$/
+
+export const parseYouTubeChannelId = (input: string): string | null => {
+  const value = input.trim()
+  if (CHANNEL_ID.test(value)) return value
+  let url: URL
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+  }
+  catch {
+    return null
+  }
+  const segments = url.pathname.split('/').filter(Boolean)
+  const candidate = YOUTUBE_HOSTS.has(url.hostname.toLowerCase()) && segments[0] === 'channel' ? segments[1] : undefined
+  return candidate && CHANNEL_ID.test(candidate) ? candidate : null
+}
+
+export const youTubeChannelUrl = (id: string) => `https://www.youtube.com/channel/${id}`

@@ -40,6 +40,10 @@
           <p class="text-secondary-200 text-sm">Prayer &amp; Study</p>
         </div>
       </div>
+      <!-- Only while a live meeting is scheduled -->
+      <div v-if="join" class="max-w-5xl mx-auto mt-7 flex justify-center">
+        <UButton v-bind="join" size="lg" icon="i-lucide-radio" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold">Join Live Meeting</UButton>
+      </div>
     </section>
 
     <!-- About -->
@@ -140,5 +144,17 @@ definePageMeta({
 })
 
 const auth = useAuthStore()
+
+// One Google Meet the viewer may join opens directly; anything else goes to
+// the Teaching page, which plays YouTube and asks members to sign in.
+const { data: live } = await useLiveMeetings()
+const join = computed(() => {
+  const meetings = live.value?.meetings ?? []
+  if (!meetings.length) return null
+  const [only] = meetings
+  return meetings.length === 1 && only!.kind === 'meet' && only!.link
+    ? { to: only!.link, target: '_blank', trailingIcon: 'i-lucide-external-link' }
+    : { to: '/teaching#live' }
+})
 
 </script>

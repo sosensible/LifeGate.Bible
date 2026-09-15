@@ -8,6 +8,8 @@
       </div>
     </div>
 
+    <LiveMeetings v-if="live" :meetings="live.meetings" :time-zone="live.timeZone" />
+
     <!-- Latest message -->
     <div v-if="latest" class="bg-parchment-900 py-11 px-6">
       <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
@@ -110,12 +112,12 @@ import { byBibleOrder } from '#shared/bible'
 definePageMeta({
   layout: 'default',
 })
-useSeoMeta({ title: 'Teaching | Lifegate Baptist Church', description: 'Sermons and teaching from Lifegate Baptist Church.' })
+useSeoMeta({ title: 'Teaching | Lifegate Baptist Church', description: 'Preaching, lessons and Bible studies from Lifegate Baptist Church.' })
 
 const auth = useAuthStore()
 const route = useRoute()
 
-const { data, error } = await useFetch('/api/sermons')
+const [{ data, error }, { data: live }] = await Promise.all([useFetch('/api/sermons'), useLiveMeetings()])
 const sermons = computed(() => data.value?.sermons ?? [])
 const hiddenCount = computed(() => data.value?.hiddenCount ?? 0)
 const latest = computed(() => sermons.value[0] ?? null)

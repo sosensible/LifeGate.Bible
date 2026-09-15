@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     if (row) recordAudit(tx, { actorUserId: session.user.id, action: 'sermon.delete', entityType: 'sermon', entityId: id })
     return row
   })
-  if (!deleted) throw createError({ statusCode: 404, statusMessage: 'Sermon not found' })
+  if (!deleted) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
 
   setResponseStatus(event, 204)
   return null
