@@ -32,3 +32,4 @@ deploy/out
 
 # keep the documented template
 !.env.example
+!.env.*.example

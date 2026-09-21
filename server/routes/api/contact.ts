@@ -1,51 +1,40 @@
-import { sendEmail, contactEmailTemplate } from '~~/server/utils/email'
+// The public contact form.
+//
+// This was v1 marketing-site code that read `event.context.cloudflare.env.db`
+// and an `EMAIL` binding. Neither exists on the node-server preset this site
+// actually runs on, so every submission returned 500 and the visitor's message
+// was lost. It now uses the app's own mail layer.
+//
+// Nothing is stored. The office reads these in a mailbox, and a table nobody
+// has a screen for is a place messages go to be forgotten -- so the send is
+// awaited and a failure is reported honestly, rather than telling somebody
+// their message arrived when it did not.
+//
+// The visitor is not sent a confirmation. Mailing whatever address a form is
+// given lets a stranger point the church's mail at someone else, repeatedly;
+// the page promises only that we will be in touch.
+import { contactSchema } from '../../../shared/contact.ts'
+import { contactEmail } from '../../lib/contact.ts'
+import { sendMail } from '../../lib/mail.ts'
+
+const office = () => process.env.CONTACT_EMAIL || 'info@lifegate.bible'
 
 export default defineEventHandler(async (event) => {
-  const { name, email, phone, subject, message } = await readBody(event)
-
-  if (!name || !email || !subject || !message) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Missing required fields',
-    })
-  }
+  const input = await readValidatedBody(event, contactSchema.parse)
+  const { subject, html, text } = contactEmail(input)
 
   try {
-    const db = event.context.cloudflare?.env?.db
-    const env = event.context.cloudflare?.env
-
-    if (!db) {
-      throw new Error('Database not available')
-    }
-
-    // Log contact message
-    const stmt = db.prepare(
-      `INSERT INTO contact_messages (name, email, phone, subject, message, created_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-    )
-
-    await stmt.bind(name, email, phone || null, subject, message).run()
-
-    // Send confirmation email to sender
-    const { html, text } = contactEmailTemplate(name, email, subject, message)
-    await sendEmail(env, email, `We received your message: ${subject}`, html, text)
-
-    // Log event
-    console.log(`Contact message from ${name} (${email}) received and notifications sent`)
-
-    // Send notification to admin
-    const adminTemplate = contactEmailTemplate(name, email, subject, message)
-    await sendEmail(env, 'info@lifegate.bible', `New Contact Form: ${subject}`, adminTemplate.html, adminTemplate.text)
-
-    return {
-      success: true,
-      message: 'Message sent successfully',
-    }
+    // Awaited: if this fails the visitor needs to know, because there is no
+    // copy anywhere else.
+    await sendMail({ to: office(), subject, text, html })
   }
-  catch (err: any) {
+  catch (error) {
+    console.error('[contact] Could not deliver a message from the website:', error)
     throw createError({
-      statusCode: 500,
-      statusMessage: err.message || 'Failed to send message',
+      statusCode: 502,
+      statusMessage: 'We could not send your message. Please try again, or telephone the church office.',
     })
   }
+
+  return { success: true, message: 'Message sent successfully' }
 })

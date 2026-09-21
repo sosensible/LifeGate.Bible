@@ -85,13 +85,27 @@ const sendViaCloudflare = async (message: MailMessage) => {
   if (body.result?.permanent_bounces?.length) throw new Error('The address bounced.')
 }
 
+// Which of the four deployments this is: dev, preview, staging, production.
+//
+// Deliberately NOT NODE_ENV. Staging and preview are built the same way as
+// production and run with NODE_ENV=production, so NODE_ENV only separates a
+// developer's machine from everything deployed -- it would have let staging
+// send real mail to real members.
+//
+// Unset means refuse. A deployment that forgets to declare itself fails loudly
+// with nothing delivered, which is the cheap mistake; the expensive one is a
+// test instance quietly emailing the congregation.
+export const appEnv = () => process.env.APP_ENV || ''
+
 export const sendMail = async (message: MailMessage) => {
   const transport = process.env.MAIL_TRANSPORT || 'smtp'
 
   if (transport === 'cloudflare') {
-    // Guard against real members receiving mail from a dev or test instance.
-    if (process.env.NODE_ENV !== 'production') {
-      throw new Error('MAIL_TRANSPORT=cloudflare is refused outside production.')
+    // Guard against real members receiving mail from any instance but the real one.
+    if (appEnv() !== 'production') {
+      throw new Error(
+        `MAIL_TRANSPORT=cloudflare is refused outside production (APP_ENV=${appEnv() || 'unset'}).`,
+      )
     }
     await sendViaCloudflare(message)
     return

@@ -55,6 +55,22 @@ ENV NODE_ENV=production \
 
 COPY --from=build /src/.output ./.output
 
+# The schema, applied at startup by server/plugins/migrate.ts. drizzle-kit is a
+# build-time tool and is deliberately not in this image; only the .sql files it
+# generated are needed to bring a volume up to date.
+COPY --from=build /src/server/database/migrations ./server/database/migrations
+
+# Everything that must outlive the container: the SQLite database and the
+# member photos beside it (server/lib/uploads.ts puts them in the database's
+# own directory). Created and owned before dropping to `node`, because a
+# process that cannot write here cannot start.
+#
+# Declaring the volume means `docker run` without a mount still keeps the data
+# somewhere rather than in the container's writable layer, where the first
+# restart would take the directory and every gift record in it.
+RUN mkdir -p /app/.data && chown -R node:node /app/.data
+VOLUME ["/app/.data"]
+
 USER node
 
 EXPOSE 3000
