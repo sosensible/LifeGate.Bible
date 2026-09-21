@@ -1,40 +1,80 @@
-# ZimaOS custom-app definition for the Lifegate church site.
+# ZimaOS custom-app definition: PRODUCTION.
 #
 # Install: ZimaOS App Store -> "Install a Custom App" -> paste this YAML.
+# Staging is the same shape with different values: deploy/zimaos-staging.yaml.
 #
 # Deliberately minimal. The ZimaOS/CasaOS compose importer is known to choke on
 # Swarm-only keys (`deploy:`) and on top-level named `volumes:`, so neither
-# appears here. That costs nothing: this deployment serves the public site only,
-# which reads from app/data/ and holds no writable state, so the container needs
-# no persistent mounts at all.
+# appears here -- persistence is a bind mount under /DATA instead.
+#
+# SECRETS: the values below are pasted into the CasaOS app configuration and
+# stored on the box. Fill them in there, not here, and do not commit a copy
+# with real values. This file is the template.
 
 name: lifegate-church
 
 services:
   lifegate:
-    # Built by ../Dockerfile for linux/amd64. Replace the tag when you cut a new
-    # version; see deploy/README.md for how to get the image onto the box.
-    image: lifegate-church:1.0.0-alpha.1
-    container_name: lifegate-church
+    # Published by .github/workflows/image.yml. Make the GHCR package public
+    # once, so this pulls without a registry login (CasaOS has no UI for one).
+    # Pin a version rather than :latest so a reinstall is reproducible.
+    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.1
+    container_name: lifegate-production
     restart: unless-stopped
     environment:
+      # Which deployment this is. NOT NODE_ENV -- staging is a production build
+      # too. Only the exact string "production" unlocks the real mail
+      # transport; see server/lib/mail.ts.
+      APP_ENV: production
+
       NODE_ENV: production
       # 0.0.0.0 binds inside the container's own network namespace only.
       HOST: 0.0.0.0
       PORT: "3000"
+
+      # The public origin, and whether search engines may index it. Both are
+      # read per request: change and restart, no rebuild.
+      NUXT_PUBLIC_SITE_URL: https://new.lifegate.bible
+      NUXT_PUBLIC_INDEXABLE: "false"
+
+      # On the bind mount below. Member photos live beside it, so one backup
+      # of that directory covers both.
+      DATABASE_PATH: /app/.data/lifegate.db
+
+      # --- fill these in ---
+      # openssl rand -base64 32 -- and NOT the same value as staging, or a
+      # session minted there would be valid here.
+      BETTER_AUTH_SECRET: ""
+      BETTER_AUTH_URL: https://new.lifegate.bible
+      BETTER_AUTH_TRUSTED_ORIGINS: https://new.lifegate.bible
+
+      MAIL_TRANSPORT: cloudflare
+      MAIL_FROM: Lifegate Baptist Church <no-reply@lifegate.bible>
+      CLOUDFLARE_ACCOUNT_ID: ""
+      CLOUDFLARE_EMAIL_API_TOKEN: ""
+      CONTACT_EMAIL: info@lifegate.bible
+
+      SIMPLEFIN_ACCESS_URL: ""
+      CHURCH_TIME_ZONE: America/Detroit
+      CHURCH_CALENDAR_ID: ""
+
+    volumes:
+      # The database and the member photos. A bind mount rather than a named
+      # volume, because the importer rejects top-level `volumes:` -- and
+      # because a visible path is one you can point a backup job at.
+      - /DATA/AppData/lifegate-production/data:/app/.data
+
     ports:
       - target: 3000
-        published: "3007"
+        published: "3010"
         protocol: tcp
 
 x-casaos:
   id: bible.lifegate.church
   main: lifegate
   index: /
-  port_map: "3007"
+  port_map: "3010"
   scheme: http
-  # TODO: point at a reachable URL for public/logo.png once the repo has a
-  # remote; ZimaOS fetches this for the dashboard tile.
   icon: ""
   title:
     en_US: Lifegate Baptist Church
@@ -45,8 +85,8 @@ x-casaos:
   description:
     en_US: >-
       Nuxt 4 site for Lifegate Baptist Church, served by the Nitro node-server
-      build and published to the public over a Cloudflare Tunnel. Public pages
-      only; the D1-backed /api/* routes are inactive on this target.
+      build and published to the public over a Cloudflare Tunnel. Applies its
+      own database migrations at startup.
   author: SOS Apps
   developer: SOS Apps
   architectures:

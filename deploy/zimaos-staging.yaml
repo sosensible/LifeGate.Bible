@@ -1,0 +1,83 @@
+# ZimaOS custom-app definition: STAGING.
+#
+# Install: ZimaOS App Store -> "Install a Custom App" -> paste this YAML.
+# Same image as production; everything that differs is below.
+#
+# Staging runs real code against FAKE data. Seed it with scripts/seed-demo.ts
+# and never from a copy of production: the directory holds addresses, birthdays
+# and photos that members chose who may see, and those choices do not travel
+# with a database file.
+
+name: lifegate-staging
+
+services:
+  lifegate:
+    # The same published image as production. Promote by pointing production at
+    # a tag that has already run here.
+    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.1
+    container_name: lifegate-staging
+    restart: unless-stopped
+    environment:
+      # Anything but "production" refuses the real mail transport, so a
+      # rehearsal cannot reach the congregation (server/lib/mail.ts).
+      APP_ENV: staging
+
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+
+      NUXT_PUBLIC_SITE_URL: https://staging.lifegate.bible
+      NUXT_PUBLIC_INDEXABLE: "false"
+
+      DATABASE_PATH: /app/.data/lifegate.db
+
+      # --- fill these in ---
+      # A DIFFERENT secret from production.
+      BETTER_AUTH_SECRET: ""
+      BETTER_AUTH_URL: https://staging.lifegate.bible
+      BETTER_AUTH_TRUSTED_ORIGINS: https://staging.lifegate.bible
+
+      # MailPit, so nothing can reach a real mailbox even by accident.
+      MAIL_TRANSPORT: smtp
+      SMTP_HOST: zimaos.local
+      SMTP_PORT: "1025"
+      MAIL_FROM: Lifegate STAGING <no-reply@lifegate.bible>
+      CONTACT_EMAIL: staging@lifegate.test
+
+      # Empty on purpose: the real URL would burn the church's ~24-requests-a-day
+      # SimpleFIN budget and pull real bank data into fake records.
+      SIMPLEFIN_ACCESS_URL: ""
+      CHURCH_TIME_ZONE: America/Detroit
+      CHURCH_CALENDAR_ID: ""
+
+    volumes:
+      # Its own directory. Pointing both environments at one path would let a
+      # rehearsal write to the real records.
+      - /DATA/AppData/lifegate-staging/data:/app/.data
+
+    ports:
+      - target: 3000
+        published: "3009"
+        protocol: tcp
+
+x-casaos:
+  id: bible.lifegate.staging
+  main: lifegate
+  index: /
+  port_map: "3009"
+  scheme: http
+  icon: ""
+  title:
+    en_US: Lifegate (staging)
+  category: Others
+  version: "1.0.0-alpha.1"
+  tagline:
+    en_US: Rehearsal copy - fake data, no real mail
+  description:
+    en_US: >-
+      Staging copy of the Lifegate church site. Same image as production,
+      separate database, seeded with demo data. Mail goes to MailPit.
+  author: SOS Apps
+  developer: SOS Apps
+  architectures:
+    - amd64

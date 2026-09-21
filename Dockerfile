@@ -1,24 +1,34 @@
 # syntax=docker/dockerfile:1
 # check=skip=FromPlatformFlagConstDisallowed
 #
-# The constant `--platform=linux/amd64` on the runtime stage below is deliberate,
-# not an oversight: the deploy target is one known Intel ZimaOS box, and pinning
-# it means a bare `docker build .` on an Apple Silicon laptop cannot silently
-# produce an arm64 image that pulls fine and then refuses to start. The check is
+# The constant `--platform=linux/amd64` on BOTH stages below is deliberate, not
+# an oversight: the deploy target is one known Intel ZimaOS box, and pinning it
+# means a bare `docker build .` on an Apple Silicon laptop cannot silently
+# produce an image that pulls fine and then refuses to start. The check is
 # skipped rather than satisfied so that guarantee survives.
 
 # Lifegate church site -> self-hosted Nitro node-server, packaged for the
 # Intel (x86_64) ZimaOS box and published over a Cloudflare Tunnel.
 
 # ---------------------------------------------------------------- build ----
-# Runs on the NATIVE platform of whichever machine builds the image, so an
-# Apple Silicon laptop builds at full speed with no QEMU emulation.
+# Pinned to the TARGET architecture, not the builder's.
 #
-# This is safe *specifically* because `nuxi build` emits pure ESM JavaScript
-# into .output/ with zero native binaries (verified: no .node/.dylib/.so).
-# The arch-specific toolchain -- rollup, @tailwindcss/oxide -- is installed
-# for the builder's own arch and never leaves this stage.
-FROM --platform=$BUILDPLATFORM node:24-slim AS build
+# This stage used to run on $BUILDPLATFORM, which was fast and correct while
+# `nuxi build` emitted pure JavaScript. It no longer does: better-sqlite3 is a
+# native addon, Nitro cannot bundle one, so the build now emits
+#
+#   .output/server/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+#
+# compiled for whatever ran `npm ci`. Built on an Apple Silicon laptop that is
+# an arm64 binary, and the amd64 runtime below cannot load it.
+#
+# `docker buildx build --platform linux/amd64` does NOT fix this on its own --
+# that sets TARGETPLATFORM, while a $BUILDPLATFORM stage keeps running native.
+# The constant here is what actually decides which binary is produced.
+#
+# On an amd64 machine (a GitHub runner, the Intel box) this is free. On Apple
+# Silicon it means QEMU, so `npm ci` is slow; build in CI rather than locally.
+FROM --platform=linux/amd64 node:24-slim AS build
 
 WORKDIR /src
 
@@ -33,9 +43,15 @@ ENV NITRO_PRESET=node-server
 RUN npm run build
 
 # -------------------------------------------------------------- runtime ----
-# Pinned to the ZimaOS host arch. Carries only .output/ -- no node_modules,
-# no source, no build toolchain.
-FROM --platform=linux/amd64 node:24-alpine AS runtime
+# Pinned to the ZimaOS host arch. Carries only .output/ -- no source, no build
+# toolchain (.output brings the runtime dependencies it needs with it).
+#
+# Debian rather than Alpine, and that is not a preference. The build stage is
+# node:24-slim (glibc); Alpine is musl. better_sqlite3.node compiled against
+# glibc will not load on musl, so the old slim-builds-alpine-runs pairing could
+# not have worked on any machine, whatever the architecture. Both stages must
+# agree on the C library. The cost is roughly 140 MB of image.
+FROM --platform=linux/amd64 node:24-slim AS runtime
 
 WORKDIR /app
 
@@ -71,6 +87,11 @@ COPY --from=build /src/server/database/migrations ./server/database/migrations
 RUN mkdir -p /app/.data && chown -R node:node /app/.data
 VOLUME ["/app/.data"]
 
+# Checks the native SQLite module before starting, so a wrong-architecture
+# build says so in one sentence instead of failing deep inside a dependency.
+COPY --from=build /src/deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 USER node
 
 EXPOSE 3000
@@ -78,4 +99,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", ".output/server/index.mjs"]
