@@ -23,10 +23,24 @@ coverage
 test-results
 playwright-report
 
-# Docker / deploy scaffolding (not needed by the build itself)
+# Docker / deploy scaffolding (not needed by the build itself).
+#
+# Listed file by file rather than ignoring `deploy` wholesale, because
+# deploy/docker-entrypoint.sh DOES ship in the image and so has to reach the
+# build stage. A blanket `deploy` silently excluded it and the build failed at
+# the COPY with "not found". Negation (`!deploy/...`) would also work, but an
+# explicit list cannot be misread.
+#
+# Anything new under deploy/ is included by default now. That costs nothing:
+# the runtime stage copies only .output, the migrations and the entrypoint, so
+# extra files in the build stage never reach the image.
 Dockerfile
 .dockerignore
-deploy
+deploy/README.md
+deploy/build-image.sh
+deploy/out
+deploy/zimaos-compose.yaml
+deploy/zimaos-staging.yaml
 
 # Misc
 .DS_Store
