@@ -61,7 +61,7 @@
           <NuxtLink to="/about" class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 inline-block">Learn More About Us →</NuxtLink>
         </div>
         <div class="shrink-0">
-          <img src="/logo.png" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
+          <SiteLogo sizes="288px" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
         </div>
       </div>
     </section>
@@ -102,7 +102,7 @@
     <footer class="bg-primary-900 border-t-4 border-gold-500 py-14 px-6">
       <div class="max-w-5xl mx-auto flex flex-wrap gap-12">
         <div class="max-w-xs">
-          <img src="/logo.png" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_5px_rgba(255,255,255,0.8))_drop-shadow(0_0_10px_rgba(255,255,255,0.5))]" />
+          <SiteLogo sizes="120px" loading="lazy" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_5px_rgba(255,255,255,0.8))_drop-shadow(0_0_10px_rgba(255,255,255,0.5))]" />
           <p class="text-white/60 text-sm font-bold leading-relaxed">Rooted in Faith.<br>Planted in Community.</p>
         </div>
         <div class="flex-1"></div>

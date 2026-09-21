@@ -1,29 +1,39 @@
 <template>
   <div class="min-h-screen flex flex-col">
-    <nav class="sticky top-0 z-50 bg-primary-800 shadow-md">
-      <div class="max-w-5xl mx-auto px-6 h-[70px] flex items-center justify-between">
-        <NuxtLink to="/" aria-label="Lifegate Baptist Church - home">
-          <img src="/logo.png" alt="Lifegate Baptist Church" class="h-12 w-auto [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_3px_rgba(255,255,255,0.8))_drop-shadow(0_0_6px_rgba(255,255,255,0.5))]" />
-        </NuxtLink>
-        <div class="flex items-center gap-4">
-          <UButton to="/about" variant="ghost" class="text-white hover:bg-white/10">About</UButton>
-          <template v-if="auth.isMember">
-            <UButton to="/teaching" variant="ghost" class="text-white hover:bg-white/10">Teaching</UButton>
-            <UButton to="/calendar" variant="ghost" class="text-white hover:bg-white/10">Calendar</UButton>
-            <UButton to="/directory" variant="ghost" class="text-white hover:bg-white/10">Directory</UButton>
-            <UButton to="/ministries" variant="ghost" class="text-white hover:bg-white/10">Ministries</UButton>
-            <UButton to="/missions" variant="ghost" class="text-white hover:bg-white/10">Missions</UButton>
-            <UButton to="/members" size="sm" color="secondary">Members</UButton>
-          </template>
-          <UDropdownMenu v-if="auth.isAuthenticated" :items="accountMenu" :content="{ align: 'end' }">
-            <UButton variant="outline" size="sm" trailing-icon="i-lucide-chevron-down" class="text-white ring-white/40 hover:bg-white/10">
-              {{ auth.user?.name?.split(' ')[0] || 'Account' }}
-            </UButton>
-          </UDropdownMenu>
-          <UButton v-else to="/login" size="sm" color="secondary">Member Login</UButton>
-        </div>
-      </div>
-    </nav>
+    <!-- Wide screens: links across the bar. Narrow screens: a menu button opens them in a slideover. -->
+    <UHeader
+      v-model:open="menuOpen"
+      mode="slideover"
+      :ui="{
+        root: 'bg-primary-800 border-b-0 shadow-md h-[70px]',
+        container: 'max-w-5xl',
+        toggle: 'text-white hover:bg-white/10',
+        header: 'bg-primary-800 h-[70px]',
+      }"
+    >
+      <template #title>
+        <SiteLogo sizes="72px" fetchpriority="high" alt="Lifegate Baptist Church - home" class="h-12 w-auto [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_3px_rgba(255,255,255,0.8))_drop-shadow(0_0_6px_rgba(255,255,255,0.5))]" />
+      </template>
+
+      <UNavigationMenu
+        :items="navItems"
+        :ui="{ link: 'text-white/85 hover:text-white hover:before:bg-white/10 data-active:text-white data-active:before:bg-white/15' }"
+      />
+
+      <template #right>
+        <UButton v-if="auth.isMember" to="/members" size="sm" color="secondary" class="hidden lg:inline-flex">Members</UButton>
+        <UDropdownMenu v-if="auth.isAuthenticated" :items="accountMenu" :content="{ align: 'end' }">
+          <UButton variant="outline" size="sm" trailing-icon="i-lucide-chevron-down" class="text-white ring-white/40 hover:bg-white/10">
+            {{ auth.user?.name?.split(' ')[0] || 'Account' }}
+          </UButton>
+        </UDropdownMenu>
+        <UButton v-else to="/login" size="sm" color="secondary">Member Login</UButton>
+      </template>
+
+      <template #body>
+        <UNavigationMenu :items="mobileNavItems" orientation="vertical" class="-mx-2.5" @click="closeOnLink" />
+      </template>
+    </UHeader>
     <div class="flex-1">
       <slot />
     </div>
@@ -41,10 +51,35 @@
 </template>
 
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 
 const auth = useAuthStore()
 const route = useRoute()
+
+const siteLinks = computed<NavigationMenuItem[]>(() => [
+  { label: 'About', icon: 'i-lucide-info', to: '/about' },
+  ...(auth.isMember
+    ? [
+        { label: 'Teaching', icon: 'i-lucide-book-open', to: '/teaching' },
+        { label: 'Calendar', icon: 'i-lucide-calendar', to: '/calendar' },
+        { label: 'Directory', icon: 'i-lucide-users', to: '/directory' },
+        { label: 'Ministries', icon: 'i-lucide-hand-heart', to: '/ministries' },
+        { label: 'Missions', icon: 'i-lucide-globe', to: '/missions' },
+      ]
+    : []),
+])
+// The bar shows text only; Members is a button beside it.
+const navItems = computed(() => siteLinks.value.map(({ icon: _icon, ...item }) => item))
+// The slideover menu keeps the icons and lists Members first.
+const mobileNavItems = computed<NavigationMenuItem[]>(() => [
+  ...(auth.isMember ? [{ label: 'Members', icon: 'i-lucide-house', to: '/members' }] : []),
+  ...siteLinks.value,
+])
+// Any link tapped in the slideover closes it, including the page already showing.
+const menuOpen = ref(false)
+const closeOnLink = (event: MouseEvent) => {
+  if ((event.target as HTMLElement).closest('a')) menuOpen.value = false
+}
 
 const handleLogout = async () => {
   await auth.logout()
@@ -74,6 +109,9 @@ watch(() => auth.user?.id, (id) => {
   }
 })
 
+// Help pages exist for the office jobs; only those roles get the menu entry.
+const hasHelp = computed(() => auth.can({ giving: ['record'] }) || auth.can({ stewardship: ['view'] }))
+
 const accountMenu = computed<DropdownMenuItem[][]>(() => [
   [
     ...(auth.isMember ? [{ label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
@@ -89,6 +127,8 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => [
     ...(auth.can({ user: ['list'] }) ? [{ label: 'Accounts', icon: 'i-lucide-key-round', to: '/admin/accounts' }] : []),
     ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
   ],
+  // Help for office work: shown to those who have at least one help page.
+  ...(hasHelp.value ? [[{ label: 'Help', icon: 'i-lucide-circle-question-mark', to: '/help' }]] : []),
   [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
 ].filter(group => group.length))
 </script>

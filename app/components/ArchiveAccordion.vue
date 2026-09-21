@@ -1,41 +1,44 @@
 <template>
-  <!-- Staff and admins only: archived entries, closed until opened. -->
-  <UAccordion :items="[{ label: `Archived (${total})`, icon: 'i-lucide-archive', slot: 'archive' }]" :unmount-on-hide="false" class="border border-default rounded-lg px-4 bg-elevated">
-    <template #archive>
-      <p class="text-muted text-xs mb-4">Only staff and administrators see this. Restore puts an entry back where members can see it; removing it cannot be undone.</p>
-      <p v-if="total === 0" class="text-muted text-sm pb-4">Nothing is archived.</p>
-      <div v-for="section in sections.filter(s => s.items.length)" :key="section.label" class="pb-4">
-        <h3 v-if="sections.length > 1" class="text-gold-600 text-[10px] tracking-[0.15em] uppercase mb-2">{{ section.label }}</h3>
-        <ul class="divide-y divide-default border border-default rounded-md">
-          <li v-for="item in section.items" :key="item.id" class="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
-            <div class="min-w-0 text-sm">
-              <NuxtLink v-if="item.to" :to="item.to" class="text-highlighted font-medium hover:underline">{{ item.name }}</NuxtLink>
-              <span v-else class="text-highlighted font-medium">{{ item.name }}</span>
-              <p class="text-muted text-xs">
-                <span v-if="item.detail">{{ item.detail }} · </span>Archived {{ formatRelative(item.archivedAt) }}
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <UButton size="xs" variant="outline" color="neutral" icon="i-lucide-archive-restore" :loading="busy === item.id" @click="restore(section, item)">Restore</UButton>
-              <UButton size="xs" variant="ghost" color="error" icon="i-lucide-trash-2" @click="removing = { section, item }">Remove</UButton>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </template>
-  </UAccordion>
+  <!-- One root, so a class set by the page (spacing) lands here. -->
+  <div>
+    <!-- Staff and admins only: archived entries, closed until opened. -->
+    <UAccordion :items="[{ label: `Archived (${total})`, icon: 'i-lucide-archive', slot: 'archive' }]" :unmount-on-hide="false" class="border border-default rounded-lg px-4 bg-elevated">
+      <template #archive>
+        <p class="text-muted text-xs mb-4">Only staff and administrators see this. Restore puts an entry back where members can see it; removing it cannot be undone.</p>
+        <p v-if="total === 0" class="text-muted text-sm pb-4">Nothing is archived.</p>
+        <div v-for="section in sections.filter(s => s.items.length)" :key="section.label" class="pb-4">
+          <h3 v-if="sections.length > 1" class="text-gold-600 text-[10px] tracking-[0.15em] uppercase mb-2">{{ section.label }}</h3>
+          <ul class="divide-y divide-default border border-default rounded-md">
+            <li v-for="item in section.items" :key="item.id" class="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
+              <div class="min-w-0 text-sm">
+                <NuxtLink v-if="item.to" :to="item.to" class="text-highlighted font-medium hover:underline">{{ item.name }}</NuxtLink>
+                <span v-else class="text-highlighted font-medium">{{ item.name }}</span>
+                <p class="text-muted text-xs">
+                  <span v-if="item.detail">{{ item.detail }} · </span>Archived {{ formatRelative(item.archivedAt) }}
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <UButton size="xs" variant="outline" color="neutral" icon="i-lucide-archive-restore" :loading="busy === item.id" @click="restore(section, item)">Restore</UButton>
+                <UButton size="xs" variant="ghost" color="error" icon="i-lucide-trash-2" @click="removing = { section, item }">Remove</UButton>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </template>
+    </UAccordion>
 
-  <UModal
-    :open="Boolean(removing)"
-    :title="removing ? `Permanently remove ${removing.item.name}?` : ''"
-    :description="removing ? removing.section.removeWarning(removing.item) : ''"
-    @update:open="value => { if (!value) removing = null }"
-  >
-    <template #footer>
-      <UButton color="neutral" variant="outline" @click="removing = null">Keep in archive</UButton>
-      <UButton color="error" :loading="busy === removing?.item.id" @click="remove">Remove permanently</UButton>
-    </template>
-  </UModal>
+    <UModal
+      :open="Boolean(removing)"
+      :title="removing ? `Permanently remove ${removing.item.name}?` : ''"
+      :description="removing ? removing.section.removeWarning(removing.item) : ''"
+      @update:open="value => { if (!value) removing = null }"
+    >
+      <template #footer>
+        <UButton color="neutral" variant="outline" @click="removing = null">Keep in archive</UButton>
+        <UButton color="error" :loading="busy === removing?.item.id" @click="remove">Remove permanently</UButton>
+      </template>
+    </UModal>
+  </div>
 </template>
 
 <script setup lang="ts">

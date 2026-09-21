@@ -1,7 +1,10 @@
 <template>
   <div>
     <AdminStewardshipHeader title="Offerings">
-      <UButton v-if="canRecord" color="secondary" icon="i-lucide-plus" @click="startOpen = true">Start a count</UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton to="/help/counting-an-offering" variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-circle-question-mark">Help</UButton>
+        <UButton v-if="canRecord" color="secondary" icon="i-lucide-plus" @click="startOpen = true">Start a count</UButton>
+      </div>
     </AdminStewardshipHeader>
 
     <div class="bg-default py-10 px-6">

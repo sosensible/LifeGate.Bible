@@ -2,6 +2,7 @@
   <div>
     <AdminStewardshipHeader title="Giving statements">
       <div class="flex flex-wrap gap-2">
+        <UButton to="/help/giving-statements" variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-circle-question-mark">Help</UButton>
         <UButton variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-settings" @click="settingsOpen = true">Statement settings</UButton>
       </div>
     </AdminStewardshipHeader>

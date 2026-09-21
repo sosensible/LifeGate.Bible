@@ -2,7 +2,25 @@
 
 ## Overview
 
-This is a full-stack church member portal built with **Nuxt 4** and **Cloudflare D1 (SQLite)**, deployed on Cloudflare Pages. The design includes authentication, sermon library, member directory (admin), giving/donations, contact forms, and pastoral candidate applications. All backend endpoints are functional and wired to Cloudflare Email Service for notifications.
+This is the website and member portal for Lifegate Baptist Church in Eau Claire, Michigan. It is a full-stack **Nuxt 4** app with a **SQLite** database. It runs as a Node server.
+
+**Public pages:** home, about, teaching (sermons and series), ministries, missions, seeking a pastor, giving, contact, privacy and terms. There is also a live-meeting link for scheduled services.
+
+**Member pages** (sign-in required):
+- member directory, with privacy controls for each person
+- own profile
+- calendar
+- My teaching: speakers can edit the details of messages that name them
+- ministry budgets, for people who have access
+
+**Church office** (role-based):
+- people and households, accounts and roles, and the audit log
+- ministries, teaching and speakers
+- **Stewardship:** envelope budget, bank sync through SimpleFIN, offerings, givers, recurring transactions, giving statements (PDF) and reports
+
+**Current state:**
+- The site runs as a preview at https://new.lifegate.bible on a dev machine behind a Cloudflare Tunnel. See [Deployment](#deployment).
+- Three older handlers do not work yet: `/api/contact`, `/api/giving` and `/api/pastoral-candidates`. They still use the Cloudflare D1 binding, so they return 500 on Node. They are being moved to SQLite.
 
 ## About the Design Files
 
@@ -20,13 +38,19 @@ The bundled files are **production-ready HTML/Vue prototypes** that form the wor
 ## Architecture
 
 ### Tech Stack
-- **Framework**: Nuxt 4 (Vue 3)
-- **Backend**: Nitro (server routes)
-- **Database**: Cloudflare D1 (SQLite)
-- **Hosting**: Cloudflare Pages + Workers
-- **Email**: Cloudflare Email Service
-- **UI Library**: Nuxt UI (for buttons, forms, modals)
+- **Framework**: Nuxt 4 (Vue 3, Vite), with Pinia for state
+- **Server**: Nitro, `node-server` preset. Nitro scheduled tasks run the bank sync and recurring transactions.
+- **UI**: Nuxt UI v4 (Tailwind CSS v4). Light mode only.
 - **Fonts**: Google Fonts (Playfair Display, Lato)
+- **Database**: SQLite through `better-sqlite3` and Drizzle ORM. Migrations are in `server/database/migrations/`.
+- **Auth**: Better Auth: email and password, magic links, and the admin plugin for roles
+- **Validation**: Zod
+- **Email**: Nodemailer over SMTP in development (MailPit). Cloudflare Email Service REST API in production.
+- **Banking**: SimpleFIN Bridge (optional)
+- **Documents**: pdfmake for statements and reports. PapaParse for CSV report exports.
+- **Video**: YouTube (unlisted), played through the Nuxt Scripts facade on `youtube-nocookie.com`
+- **Hosting**: dev server under pm2 on a Mac, published through a Cloudflare Tunnel. Docker on ZimaOS is planned.
+- **Tests**: Vitest with `@nuxt/test-utils` and happy-dom
 
 ### Project Structure
 ```
@@ -226,6 +250,11 @@ Members only, and not indexed by search engines. Some countries make being known
 - **Accounts** (`user:list`):
   - create accounts (always email-verified; optional set-password email);
   - assign roles, block and unblock, email a password link, sign out everywhere, delete.
+- **Directory entries** (`people:update`, the same power as on the People page): an account can be connected to one person, and a person to one account (`server/lib/accounts.ts`).
+  - Open an account to connect it to someone without sign-in access, or disconnect it. Both the account and the person are kept.
+  - When adding an account, choosing its directory entry fills in the name and email and connects it as it is created.
+  - A **member** login with no directory entry is flagged "Not in directory": it reaches the members area but has no profile. The page counts them and can show only those. Other roles (e.g. a treasurer-only login) are not flagged.
+  - Audit: `account.link`, `account.unlink`.
   - Roles are defined in `shared/auth/permissions.ts`; the page describes each one (`shared/auth/role-info.ts`).
 - **Safeguards** (`server/lib/accounts.ts`): nobody can block, delete or remove the administrator role from their own account, and the last active administrator cannot be demoted, blocked or deleted.
 - Better Auth's own `/api/auth/admin/*` endpoints return 404 over HTTP, so every account change goes through these guarded, audited routes.
@@ -233,7 +262,31 @@ Members only, and not indexed by search engines. Some countries make being known
 - **Sign-ins** are recorded from Better Auth's session hook.
 - **Magic links and passwords:** Better Auth deletes the password of an account whose email is unverified the first time it signs in with a magic link. Accounts created here are marked verified, completing a password reset marks the email verified, and migration `0004` marks existing accounts verified. See `tests/unit/magic-link.spec.ts`.
 
-### 10. Stewardship (`/admin/stewardship/*`, `/ministry-budget`)
+### 10. Help (`/help`, `/help/[slug]`)
+
+Instructions for the people who run the church office. Signed-in only, and never indexed.
+
+- **Content**: one Markdown file per topic in `server/assets/help/`, bundled into the build as a Nitro server asset (the runtime image carries only `.output/`, so files on disk would not be there). Front matter: `title`, `summary`, `area` (must be listed in `HELP_AREAS` in `shared/help.ts`), `order`, `permission` (e.g. `giving:view`, or several separated by commas) and optional `keywords`. A page missing any of these fails `tests/unit/help.spec.ts` rather than rendering half a page.
+- **Who sees what**: `server/lib/help.ts` filters every topic by its `permission`. A Counter sees the four pages about entering gifts; the Treasurer sees all nine. A topic the viewer may not read is a 404, not a 403. Admins hold no `giving` permission, so they see no giving help at all.
+- **Indexed reference**: the contents list, grouped by area, is on every help page (a sidebar on wide screens, above and below the text on narrow ones), with the current page marked.
+- **Searchable**: the search box sits in that same contents list. `GET /api/help?q=` needs every word to appear in a topic, searching title, summary, keywords and body, within the topics that viewer may read; title matches come first and each result carries the text around the match. `?q=` stays in the address, so a search can be shared or reloaded.
+- **On this page**: `h2` and `h3` headings are given ids as they are rendered and listed beside the text (`UPageAnchors`).
+- **Markdown** is rendered with `marked`; `app/pages/help/[slug].vue` styles the result. The content is written in this repository, so the HTML is trusted.
+- **Links in**: "Help" in the account menu (for roles that have any help pages), and a **Help** button in the header of Offerings, Givers and Statements.
+- **Written so far**: offerings and giving statements, nine topics. Add an area to `HELP_AREAS` before writing pages for it.
+
+### 11. Calendar (`/calendar`)
+
+The church calendar, read from Google Calendar and drawn by the site rather than embedded in an iframe. Signed-in members only (`memberArea:view`).
+
+- **Source**: the calendar's public `.ics` feed. No API key and no stored secret; `CHURCH_CALENDAR_ID` overrides which calendar, `CHURCH_TIME_ZONE` the zone times are shown in. The calendar must be public for the feed to answer.
+- **Reading it**: `server/lib/calendar.ts` uses `ical.js` (Mozilla's). Repeating events are expanded from their `RRULE`; an occurrence someone moved or renamed arrives as a separate `VEVENT` with the same UID and a `RECURRENCE-ID`, and is attached to its series so the day is not listed twice; a cancelled occurrence is dropped. Times carry the calendar's own `VTIMEZONE`, which is registered before anything is read — without it 11:00 local would be taken as 11:00 UTC. Expansion stops at a year ahead, or 600 occurrences.
+- **Caching**: a module-level variable in `server/lib/calendar.ts` — not Nitro storage, not the database, not disk. It holds the parsed payload and the time it was read. Read at most once a day, on the first request after that goes stale; concurrent requests share one fetch. If Google fails and there is a previous copy, the daily read serves the previous copy rather than an error — but a refresh someone pressed rejects instead, so nobody is told it worked when it did not. The cache lives in the process, so a restart (or a second instance) means the next request fetches. Single-process only; if this is ever run under more than one worker, each keeps its own copy and a refresh only clears the one that served it.
+- **Refreshing**: `POST /api/admin/calendar/refresh` re-reads the feed now and writes a `calendar.refresh` audit entry. It needs `liveMeeting:manage` — admins and content editors, the same permission as scheduling live meetings. The button is in the page header and only appears for those roles.
+- **Presentation**: `UTabs` switches between **Upcoming** (events grouped by month) and **Month** (`UCalendar` with a dot on days that have something, and that day's events beside the grid). Both use `app/components/CalendarEntry.vue`. Meet links become a **Join online** button; per the earlier decision, Meet is linked to and never embedded.
+- **Tests**: `tests/unit/calendar.spec.ts` covers recurrence, moved and cancelled occurrences, the daylight-saving boundary, and the grouping the page relies on.
+
+### 12. Stewardship (`/admin/stewardship/*`, `/ministry-budget`)
 
 The church's accounts, transactions and budget (Phase 1), offerings with year-end giving statements (Phase 2), and semi-annual reports (Phase 3).
 
@@ -566,24 +619,157 @@ Email: [email]
   - Onboard domain in Cloudflare Email Sending dashboard
   - Configure SPF/DKIM/DMARC for `info@lifegate.bible`
 
+## Running the Dev Server with pm2
+
+The site currently runs as a dev server (`nuxi dev`) on port **3007**. A Cloudflare Tunnel points at that port. pm2 keeps the server running when editors or the Claude app restart. It also restarts the server if it crashes.
+
+Do not start a second dev server (`npm run dev`) while pm2 runs it. Both try to use port 3007. The Claude Browser pane (`.claude/launch.json`) only opens the running server. It does not start one.
+
+The process settings are in [`ecosystem.config.cjs`](ecosystem.config.cjs). The pm2 app name is `lifegate`.
+
+### One-time setup
+
+1. Install pm2 globally:
+   ```bash
+   npm install -g pm2
+   ```
+2. Start the site from the project folder:
+   ```bash
+   pm2 start ecosystem.config.cjs
+   ```
+3. Save the process list, so pm2 can start it again:
+   ```bash
+   pm2 save
+   ```
+4. Start pm2 when you log in. Run this command, then copy and run the `sudo` command that it prints:
+   ```bash
+   pm2 startup launchd
+   ```
+   For Node 24.15.0 installed with fnm, the printed command is:
+   ```bash
+   sudo env PATH=$PATH:/Users/johnfarrar/.local/share/fnm/node-versions/v24.15.0/installation/bin /Users/johnfarrar/.local/share/fnm/node-versions/v24.15.0/installation/lib/node_modules/pm2/bin/pm2 startup launchd -u johnfarrar --hp /Users/johnfarrar
+   ```
+   Run `sudo` in macOS Terminal, because it asks for your password.
+
+### Daily commands
+
+| Task | Command |
+|------|---------|
+| Show status | `pm2 ls` |
+| Show the live log | `pm2 logs lifegate` |
+| Restart (after changes to `nuxt.config.ts`, `.env` or dependencies) | `pm2 restart lifegate` |
+| Stop (to free port 3007) | `pm2 stop lifegate` |
+| Start again after a stop | `pm2 start lifegate` |
+
+Nuxt hot-reloads page and server changes. You do not need to restart for ordinary edits.
+
+Log files are in `~/.pm2/logs/`. Each line has a timestamp.
+
+### Notes
+
+- **Changing the Node version:** pm2 and the startup script use the Node version that was active when you installed them. If you change the Node version with fnm, do these steps again: install pm2 (step 1), run `pm2 unstartup launchd`, then do steps 4 and 3.
+- **Restart limits:** If the server fails repeatedly, pm2 waits longer before each restart. It stops after 20 failed starts. A start counts as failed when the server runs for less than 30 seconds. After you fix the cause, run `pm2 restart lifegate`.
+- **File watching:** pm2 file watching is off. Nuxt already watches files, so pm2 watching would restart the server on every save.
+
 ## Deployment
 
-### Prerequisites
-1. Cloudflare account with Pages enabled
-2. `lifegate.bible` domain on Cloudflare DNS
-3. D1 database created (`lifegate_db`)
-4. Email Service enabled and domain onboarded
+### Current setup: dev machine and Cloudflare Tunnel
 
-### Steps
-1. Push to GitHub (or deploy via Wrangler)
-2. Link repo to Cloudflare Pages in dashboard
-3. Set build command: `npm run build`
-4. Set publish directory: `.output/public`
-5. Add environment variables:
-   - `CLOUDFLARE_D1_BINDING=lifegate_db`
-   - `CLOUDFLARE_EMAIL_BINDING=EMAIL`
-6. Configure custom domain
-7. Test auth, forms, and email notifications in production
+The site is live at **https://new.lifegate.bible** as a preview. Search engines do not index it.
+
+| Part | Where it is |
+|------|-------------|
+| Site | `nuxi dev` on port 3007, kept running by pm2 (see [Running the Dev Server with pm2](#running-the-dev-server-with-pm2)) |
+| Database | SQLite file `.data/lifegate.db` (`DATABASE_PATH`). Not in git. |
+| Settings | `.env` (copy of `.env.example`). Not in git. |
+| Tunnel | `cloudflared` runs as a macOS LaunchDaemon (`/Library/LaunchDaemons/com.cloudflare.cloudflared.plist`). It starts when the machine starts. |
+| Hostname routing | Cloudflare Zero Trust → Networks → Tunnels. There is no local tunnel config file. The public hostname points to `http://localhost:3007`. |
+
+`nuxt.config.ts` has two settings that the tunnel needs. Do not remove them:
+
+- `vite.server.allowedHosts: ['.lifegate.bible']`. Without it, Vite blocks requests for the tunnel hostname.
+- The `lifegate:dev-no-store-through-tunnel` plugin. Without it, Cloudflare caches dev assets and the app does not start.
+
+### Set up a new machine
+
+1. Clone the repo and install dependencies:
+   ```bash
+   npm ci
+   ```
+2. Copy the settings file:
+   ```bash
+   cp .env.example .env
+   ```
+   Then fill in `.env`:
+   - `BETTER_AUTH_SECRET`: generate with `openssl rand -base64 32`.
+   - `BETTER_AUTH_URL`: the address people use, `https://new.lifegate.bible`.
+   - `BETTER_AUTH_TRUSTED_ORIGINS`: include `http://localhost:3007` and the public address.
+   - Mail and SimpleFIN values, if you need them (see the comments in `.env.example`).
+3. Create the database:
+   ```bash
+   npm run db:migrate
+   ```
+4. Create the first administrator:
+   ```bash
+   npm run admin:create -- someone@example.org "Full Name"
+   ```
+   To sign in, use **Email me a sign-in link**.
+5. Start the site with pm2. Follow [One-time setup](#one-time-setup).
+6. Install the tunnel connector:
+   ```bash
+   brew install cloudflared
+   ```
+   In Cloudflare Zero Trust → Networks → Tunnels, open the tunnel and copy the macOS install command (`sudo cloudflared service install <token>`). Run it in macOS Terminal. The token is a secret. Do not put it in the repo.
+7. In the same tunnel, make sure that the public hostname `new.lifegate.bible` points to `http://localhost:3007`.
+8. Make sure that the site responds:
+   ```bash
+   curl -I https://new.lifegate.bible/
+   ```
+   The result must be `200`.
+
+### Update the site
+
+1. Get the new code:
+   ```bash
+   git pull
+   ```
+2. If `package-lock.json` changed, install dependencies:
+   ```bash
+   npm ci
+   ```
+3. If there are new files in `server/database/migrations/`, back up the database first. The `.backup` command makes a safe copy while the site runs:
+   ```bash
+   sqlite3 .data/lifegate.db ".backup .data/lifegate.before-<change>.db"
+   ```
+   Then apply the migrations:
+   ```bash
+   npm run db:migrate
+   ```
+4. Restart the site:
+   ```bash
+   pm2 restart lifegate
+   ```
+
+### Launch settings
+
+These values are read at runtime. To change them, add them to `.env` and run `pm2 restart lifegate`. You do not need to rebuild.
+
+- `NUXT_PUBLIC_SITE_URL`: the public address used in `/sitemap.xml` and `/robots.txt`. The default is `https://new.lifegate.bible`.
+- `NUXT_PUBLIC_INDEXABLE`: the default is `false`. The site then sends `noindex` on every response. Set it to `true` only at launch on the final domain.
+
+When you move to the final domain, also update `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS` and the tunnel's public hostname.
+
+### Limits of this setup
+
+- **It is a dev server.** It is not optimized for production traffic.
+- **Mail uses SMTP.** `MAIL_TRANSPORT=cloudflare` works only when `NODE_ENV=production`, and the dev server is not production. Mail goes through SMTP (MailPit in development).
+- **The machine must stay on.** If it sleeps or shuts down, the site is offline. After a restart, `cloudflared` starts again automatically. pm2 starts again when you log in, but only if you did step 4 of [One-time setup](#one-time-setup).
+
+### Later: Docker on ZimaOS
+
+A Docker deployment to the ZimaOS box is planned but not in use. The runbook is [`deploy/README.md`](deploy/README.md). It lists the work that remains: the database volume, environment variables, migrations, and building `better-sqlite3` for amd64.
+
+Cloudflare Pages is no longer a target. The app uses `better-sqlite3`, a native Node module that does not run on Cloudflare Workers. The `NITRO_PRESET` override is still in `nuxt.config.ts`, but a Pages build will not work.
 
 ## Files Reference
 

@@ -6,7 +6,8 @@ import type { statement } from '../../shared/auth/permissions.ts'
 import { auth } from '../lib/auth.ts'
 import { servesInMissionsMinistry } from '../lib/missions.ts'
 
-type Permissions = {
+// Also used by server/lib/help.ts, where a help page names what it needs.
+export type Permissions = {
   [Resource in keyof typeof statement]?: Array<(typeof statement)[Resource][number]>
 }
 

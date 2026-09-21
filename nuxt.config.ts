@@ -92,9 +92,12 @@ export default defineNuxtConfig({
       },
     },
   },
-  // The church office's teaching page used to be /admin/sermons.
   routeRules: {
+    // The church office's teaching page used to be /admin/sermons.
     '/admin/sermons': { redirect: { to: '/admin/teaching', statusCode: 301 } },
+    // The offline page is the only route rendered ahead of time: the service
+    // worker can only fall back to a file that exists in the build.
+    '/offline': { prerender: true },
   },
   runtimeConfig: {
     public: {
@@ -124,6 +127,7 @@ export default defineNuxtConfig({
     // YouTube player facade: nothing loads from YouTube until someone presses
     // play, and it uses the privacy-enhanced youtube-nocookie.com host.
     '@nuxt/scripts',
+    '@vite-pwa/nuxt',
   ],
   // @nuxt/ui v4 requires this CSS entry; color aliases live in app.config.ts.
   css: ['~/assets/css/main.css'],
@@ -147,15 +151,103 @@ export default defineNuxtConfig({
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'Lifegate Baptist Church - Eau Claire, Michigan' },
+        { name: 'theme-color', content: '#164826' },
+        // Installed on a home screen, these make it open as an app rather than
+        // in a browser tab. iPhone reads the apple- ones and ignores the
+        // manifest's `display`.
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'Lifegate' },
       ],
       link: [
-        // Favicon generated from the church crest logo (public/logo.png).
-        // ?v= busts the browser's aggressive favicon cache; bump it if the icon changes.
-        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=2' },
-        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=2' },
-        { rel: 'icon', type: 'image/png', href: '/favicon-32x32.png?v=2' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=2' },
+        // Icons made from the church crest (public/logo.png): favicons for browser tabs,
+        // an opaque apple-touch-icon for iPhone home screens (iOS shows transparency as
+        // black). The 192/512 icons for Android are listed in the PWA manifest below.
+        // ?v= busts the browser's aggressive icon cache; bump it if the icons change.
+        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48x48.png?v=3' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=3' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=3' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=3' },
+        // @vite-pwa/nuxt writes /manifest.webmanifest but does not add this
+        // link on Nuxt 4 (its Nuxt integration still asks for kit 3). Without
+        // the link a browser will not offer to install the site, so it is
+        // written here rather than left to the module.
+        { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
     },
+  },
+
+  // Installable on a phone, and the member pages readable without a signal.
+  // What is kept offline is member information, so `app/stores/auth.ts` empties
+  // these caches the moment someone signs out or a different person signs in.
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      id: '/',
+      name: 'Lifegate Baptist Church',
+      short_name: 'Lifegate',
+      description: 'Lifegate Baptist Church — Eau Claire, Michigan',
+      // Installed, it opens at the members area; signed out that lands on login,
+      // which is where someone who installed the app wants to be.
+      start_url: '/members',
+      scope: '/',
+      display: 'standalone',
+      orientation: 'portrait',
+      theme_color: '#164826',
+      background_color: '#ffffff',
+      icons: [
+        { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    },
+    // The worker is written by hand (service-worker/sw.ts) rather than
+    // generated. Workbox's generated `navigateFallback` answers every matching
+    // navigation with the offline page whether or not the network is up, which
+    // on a server-rendered site means the whole site reads "No connection".
+    // Only the precache list is generated here; the routing lives in the file.
+    strategies: 'injectManifest',
+    srcDir: 'service-worker',
+    filename: 'sw.ts',
+    injectManifest: {
+      // The app's own code and fonts. No page and no API answer is precached.
+      // The offline page carries the site header, so the crest has to be here
+      // too or it shows a broken image exactly when nothing can be fetched.
+      // The header asks for 72px, which picks the 216 and 432 widths; the 864
+      // pair is never requested at that size and is left out.
+      globPatterns: [
+        '**/*.{js,css,woff2}',
+        'offline/index.html',
+        'icon-*.png',
+        'favicon*.png',
+        // Every AVIF width: the header asks for 72px, but a browser is allowed
+        // to reuse a wider copy it already holds (the home page's hero asks for
+        // 864), and offline it must find whichever one it settles on.
+        'images/logo-*.avif',
+        // PNG only up to 432 — that is the `src` fallback and the widest a
+        // 72px slot can ask for. The 864 PNG is 367 kB and stays out.
+        'images/logo-{216,432}.png',
+      ],
+    },
+    client: {
+      // The browser offers installation itself; there is no prompt of our own.
+      installPrompt: false,
+      // How often an open app re-checks for a new worker, in seconds.
+      //
+      // This is the recovery path for a bad release. Chrome throttles the
+      // update check it does on its own: with a broken worker installed,
+      // repeated navigations did not pick up a corrected one, because plain
+      // `register()` is subject to that throttle. This check is not -- it
+      // re-fetches the worker with `cache: no-store` before calling `update()`
+      // -- so it is what actually gets a stuck phone back onto a working site.
+      //
+      // The first check happens one interval after the app opens, never on
+      // load, so the number is the worst-case time somebody stays stuck. Ten
+      // minutes costs an open tab roughly 230 kB an hour; lower it if a release
+      // ever goes wrong, raise it if that traffic is unwelcome.
+      periodicSyncForUpdates: 600,
+    },
+    devOptions: { enabled: false },
   },
 })

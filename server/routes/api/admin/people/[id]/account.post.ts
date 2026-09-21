@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { accountLinkSchema } from '../../../../../../shared/people.ts'
 import { people, user } from '../../../../../database/schema/index.ts'
+import { assertCanLink, linkAccount } from '../../../../../lib/accounts.ts'
 import { ADMIN_CREATED, auth, linkOrigin } from '../../../../../lib/auth.ts'
 import { db } from '../../../../../lib/db.ts'
 import { loadPerson, presentForAdmin, recordAudit } from '../../../../../lib/people.ts'
@@ -19,13 +20,8 @@ export default defineEventHandler(async (event) => {
   const existing = db.select({ id: user.id }).from(user).where(eq(user.email, email)).get()
 
   if (existing) {
-    const linked = db.select({ id: people.id }).from(people).where(eq(people.userId, existing.id)).get()
-    if (linked) throw createError({ statusCode: 409, statusMessage: 'That account is already linked to another directory entry' })
-
-    db.transaction((tx) => {
-      tx.update(people).set({ userId: existing.id }).where(eq(people.id, id)).run()
-      recordAudit(tx, { actorUserId: session.user.id, action: 'account.link', entityType: 'person', entityId: id })
-    })
+    assertCanLink(id, existing.id)
+    db.transaction(tx => linkAccount(tx, session.user.id, id, existing.id))
     return { person: presentForAdmin(loadPerson(id)!), created: false }
   }
 

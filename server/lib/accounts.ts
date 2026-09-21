@@ -1,10 +1,11 @@
 // Sign-in accounts for the accounts admin, and the rules that keep the church
 // from locking itself out.
-import { eq, max } from 'drizzle-orm'
+import { eq, isNull, max } from 'drizzle-orm'
 import { createError } from 'h3'
 import type { AccountView } from '../../shared/accounts.ts'
 import { parseRoles, type AssignableRole } from '../../shared/auth/role-info.ts'
 import { auditLog, people, user } from '../database/schema/index.ts'
+import { recordAudit, type Tx } from './audit.ts'
 import { db } from './db.ts'
 
 export const loadAccounts = (id?: string): AccountView[] => {
@@ -76,3 +77,35 @@ export const assertSafeAccountChange = (actorUserId: string, target: Pick<Accoun
 
 // Better Auth stores roles comma-separated; an account with none gets `user`.
 export const storedRoles = (roles: AssignableRole[]) => (roles.length ? [...new Set(roles)] : ['user'])
+
+// Connecting accounts and directory entries. One account per person and one
+// person per account; the People page and the Accounts page both use these.
+// Without a userId, checks only the person (for an account not created yet).
+export const assertCanLink = (personId: string, userId?: string) => {
+  const person = db.select({ userId: people.userId }).from(people).where(eq(people.id, personId)).get()
+  if (!person) throw createError({ statusCode: 404, statusMessage: 'Person not found' })
+  if (person.userId) throw createError({ statusCode: 409, statusMessage: 'That person already has sign-in access' })
+  if (userId && db.select({ id: people.id }).from(people).where(eq(people.userId, userId)).get()) {
+    throw createError({ statusCode: 409, statusMessage: 'That account is already connected to another directory entry' })
+  }
+}
+
+// Call inside a transaction, after assertCanLink.
+export const linkAccount = (tx: Tx, actorUserId: string, personId: string, userId: string) => {
+  tx.update(people).set({ userId }).where(eq(people.id, personId)).run()
+  recordAudit(tx, { actorUserId, action: 'account.link', entityType: 'person', entityId: personId })
+}
+
+export const unlinkAccount = (tx: Tx, actorUserId: string, personId: string) => {
+  tx.update(people).set({ userId: null }).where(eq(people.id, personId)).run()
+  recordAudit(tx, { actorUserId, action: 'account.unlink', entityType: 'person', entityId: personId })
+}
+
+// Directory entries with no sign-in access, for choosing whom an account belongs to.
+export const loadUnlinkedPeople = () =>
+  db.select({ id: people.id, firstName: people.firstName, lastName: people.lastName, email: people.email, kind: people.kind, isMinor: people.isMinor })
+    .from(people)
+    .where(isNull(people.userId))
+    .orderBy(people.lastName, people.firstName)
+    .all()
+

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-elevated rounded-lg shadow-lg p-10 sm:p-12 text-center">
-      <img src="/logo.png" alt="Lifegate Baptist Church" class="h-20 w-auto mx-auto mb-6" />
+      <SiteLogo sizes="120px" alt="Lifegate Baptist Church" class="h-20 w-auto mx-auto mb-6" />
       <h1 class="text-3xl font-bold text-primary mb-3 font-serif">Sign in to Lifegate</h1>
 
       <template v-if="token">

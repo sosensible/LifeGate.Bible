@@ -20,11 +20,15 @@
 
     <div class="bg-parchment-900 py-10 px-6">
       <div class="max-w-5xl mx-auto space-y-4">
+        <!-- The only warning block on a dark panel. Warning text is darkened
+             app-wide for contrast on light surfaces (see app.config.ts); here
+             that would read as brown on brown, so it keeps the light amber. -->
         <UAlert
           v-if="sermon.status === 'draft'"
           color="warning"
           variant="subtle"
           icon="i-lucide-eye-off"
+          :ui="{ root: 'text-warning-500' }"
           title="Draft preview"
           :description="isTeacher ? 'Only you and the people who manage teaching can see this. It is not on the Teaching page yet.' : 'Only people who manage teaching can see this. It is not on the Teaching page yet.'"
         />

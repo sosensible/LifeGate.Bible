@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md">
       <div class="bg-elevated rounded-lg shadow-lg p-10 sm:p-12">
-        <img src="/logo.png" alt="Lifegate Baptist Church" class="h-24 w-auto mx-auto mb-6" />
+        <SiteLogo sizes="144px" alt="Lifegate Baptist Church" class="h-24 w-auto mx-auto mb-6" />
         <p class="text-center text-gold-600 text-xs font-bold tracking-[0.2em] uppercase mb-2">Members Only</p>
         <h1 class="text-3xl font-bold text-primary mb-2 text-center font-serif">{{ copy.heading }}</h1>
         <p class="text-center text-toned mb-6 text-sm leading-relaxed">{{ copy.intro }}</p>

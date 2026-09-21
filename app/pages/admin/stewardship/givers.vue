@@ -1,7 +1,10 @@
 <template>
   <div>
     <AdminStewardshipHeader title="Givers">
-      <UButton v-if="canManage" color="secondary" icon="i-lucide-plus" @click="openGiver(null)">Add giving record</UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton to="/help/giving-records" variant="outline" class="text-white ring-white/40 hover:bg-white/10" icon="i-lucide-circle-question-mark">Help</UButton>
+        <UButton v-if="canManage" color="secondary" icon="i-lucide-plus" @click="openGiver(null)">Add giving record</UButton>
+      </div>
     </AdminStewardshipHeader>
 
     <div class="bg-default py-10 px-6">

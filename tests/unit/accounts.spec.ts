@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { needsDirectoryEntry } from '../../shared/accounts'
 import { parseRoles, permissionLabels } from '../../shared/auth/role-info'
 
 const dir = mkdtempSync(join(tmpdir(), 'lifegate-accounts-'))
@@ -74,5 +75,48 @@ describe('account safeguards', () => {
     expect(() => lib.assertSafeAccountChange('only-admin', account('editor'), { kind: 'roles', roles: [] })).not.toThrow()
     expect(() => lib.assertSafeAccountChange('only-admin', account('editor'), { kind: 'block' })).not.toThrow()
     expect(() => lib.assertSafeAccountChange('only-admin', account('only-admin'), { kind: 'roles', roles: ['admin'] })).not.toThrow()
+  })
+})
+
+describe('connecting accounts to directory entries', () => {
+  const addPerson = (firstName: string) => db.insert(schema.people).values({ firstName, lastName: 'Linkson' }).returning().get().id
+  const links = () => db.select().from(schema.auditLog).all().filter(e => e.action.startsWith('account.'))
+
+  it('connects an account, flags member logins with none, and lists only people without access', () => {
+    addUser('new-member', 'member')
+    addUser('treasurer-only', 'treasurer')
+    const ruth = addPerson('Ruth')
+    const amos = addPerson('Amos')
+
+    expect(needsDirectoryEntry(lib.loadAccount('new-member')!)).toBe(true)
+    // Not a member login: nothing to flag.
+    expect(needsDirectoryEntry(lib.loadAccount('treasurer-only')!)).toBe(false)
+
+    lib.assertCanLink(ruth, 'new-member')
+    db.transaction(tx => lib.linkAccount(tx, 'only-admin', ruth, 'new-member'))
+
+    expect(lib.loadAccount('new-member')!.person).toMatchObject({ id: ruth, firstName: 'Ruth' })
+    expect(needsDirectoryEntry(lib.loadAccount('new-member')!)).toBe(false)
+    expect(lib.loadUnlinkedPeople().map(p => p.id)).toContain(amos)
+    expect(lib.loadUnlinkedPeople().map(p => p.id)).not.toContain(ruth)
+    expect(links().at(-1)).toMatchObject({ action: 'account.link', entityType: 'person', entityId: ruth, actorUserId: 'only-admin' })
+  })
+
+  it('keeps one account per person and one person per account', () => {
+    const ruth = lib.loadAccount('new-member')!.person!.id
+    const amos = lib.loadUnlinkedPeople().find(p => p.firstName === 'Amos')!.id
+    expect(() => lib.assertCanLink(ruth, 'editor')).toThrow(/already has sign-in access/)
+    expect(() => lib.assertCanLink(amos, 'new-member')).toThrow(/already connected to another directory entry/)
+    expect(() => lib.assertCanLink('no-such-person', 'editor')).toThrow(/Person not found/)
+    // Before an account exists, only the person is checked.
+    expect(() => lib.assertCanLink(amos)).not.toThrow()
+  })
+
+  it('disconnects, keeping both the account and the person', () => {
+    const ruth = lib.loadAccount('new-member')!.person!.id
+    db.transaction(tx => lib.unlinkAccount(tx, 'only-admin', ruth))
+    expect(lib.loadAccount('new-member')!.person).toBeNull()
+    expect(lib.loadUnlinkedPeople().map(p => p.id)).toContain(ruth)
+    expect(links().at(-1)).toMatchObject({ action: 'account.unlink', entityId: ruth })
   })
 })

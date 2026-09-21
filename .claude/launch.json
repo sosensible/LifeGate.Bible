@@ -3,9 +3,11 @@
   "configurations": [
     {
       "name": "nuxt-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3007
+      "url": "http://localhost:3007"
+    },
+    {
+      "name": "nuxt-prod",
+      "url": "http://localhost:3008"
     }
   ]
 }

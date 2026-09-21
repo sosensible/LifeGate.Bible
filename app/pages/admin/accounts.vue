@@ -16,9 +16,19 @@
 
         <section v-else>
           <p class="text-toned text-sm mb-4 max-w-3xl">
-            An account is how someone signs in. It is separate from their directory entry, which you connect on the
+            An account is how someone signs in. It is separate from their directory entry, which you connect by opening the account here, or on the
             <NuxtLink to="/admin/people" class="text-primary hover:underline">People</NuxtLink> page. Nobody can create their own account.
           </p>
+          <UAlert
+            v-if="notInDirectoryCount"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-user-round-x"
+            class="mb-4"
+            :title="`${notInDirectoryCount} member ${notInDirectoryCount === 1 ? 'login is' : 'logins are'} not in the directory`"
+            description="They reach the members area but have no profile. Open one to connect it to its directory entry."
+            :actions="[{ label: onlyNotInDirectory ? 'Show all accounts' : 'Show only these', color: 'warning', variant: 'outline', onClick: () => { onlyNotInDirectory = !onlyNotInDirectory } }]"
+          />
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <UInput v-model="search" icon="i-lucide-search" placeholder="Search name, email or role..." class="w-full max-w-md" />
             <p class="text-muted text-sm">{{ filtered.length }} of {{ accounts.length }}</p>
@@ -42,7 +52,9 @@
                 </div>
               </template>
               <template #person-cell="{ row }">
-                <span class="text-toned text-xs">{{ row.original.person ? `${row.original.person.firstName} ${row.original.person.lastName}` : '—' }}</span>
+                <span v-if="row.original.person" class="text-toned text-xs">{{ row.original.person.firstName }} {{ row.original.person.lastName }}</span>
+                <UBadge v-else-if="needsDirectoryEntry(row.original)" size="sm" variant="subtle" color="warning" icon="i-lucide-user-round-x">Not in directory</UBadge>
+                <span v-else class="text-toned text-xs">—</span>
               </template>
               <template #lastSignIn-cell="{ row }">
                 <span class="text-toned text-xs whitespace-nowrap" :title="row.original.lastSignInAt ? formatDateTime(row.original.lastSignInAt) : undefined">
@@ -82,7 +94,7 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { AccountView } from '#shared/accounts'
+import { needsDirectoryEntry, type AccountView } from '#shared/accounts'
 import { ASSIGNABLE_ROLES, permissionLabels, ROLE_INFO } from '#shared/auth/role-info'
 
 definePageMeta({
@@ -108,11 +120,17 @@ const columns: TableColumn<AccountView>[] = [
   { id: 'actions', header: '' },
 ]
 
+// Member logins with no directory entry.
+const notInDirectoryCount = computed(() => accounts.value.filter(needsDirectoryEntry).length)
+const onlyNotInDirectory = ref(false)
+watch(notInDirectoryCount, (count) => { if (!count) onlyNotInDirectory.value = false })
+
 const search = ref('')
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return accounts.value
-  return accounts.value.filter(a =>
+  const list = onlyNotInDirectory.value ? accounts.value.filter(needsDirectoryEntry) : accounts.value
+  if (!q) return list
+  return list.filter(a =>
     [a.name, a.email, ...a.roles.map(r => ROLE_INFO[r].label)].some(value => value.toLowerCase().includes(q)),
   )
 })

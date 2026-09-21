@@ -37,16 +37,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setSession = (value: Session | null) => {
     session.value = value
+    // Anything the phone kept offline belongs to whoever was signed in. If that
+    // is now somebody else, it goes before they can read it.
+    if (import.meta.client) void claimOfflineCaches(value?.user?.id ?? null)
   }
 
   const refresh = async () => {
     const { data } = await authClient.getSession()
-    session.value = data ?? null
+    setSession(data ?? null)
   }
 
   const logout = async () => {
     await authClient.signOut()
     session.value = null
+    // Signing out empties the offline copies of the directory, ministries and
+    // calendar. Awaited, so the phone is clear before the next page renders.
+    if (import.meta.client) await purgeOfflineCaches()
   }
 
   return { session, user, isAuthenticated, isMember, isStaff, roleNames, can, setSession, refresh, logout }

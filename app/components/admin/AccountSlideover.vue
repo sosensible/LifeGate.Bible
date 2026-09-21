@@ -3,6 +3,18 @@
     <template #body>
       <!-- New account -->
       <UForm v-if="!account" id="account-form" :schema="accountCreateSchema" :state="createState" class="space-y-6" @submit="create">
+        <UFormField v-if="canLink" label="Directory entry" name="personId" description="Whose account this is. Choosing someone fills in their name and email.">
+          <USelectMenu
+            v-model="createState.personId"
+            :items="personItems"
+            value-key="value"
+            placeholder="Not in the directory"
+            :loading="loadingPeople"
+            clear
+            class="w-full"
+            @update:model-value="fillFromPerson"
+          />
+        </UFormField>
         <UFormField label="Name" name="name" required>
           <UInput v-model="createState.name" class="w-full" />
         </UFormField>
@@ -28,8 +40,18 @@
           :description="account.blockReason ? `Reason: ${account.blockReason}` : 'This account cannot sign in.'"
         />
 
+        <UAlert
+          v-if="needsDirectoryEntry(account)"
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-user-round-x"
+          title="Not in the directory"
+          description="This member login is not connected to a directory entry, so they have no profile and cannot see or set what the directory shares about them."
+        />
+
         <dl class="grid grid-cols-2 gap-4 text-sm">
-          <div>
+          <!-- Those who can connect accounts get the Directory entry section below instead. -->
+          <div v-if="!canLink">
             <dt class="text-gold-600 text-[10px] tracking-[0.15em] uppercase">Directory</dt>
             <dd class="text-toned">
               <NuxtLink v-if="account.person" to="/admin/people" class="text-primary hover:underline">{{ account.person.firstName }} {{ account.person.lastName }}</NuxtLink>
@@ -43,6 +65,21 @@
             </dd>
           </div>
         </dl>
+
+        <section v-if="canLink" class="space-y-3">
+          <h3 class="font-serif text-lg font-bold text-highlighted">Directory entry</h3>
+          <div v-if="account.person" class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-toned text-sm">Connected to {{ account.person.firstName }} {{ account.person.lastName }}.</p>
+            <UButton size="sm" variant="outline" color="neutral" icon="i-lucide-unlink" :loading="busy === 'unlink'" @click="disconnectPerson">Disconnect</UButton>
+          </div>
+          <template v-else>
+            <p class="text-muted text-xs">People who do not have sign-in access yet.</p>
+            <div class="flex gap-2">
+              <USelectMenu v-model="linkPersonId" :items="personItems" value-key="value" placeholder="Choose a person" :loading="loadingPeople" class="flex-1" />
+              <UButton :disabled="!linkPersonId" :loading="busy === 'link'" icon="i-lucide-link" @click="connectPerson">Connect</UButton>
+            </div>
+          </template>
+        </section>
 
         <section v-if="canSetRoles" class="space-y-3">
           <h3 class="font-serif text-lg font-bold text-highlighted">Roles</h3>
@@ -85,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { accountCreateSchema, type AccountView } from '#shared/accounts'
+import { accountCreateSchema, needsDirectoryEntry, type AccountView, type UnlinkedPerson } from '#shared/accounts'
 import { ASSIGNABLE_ROLES, ROLE_INFO, type AssignableRole } from '#shared/auth/role-info'
 
 const props = defineProps<{ account: AccountView | null }>()
@@ -100,10 +137,40 @@ const canUpdate = computed(() => auth.can({ user: ['update'] }))
 const canBlock = computed(() => auth.can({ user: ['ban'] }))
 const canDelete = computed(() => auth.can({ user: ['delete'] }))
 const canRevoke = computed(() => auth.can({ session: ['revoke'] }))
+// Connecting accounts to directory entries is directory work.
+const canLink = computed(() => auth.can({ people: ['update'] }))
 
 const roleItems = ASSIGNABLE_ROLES.map(value => ({ value, label: ROLE_INFO[value].label, description: ROLE_INFO[value].description }))
 
-const createState = reactive({ name: '', email: '', roles: ['member'] as AssignableRole[], sendPasswordLink: true })
+const createState = reactive({ name: '', email: '', roles: ['member'] as AssignableRole[], sendPasswordLink: true, personId: undefined as string | null | undefined })
+
+// People without sign-in access, loaded each time the slideover opens.
+const unlinkedPeople = ref<UnlinkedPerson[]>([])
+const loadingPeople = ref(false)
+const personItems = computed(() => unlinkedPeople.value.map(p => ({
+  value: p.id,
+  label: `${p.lastName}, ${p.firstName}`,
+  description: [p.kind === 'guest' ? 'Guest' : null, p.isMinor ? 'Minor' : null, p.email].filter(Boolean).join(' · ') || undefined,
+})))
+const loadUnlinkedPeople = async () => {
+  loadingPeople.value = true
+  try {
+    unlinkedPeople.value = (await $fetch<{ people: UnlinkedPerson[] }>('/api/admin/accounts/unlinked-people')).people
+  }
+  catch (error) {
+    toast.add({ title: 'Directory entries could not be loaded', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    loadingPeople.value = false
+  }
+}
+const fillFromPerson = (id: string | null | undefined) => {
+  const person = unlinkedPeople.value.find(p => p.id === id)
+  if (!person) return
+  createState.name = `${person.firstName} ${person.lastName}`
+  if (person.email) createState.email = person.email
+}
+const linkPersonId = ref<string | undefined>()
 const roles = ref<AssignableRole[]>([])
 const blockReason = ref('')
 const busy = ref<string | null>(null)
@@ -111,7 +178,9 @@ const confirmingDelete = ref(false)
 
 watch(open, (isOpen) => {
   if (!isOpen) return
-  Object.assign(createState, { name: '', email: '', roles: ['member'], sendPasswordLink: true })
+  Object.assign(createState, { name: '', email: '', roles: ['member'], sendPasswordLink: true, personId: undefined })
+  linkPersonId.value = undefined
+  if (canLink.value && !props.account?.person) loadUnlinkedPeople()
   roles.value = [...(props.account?.roles ?? [])]
   blockReason.value = ''
 }, { immediate: true })
@@ -145,6 +214,22 @@ const create = async () => {
   if (result) {
     emit('saved', result.account)
     open.value = false
+  }
+}
+
+const connectPerson = async () => {
+  const result = await run('link', () => $fetch<AccountResult>(accountUrl('/person'), { method: 'PUT', body: { personId: linkPersonId.value } }), 'Connected to the directory', 'Not connected')
+  if (result) {
+    linkPersonId.value = undefined
+    emit('saved', result.account)
+  }
+}
+
+const disconnectPerson = async () => {
+  const result = await run('unlink', () => $fetch<AccountResult>(accountUrl('/person'), { method: 'DELETE' }), 'Disconnected from the directory', 'Not disconnected')
+  if (result) {
+    emit('saved', result.account)
+    loadUnlinkedPeople()
   }
 }
 
