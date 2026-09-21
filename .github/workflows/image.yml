@@ -37,8 +37,12 @@ jobs:
 
       - run: npm ci
 
-      # Publishing an image that fails its own tests helps nobody.
-      - run: npx vitest run
+      # Unit specs only. tests/e2e/homepage.spec.ts runs in @nuxt/test-utils
+      # "host" mode against the dev server on 127.0.0.1:3007, so it passes on a
+      # developer's machine purely because that server happens to be running,
+      # and cannot pass here. The image job below exercises the real artifact
+      # instead, which is a better end-to-end check than a dev server anyway.
+      - run: npx vitest run tests/unit
 
   image:
     name: build and push
@@ -82,15 +86,47 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The image is useless if the native module inside it is wrong for the
-      # target, and that is exactly the failure this whole pipeline exists to
-      # prevent -- so prove it here rather than discovering it on the box.
-      # The entrypoint runs the check and then `true` instead of the server.
-      - name: Check the image actually runs on amd64
+      # Boot the real artifact and ask it for a page. This is the check that
+      # matters: it proves the native SQLite module loads on amd64, that the
+      # migrations build a database from an empty volume, and that the site
+      # serves -- the three things that can only fail on the target.
+      #
+      # Throwaway secrets: nothing here reaches a real person. APP_ENV is
+      # deliberately not "production", so even a misconfigured mail setting
+      # cannot send (server/lib/mail.ts).
+      - name: Boot the image and serve a page
         run: |
-          docker run --rm --platform linux/amd64 \
-            ${{ steps.meta.outputs.image }}:${{ github.sha }} true
-          echo "Native module loaded on linux/amd64."
+          docker run -d --name smoke --platform linux/amd64 \
+            -e APP_ENV=ci \
+            -e BETTER_AUTH_SECRET=ci-only-not-a-real-secret-32-bytes-x \
+            -e BETTER_AUTH_URL=http://127.0.0.1:3000 \
+            -e MAIL_TRANSPORT=smtp \
+            -p 3000:3000 \
+            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/; then
+              echo "Served a page on attempt $i."
+              ok=1; break
+            fi
+            sleep 2
+          done
+
+          echo "--- container log ---"
+          docker logs smoke
+
+          if [ "${ok:-0}" != "1" ]; then
+            echo "::error::The image never served a page. See the log above."
+            docker rm -f smoke >/dev/null 2>&1 || true
+            exit 1
+          fi
+
+          # The migration plugin announces itself; its absence means the schema
+          # was never applied and the database is not what we think it is.
+          docker logs smoke 2>&1 | grep -q '\[migrate\]' \
+            || { echo "::error::No migration ran."; docker rm -f smoke; exit 1; }
+
+          docker rm -f smoke >/dev/null
 
       - name: Summary
         run: |
