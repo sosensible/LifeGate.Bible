@@ -18,7 +18,7 @@ services:
     # Published by .github/workflows/image.yml. Make the GHCR package public
     # once, so this pulls without a registry login (CasaOS has no UI for one).
     # Pin a version rather than :latest so a reinstall is reproducible.
-    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.1
+    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.2
     container_name: lifegate-production
     restart: unless-stopped
     environment:
@@ -90,7 +90,7 @@ x-casaos:
   title:
     en_US: Lifegate Baptist Church
   category: Others
-  version: "1.0.0-alpha.1"
+  version: "1.0.0-alpha.2"
   tagline:
     en_US: Lifegate Baptist Church - Eau Claire, Michigan
   description:

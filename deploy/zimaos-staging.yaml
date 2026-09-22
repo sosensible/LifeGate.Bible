@@ -14,7 +14,7 @@ services:
   lifegate:
     # The same published image as production. Promote by pointing production at
     # a tag that has already run here.
-    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.1
+    image: ghcr.io/sosensible/lifegate-church:1.0.0-alpha.2
     container_name: lifegate-staging
     restart: unless-stopped
     environment:
@@ -74,7 +74,7 @@ x-casaos:
   title:
     en_US: Lifegate (staging)
   category: Others
-  version: "1.0.0-alpha.1"
+  version: "1.0.0-alpha.2"
   tagline:
     en_US: Rehearsal copy - fake data, no real mail
   description:
