@@ -41,7 +41,11 @@ services:
       MAIL_TRANSPORT: smtp
       SMTP_HOST: zimaos.local
       SMTP_PORT: "1025"
-      MAIL_FROM: Lifegate STAGING <no-reply@lifegate.bible>
+      # A bare address, no display name. "Name <addr>" would be rejected by the
+      # ZimaOS install form, which reads angle brackets as an unfilled
+      # placeholder. The address itself says which deployment sent it, which is
+      # the part that matters when a rehearsal message turns up in MailPit.
+      MAIL_FROM: staging-no-reply@lifegate.bible
       CONTACT_EMAIL: staging@lifegate.test
 
       # Empty on purpose: the real URL would burn the church's ~24-requests-a-day

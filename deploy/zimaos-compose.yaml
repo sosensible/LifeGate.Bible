@@ -49,7 +49,18 @@ services:
       BETTER_AUTH_TRUSTED_ORIGINS: https://new.lifegate.bible
 
       MAIL_TRANSPORT: cloudflare
-      MAIL_FROM: Lifegate Baptist Church <no-reply@lifegate.bible>
+      # MAIL_FROM is deliberately NOT set here.
+      #
+      # The address needs a display name -- "Lifegate Baptist Church
+      # <no-reply@lifegate.bible>" -- and RFC 5322 puts the address in angle
+      # brackets. The ZimaOS "Install a Custom App" form reads anything in
+      # angle brackets as a placeholder you forgot to fill in, and refuses to
+      # save: "Resolve YAML placeholder before saving".
+      #
+      # Left unset, server/lib/mail.ts falls back to exactly that string
+      # (DEFAULT_FROM), so the sender is right and the form is happy. Set it
+      # only if the address changes, and then use a bare address with no
+      # display name.
       CLOUDFLARE_ACCOUNT_ID: ""
       CLOUDFLARE_EMAIL_API_TOKEN: ""
       CONTACT_EMAIL: info@lifegate.bible

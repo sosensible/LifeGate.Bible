@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cloudflarePayload, parseFrom, sendMail } from '../../server/lib/mail'
+import { cloudflarePayload, mailFrom, parseFrom, sendMail } from '../../server/lib/mail'
 
 describe('Cloudflare Email payload', () => {
   it('uses the REST API’s field names and base64 attachments', () => {
@@ -24,6 +24,28 @@ describe('Cloudflare Email payload', () => {
   it('leaves attachments out when there are none, and accepts a bare address', () => {
     expect(cloudflarePayload({ to: 'a@example.org', subject: 's', text: 't', html: 'h' }, 'x@lifegate.bible')).not.toHaveProperty('attachments')
     expect(parseFrom('x@lifegate.bible')).toEqual({ address: 'x@lifegate.bible' })
+  })
+})
+
+// Production on ZimaOS leaves MAIL_FROM unset on purpose: its "Install a
+// Custom App" form reads the angle brackets an RFC 5322 display name needs as
+// an unfilled placeholder and refuses to save. So the built-in default IS the
+// production sender, and changing it changes what the congregation sees.
+describe('who the mail comes from', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('falls back to the church’s own address when nothing is set', () => {
+    vi.stubEnv('MAIL_FROM', '')
+    expect(mailFrom()).toBe('Lifegate Baptist Church <no-reply@lifegate.bible>')
+    expect(parseFrom(mailFrom())).toEqual({
+      address: 'no-reply@lifegate.bible',
+      name: 'Lifegate Baptist Church',
+    })
+  })
+
+  it('takes a bare address when one is given, which is what staging uses', () => {
+    vi.stubEnv('MAIL_FROM', 'staging-no-reply@lifegate.bible')
+    expect(parseFrom(mailFrom())).toEqual({ address: 'staging-no-reply@lifegate.bible' })
   })
 })
 

@@ -22,7 +22,11 @@ export interface MailMessage {
 }
 
 const DEFAULT_FROM = 'Lifegate Baptist Church <no-reply@lifegate.bible>'
-const mailFrom = () => process.env.MAIL_FROM || DEFAULT_FROM
+// Exported so the fallback can be tested: the ZimaOS production app
+// definition deliberately leaves MAIL_FROM unset, because its install form
+// rejects the angle brackets an RFC 5322 display name needs. That makes
+// DEFAULT_FROM the real sender in production, not just a convenience.
+export const mailFrom = () => process.env.MAIL_FROM || DEFAULT_FROM
 
 let smtp: Transporter | undefined
 
