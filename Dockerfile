@@ -92,6 +92,32 @@ VOLUME ["/app/.data"]
 COPY --from=build /src/deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# scripts/create-admin.ts and the exact source files it imports -- not the
+# whole server, just this one script's dependency graph, traced by hand:
+# auth.ts, db.ts, audit.ts, mail.ts, the schema, and the roles it reads.
+#
+# A fresh deployment has an empty database and nobody in it yet, so this is
+# the bootstrap path -- run with `docker exec` once the app is up:
+#
+#   docker exec -it <container> node scripts/create-admin.ts \
+#     someone@example.org "Full Name"
+#
+# It runs as a plain source file: this repo's scripts already run on Node's
+# own TypeScript support with no build step (see the admin:create npm script),
+# so nothing here needs compiling. The symlink below is what lets its bare
+# imports (better-auth, drizzle-orm, ...) resolve -- Node walks up from
+# /app/server/lib/*.ts looking for a node_modules folder, and everything
+# those packages need is already in .output/server/node_modules because the
+# running server depends on the same packages.
+COPY --from=build /src/scripts/create-admin.ts ./scripts/create-admin.ts
+COPY --from=build /src/server/lib/auth.ts ./server/lib/auth.ts
+COPY --from=build /src/server/lib/db.ts ./server/lib/db.ts
+COPY --from=build /src/server/lib/audit.ts ./server/lib/audit.ts
+COPY --from=build /src/server/lib/mail.ts ./server/lib/mail.ts
+COPY --from=build /src/server/database/schema ./server/database/schema
+COPY --from=build /src/shared/auth ./shared/auth
+RUN ln -s .output/server/node_modules node_modules
+
 USER node
 
 EXPOSE 3000

@@ -177,6 +177,37 @@ curl -I http://<zima-ip>:3010/
 Expect `200`. If the container exits immediately, read its log — a native module
 built for the wrong platform says so in one sentence.
 
+### The first admin
+
+A fresh deployment migrates its own schema at startup and creates no accounts
+-- nobody can sign in yet, including you. Create the first administrator once
+the container is up:
+
+```
+docker exec -it lifegate-production node scripts/create-admin.ts \
+  you@example.org "Your Name"
+```
+
+(Staging: `lifegate-staging` in place of `lifegate-production`.)
+
+No `--env-file` is needed and none would work -- there is no `.env` file in the
+image. `docker exec` runs inside the already-running container, so it inherits
+the environment the app definition set (`DATABASE_PATH`, `BETTER_AUTH_*`).
+
+**No SSH? ZimaOS's own dashboard has a terminal.** Click the installed app,
+open its menu, choose **Terminal** -- that opens a shell inside the container
+through the web UI, no SSH required. Run the command above there.
+
+The account gets a random password nobody knows. Sign in at `/login` with
+"Email me a sign-in link", then set a real password from "Forgot password?" if
+wanted. Running the command again with the same email refuses and changes
+nothing -- it creates a new account, it does not grant roles to an existing
+one.
+
+This same script is how any admin can be added later, from a checkout on a
+developer's machine, against `.data/lifegate.db` directly:
+`npm run admin:create -- someone@example.org "Full Name"`.
+
 ### Stewardship bank sync
 
 Stewardship reads bank data from SimpleFIN Bridge. It is optional; without it
