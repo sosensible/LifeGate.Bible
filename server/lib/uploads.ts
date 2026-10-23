@@ -8,7 +8,7 @@ import { createError } from 'h3'
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
-const uploadsDir = () =>
+export const uploadsDir = () =>
   resolve(process.env.UPLOADS_PATH || join(dirname(process.env.DATABASE_PATH || '.data/lifegate.db'), 'uploads'))
 
 const NAME = /^[0-9a-f-]{36}\.(jpg|png|webp)$/

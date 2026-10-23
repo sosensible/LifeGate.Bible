@@ -74,7 +74,9 @@ export const updateMinistry = (tx: Tx, id: string, input: MinistryInput) => {
 }
 
 // Only a ministry nobody serves in and no budget is shared with, so removing
-// it never silently drops a roster or a Stewardship decision.
+// it never silently drops a roster or a Stewardship decision. Its lists go with
+// it: with no one serving there is no leader left who could delete them, so
+// refusing would strand them for good.
 export const deleteMinistry = (tx: Tx, id: string) => {
   const ministry = findMinistry(tx, id)
   if (isProtected(ministry.slug)) {

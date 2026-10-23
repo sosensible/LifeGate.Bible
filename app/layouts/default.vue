@@ -12,7 +12,7 @@
       }"
     >
       <template #title>
-        <SiteLogo sizes="72px" fetchpriority="high" alt="Lifegate Baptist Church - home" class="h-12 w-auto [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_3px_rgba(255,255,255,0.8))_drop-shadow(0_0_6px_rgba(255,255,255,0.5))]" />
+        <SiteLogo sizes="72px" fetchpriority="high" :alt="`${site.name} - home`" class="h-12 w-auto [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_3px_rgba(255,255,255,0.8))_drop-shadow(0_0_6px_rgba(255,255,255,0.5))]" />
       </template>
 
       <UNavigationMenu
@@ -40,7 +40,7 @@
     <!-- The home page has its own full footer. -->
     <footer v-if="route.path !== '/'" class="bg-primary-900 border-t border-white/10 py-5 px-6">
       <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <p class="text-white/50 text-xs font-bold">© {{ new Date().getFullYear() }} Lifegate Baptist Church · Eau Claire, Michigan</p>
+        <p class="text-white/50 text-xs font-bold">© {{ new Date().getFullYear() }} {{ site.name }}<template v-if="placeName"> · {{ placeName }}</template></p>
         <div class="flex gap-4">
           <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
           <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
@@ -55,6 +55,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 
 const auth = useAuthStore()
 const route = useRoute()
+const { site, placeName } = useSite()
 
 const siteLinks = computed<NavigationMenuItem[]>(() => [
   { label: 'About', icon: 'i-lucide-info', to: '/about' },
@@ -98,14 +99,22 @@ const { data: myTeaching, refresh: refreshMyTeaching } = useLazyFetch('/api/teac
   immediate: auth.isAuthenticated,
   default: () => ({ sermons: [], series: [] }),
 })
+// Lists and tasks from the ministries this person serves in.
+const { data: myLists, refresh: refreshMyLists } = useLazyFetch('/api/me/lists', {
+  server: false,
+  immediate: auth.isAuthenticated,
+  default: () => ({ assigned: [], ministries: [] }),
+})
 watch(() => auth.user?.id, (id) => {
   if (id) {
     refreshMinistryBudgets()
     refreshMyTeaching()
+    refreshMyLists()
   }
   else {
     ministryBudgets.value = { ministries: [] }
     myTeaching.value = { sermons: [], series: [] }
+    myLists.value = { assigned: [], ministries: [] }
   }
 })
 
@@ -114,9 +123,10 @@ const hasHelp = computed(() => auth.can({ giving: ['record'] }) || auth.can({ st
 
 const accountMenu = computed<DropdownMenuItem[][]>(() => [
   [
-    ...(auth.isMember ? [{ label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
+    ...(auth.isMember ? [{ label: 'My Page', icon: 'i-lucide-id-card', to: '/me' }, { label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
     ...(ministryBudgets.value.ministries.length ? [{ label: 'Ministry budget', icon: 'i-lucide-wallet', to: '/ministry-budget' }] : []),
     ...(myTeaching.value.sermons.length ? [{ label: 'My teaching', icon: 'i-lucide-book-open', to: '/my-teaching' }] : []),
+    ...(myLists.value.ministries.length ? [{ label: 'My lists', icon: 'i-lucide-list-checks', to: '/my-lists' }] : []),
     ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
     ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Manage teaching', icon: 'i-lucide-video', to: '/admin/teaching' }] : []),
     ...(auth.can({ ministry: ['update'] }) ? [{ label: 'Ministries', icon: 'i-lucide-hand-heart', to: '/admin/ministries' }] : []),
@@ -125,6 +135,7 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => [
       : auth.can({ giving: ['record'] }) ? [{ label: 'Offerings', icon: 'i-lucide-hand-coins', to: '/admin/stewardship/offerings' }] : []),
     ...(auth.can({ stewardship: ['grantAccess'] }) && !auth.can({ stewardship: ['view'] }) ? [{ label: 'Ministry budget access', icon: 'i-lucide-shield-check', to: '/admin/stewardship/ministry-access' }] : []),
     ...(auth.can({ user: ['list'] }) ? [{ label: 'Accounts', icon: 'i-lucide-key-round', to: '/admin/accounts' }] : []),
+    ...(auth.can({ siteSettings: ['update'] }) ? [{ label: 'Church details', icon: 'i-lucide-church', to: '/admin/site' }] : []),
     ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
   ],
   // Help for office work: shown to those who have at least one help page.

@@ -34,7 +34,7 @@ services:
 
       # The public origin, and whether search engines may index it. Both are
       # read per request: change and restart, no rebuild.
-      NUXT_PUBLIC_SITE_URL: https://new.lifegate.bible
+      NUXT_PUBLIC_SITE_URL: https://lifegate.bible
       NUXT_PUBLIC_INDEXABLE: "false"
 
       # On the bind mount below. Member photos live beside it, so one backup
@@ -45,22 +45,28 @@ services:
       # openssl rand -base64 32 -- and NOT the same value as staging, or a
       # session minted there would be valid here.
       BETTER_AUTH_SECRET: ""
-      BETTER_AUTH_URL: https://new.lifegate.bible
-      BETTER_AUTH_TRUSTED_ORIGINS: https://new.lifegate.bible
+      # These two must name the host people actually type. Better Auth refuses
+      # a sign-in whose Origin is not listed (403 INVALID_ORIGIN), so a stale
+      # value here means nobody can log in, and BETTER_AUTH_URL is also what
+      # emailed sign-in and reset links are built from. Comma-separate to trust
+      # more than one origin, e.g. during a hostname move.
+      BETTER_AUTH_URL: https://lifegate.bible
+      BETTER_AUTH_TRUSTED_ORIGINS: https://lifegate.bible
 
       MAIL_TRANSPORT: cloudflare
       # MAIL_FROM is deliberately NOT set here.
       #
-      # The address needs a display name -- "Lifegate Baptist Church
-      # <no-reply@lifegate.bible>" -- and RFC 5322 puts the address in angle
-      # brackets. The ZimaOS "Install a Custom App" form reads anything in
-      # angle brackets as a placeholder you forgot to fill in, and refuses to
-      # save: "Resolve YAML placeholder before saving".
+      # A sender needs a display name -- "Church Name <no-reply@example.org>" --
+      # and RFC 5322 puts the address in angle brackets. The ZimaOS "Install a
+      # Custom App" form reads anything in angle brackets as a placeholder you
+      # forgot to fill in, and refuses to save: "Resolve YAML placeholder before
+      # saving".
       #
-      # Left unset, server/lib/mail.ts falls back to exactly that string
-      # (DEFAULT_FROM), so the sender is right and the form is happy. Set it
-      # only if the address changes, and then use a bare address with no
-      # display name.
+      # Left unset, server/lib/mail.ts builds the sender itself: the church's
+      # name from Church details (/admin/site), at the address below. So the
+      # display name follows the settings, and only the address lives here. It
+      # must be on the domain the mail service is set up to send from.
+      MAIL_FROM_ADDRESS: no-reply@lifegate.bible
       CLOUDFLARE_ACCOUNT_ID: ""
       CLOUDFLARE_EMAIL_API_TOKEN: ""
       CONTACT_EMAIL: info@lifegate.bible

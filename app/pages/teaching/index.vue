@@ -112,7 +112,7 @@ import { byBibleOrder } from '#shared/bible'
 definePageMeta({
   layout: 'default',
 })
-useSeoMeta({ title: 'Teaching | Lifegate Baptist Church', description: 'Preaching, lessons and Bible studies from Lifegate Baptist Church.' })
+useSeoMeta({ title: 'Teaching', description: 'Preaching, lessons and Bible studies from Lifegate Baptist Church.' })
 
 const auth = useAuthStore()
 const route = useRoute()

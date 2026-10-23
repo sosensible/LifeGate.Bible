@@ -1,0 +1,1 @@
+ALTER TABLE `ministry_lists` ADD `assignees_see_all` integer DEFAULT false NOT NULL;

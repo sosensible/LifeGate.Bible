@@ -143,7 +143,7 @@ definePageMeta({
   permission: { giving: ['view'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Giving statements | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Giving statements' })
 
 const auth = useAuthStore()
 const toast = useToast()

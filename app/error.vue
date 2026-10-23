@@ -97,7 +97,7 @@ const showDetails = computed(() => import.meta.dev && !!props.error?.message)
 const goTo = (path: string) => clearError({ redirect: path })
 
 useSeoMeta({
-  title: `${statusCode.value} ${eyebrow.value} | Lifegate Baptist Church`,
+  title: `${statusCode.value} ${eyebrow.value}`,
   // Error pages must never be indexed, whatever robots.txt says.
   robots: 'noindex, nofollow',
 })

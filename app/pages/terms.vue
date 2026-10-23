@@ -2,7 +2,7 @@
   <div>
     <section class="bg-primary-800 py-16 px-6">
       <div class="max-w-4xl mx-auto">
-        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-4">Lifegate Baptist Church</p>
+        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-4">{{ site.name }}</p>
         <h1 class="text-5xl font-bold font-serif text-white leading-[1.05]">Terms of Use</h1>
         <p class="text-white/70 text-sm mt-4">Last updated {{ LEGAL_UPDATED }}</p>
       </div>
@@ -25,18 +25,21 @@
 </template>
 
 <script setup lang="ts">
+import { contactPhrase } from '../../shared/site'
+
 definePageMeta({ layout: 'default' })
+const { site, placeName } = useSite()
 useSeoMeta({
-  title: 'Terms of Use | Lifegate Baptist Church',
-  description: 'The terms for using the Lifegate Baptist Church website and member area.',
+  title: 'Terms of Use',
+  description: () => `The terms for using the ${site.value.name} website and member area.`,
 })
 
-const sections: Array<{ id: string, title: string, paragraphs: string[], items?: string[] }> = [
+const sections = computed<Array<{ id: string, title: string, paragraphs: string[], items?: string[] }>>(() => [
   {
     id: 'agreement',
     title: 'Using this site',
     paragraphs: [
-      'This website is provided by Lifegate Baptist Church, Eau Claire, Michigan, to share our ministry and to serve our church family. By using it, or by signing in to the member area, you agree to these terms. If you do not agree, please do not use the site.',
+      `This website is provided by ${site.value.name}${placeName.value ? `, ${placeName.value}` : ''}, to share our ministry and to serve our church family. By using it, or by signing in to the member area, you agree to these terms. If you do not agree, please do not use the site.`,
     ],
   },
   {
@@ -74,7 +77,7 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     id: 'content',
     title: 'Teaching and other content',
     paragraphs: [
-      'Teaching, photos and other content on this site belong to Lifegate Baptist Church or the people who created them. You are welcome to watch, read and share links to them for personal, church and non-commercial use. Please ask before republishing them.',
+      `Teaching, photos and other content on this site belong to ${site.value.name} or the people who created them. You are welcome to watch, read and share links to them for personal, church and non-commercial use. Please ask before republishing them.`,
       'Scripture quotations are from the King James Version, which is in the public domain in the United States.',
       'If you teach and edit your own messages, or submit information to the church, you confirm it is accurate and that you may share it, and you allow the church to use it for its ministry.',
     ],
@@ -83,7 +86,7 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     id: 'giving',
     title: 'Giving',
     paragraphs: [
-      'Gifts to Lifegate Baptist Church are voluntary contributions to the church’s ministry and are used at the church’s discretion, honoring designations where it can. Contribution statements reflect gifts the church has received and recorded. If you believe a statement is wrong, contact the church so it can be corrected.',
+      `Gifts to ${site.value.name} are voluntary contributions to the church’s ministry and are used at the church’s discretion, honoring designations where it can. Contribution statements reflect gifts the church has received and recorded. If you believe a statement is wrong, contact the church so it can be corrected.`,
     ],
   },
   {
@@ -97,7 +100,7 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     id: 'disclaimer',
     title: 'No warranty',
     paragraphs: [
-      'We work to keep the site accurate and available, but it is provided as is, without warranties of any kind. Service times, events and other details can change. To the extent the law allows, Lifegate Baptist Church is not liable for any loss or damage arising from use of the site.',
+      `We work to keep the site accurate and available, but it is provided as is, without warranties of any kind. Service times, events and other details can change. To the extent the law allows, ${site.value.name} is not liable for any loss or damage arising from use of the site.`,
     ],
   },
   {
@@ -105,8 +108,8 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     title: 'Changes and governing law',
     paragraphs: [
       'We may update these terms; the date above shows the latest version, and continuing to use the site means you accept the changes. These terms are governed by the laws of the State of Michigan.',
-      `Questions about these terms can be sent to ${LEGAL_CONTACT_EMAIL}.`,
+      `Questions about these terms can be sent to ${contactPhrase(site.value)}.`,
     ],
   },
-]
+])
 </script>

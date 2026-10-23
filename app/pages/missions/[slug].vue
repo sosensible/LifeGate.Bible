@@ -205,7 +205,7 @@ const restore = async () => {
   }
 }
 
-useSeoMeta({ title: () => `${missionary.value?.name ?? 'Missions'} | Lifegate Baptist Church`, robots: 'noindex, nofollow' })
+useSeoMeta({ title: () => `${missionary.value?.name ?? 'Missions'}`, robots: 'noindex, nofollow' })
 
 const hasContact = computed(() => Boolean(missionary.value?.email || missionary.value?.phone || missionary.value?.website || missionary.value?.mailingAddress))
 

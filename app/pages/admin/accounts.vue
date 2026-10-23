@@ -102,7 +102,7 @@ definePageMeta({
   permission: { user: ['list'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Accounts | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Accounts' })
 
 const auth = useAuthStore()
 const canCreate = computed(() => auth.can({ user: ['create', 'set-role'] }))

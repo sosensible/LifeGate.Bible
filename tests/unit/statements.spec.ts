@@ -91,7 +91,8 @@ describe('statements', () => {
     const fields = db.transaction(tx => statements.saveStatementSettings(tx, {
       legalName: 'Lifegate Baptist Church', mailingAddress: 'PO Box 1\nTown, MI', ein: '12-3456789', signerName: 'Pat Treasurer', signerTitle: 'Treasurer', closingMessage: null, emailSubject: null,
     }))
-    expect(fields).toEqual(['mailingAddress', 'ein', 'signerName', 'signerTitle'])
+    // The seeded legal name is a neutral placeholder, so entering the real one is a change too.
+    expect(fields).toEqual(['legalName', 'mailingAddress', 'ein', 'signerName', 'signerTitle'])
     expect(statements.loadStatementSettings()).toMatchObject({ ein: '12-3456789', signerName: 'Pat Treasurer' })
   })
 

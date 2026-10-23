@@ -28,6 +28,16 @@ export const statement = {
   // Scheduling Google Meet and YouTube Live links on the Teaching page.
   liveMeeting: ['manage'],
   ministry: ['update'],
+  // The church's name, address, logo, contact details and service times
+  // (/admin/site). Reading them is public; this is who may change them.
+  siteSettings: ['update'],
+  // Ministry lists (server/lib/ministry-lists.ts). This is ONLY the read-only
+  // overview staff get across every ministry. Running a ministry's lists comes
+  // from the roster -- its leaders manage them, its members work them -- not
+  // from a role, so it passes to a new leader with no change here. `view` reads
+  // every ministry's lists; `viewLeadersOnly` also reads the ones a ministry's
+  // leaders keep to themselves. Deliberately not granted to admins.
+  ministryList: ['view', 'viewLeadersOnly'],
   // The members-only Missions pages. `update` is also granted, outside roles, to
   // anyone who serves in the Missions ministry (server/lib/missions.ts); they
   // can archive entries. Only `delete` (staff and admins) sees the archive,
@@ -80,6 +90,7 @@ export const directoryManager = ac.newRole({
 
 export const pastor = ac.newRole({
   people: ['viewContact'],
+  ministryList: ['view', 'viewLeadersOnly'],
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],
   contactMessage: ['view'],
@@ -109,6 +120,8 @@ export const deacon = ac.newRole({
 export const churchSecretary = ac.newRole({
   stewardship: ['grantAccess'],
   ministry: ['update'],
+  siteSettings: ['update'],
+  ministryList: ['view'],
 })
 
 export const searchCommittee = ac.newRole({
@@ -121,6 +134,7 @@ export const admin = ac.newRole({
   sermon: ['create', 'update', 'delete', 'publish'],
   liveMeeting: ['manage'],
   ministry: ['update'],
+  siteSettings: ['update'],
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],
   contactMessage: ['view'],

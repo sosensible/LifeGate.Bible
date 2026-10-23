@@ -44,10 +44,13 @@
         <!-- Upcoming -->
         <div v-if="view === 'upcoming'">
           <div v-if="!data.events.length" class="bg-muted border border-default rounded-lg p-8 text-center">
-            <p class="text-toned">Nothing is on the calendar for the year ahead.</p>
+            <p class="text-toned">Nothing is on the calendar for the months ahead.</p>
           </div>
 
           <div v-else class="space-y-8">
+            <p v-if="listed.length < data.events.length" class="text-muted text-xs">
+              A repeating event shows this time and the next. The Month view shows every one.
+            </p>
             <section v-for="month in months" :key="month.key">
               <h2 class="text-gold-600 text-[11px] font-bold tracking-[0.15em] uppercase mb-3">{{ month.label }}</h2>
               <ul class="space-y-3">
@@ -56,6 +59,19 @@
                 </li>
               </ul>
             </section>
+
+            <!-- Single events planned beyond the next three months. -->
+            <div v-if="futureMonths.length" class="pt-4 border-t border-default space-y-8">
+              <h2 class="font-serif text-2xl font-bold text-highlighted">Future events</h2>
+              <section v-for="month in futureMonths" :key="month.key">
+                <h3 class="text-gold-600 text-[11px] font-bold tracking-[0.15em] uppercase mb-3">{{ month.label }}</h3>
+                <ul class="space-y-3">
+                  <li v-for="event in month.events" :key="event.id">
+                    <CalendarEntry :event="event" :time-zone="data.timeZone" />
+                  </li>
+                </ul>
+              </section>
+            </div>
           </div>
         </div>
 
@@ -98,7 +114,7 @@
 
 <script setup lang="ts">
 import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
-import { dayKey, groupByDay, groupByMonth } from '#shared/calendar'
+import { dayKey, firstOfEachSeries, groupByDay, groupByMonth, splitFuture } from '#shared/calendar'
 
 definePageMeta({
   middleware: 'auth',
@@ -119,7 +135,12 @@ const tabs = [
   { label: 'Month', value: 'month', icon: 'i-lucide-calendar-days' },
 ]
 
-const months = computed(() => (data.value ? groupByMonth(data.value.events, data.value.timeZone) : []))
+// The list shows a repeating event this time and the next; the month view, below,
+// keeps every occurrence.
+const listed = computed(() => (data.value ? firstOfEachSeries(data.value.events) : []))
+const split = computed(() => (data.value ? splitFuture(listed.value, data.value.horizon) : { soon: [], future: [] }))
+const months = computed(() => (data.value ? groupByMonth(split.value.soon, data.value.timeZone) : []))
+const futureMonths = computed(() => (data.value ? groupByMonth(split.value.future, data.value.timeZone) : []))
 const eventsByDay = computed(() => (data.value ? groupByDay(data.value.events, data.value.timeZone) : new Map()))
 
 // Open the month view on the next day that actually has something on it, so the

@@ -2,7 +2,7 @@
   <div>
     <section class="bg-primary-800 py-16 px-6">
       <div class="max-w-4xl mx-auto">
-        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-4">Lifegate Baptist Church</p>
+        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-4">{{ site.name }}</p>
         <h1 class="text-5xl font-bold font-serif text-white leading-[1.05]">Privacy Policy</h1>
         <p class="text-white/70 text-sm mt-4">Last updated {{ LEGAL_UPDATED }}</p>
       </div>
@@ -33,18 +33,22 @@
 </template>
 
 <script setup lang="ts">
+import { contactPhrase } from '../../shared/site'
+
 definePageMeta({ layout: 'default' })
+const { site, placeName } = useSite()
+const siteHost = new URL(useRuntimeConfig().public.siteUrl).host
 useSeoMeta({
-  title: 'Privacy Policy | Lifegate Baptist Church',
-  description: 'How Lifegate Baptist Church collects, uses and protects information on its website.',
+  title: 'Privacy Policy',
+  description: () => `How ${site.value.name} collects, uses and protects information on its website.`,
 })
 
-const sections: Array<{ id: string, title: string, paragraphs: string[], items?: string[] }> = [
+const sections = computed<Array<{ id: string, title: string, paragraphs: string[], items?: string[] }>>(() => [
   {
     id: 'who',
     title: 'Who we are',
     paragraphs: [
-      `This policy covers the Lifegate Baptist Church website (lifegate.bible), run by Lifegate Baptist Church, Eau Claire, Michigan. Questions or requests about your information can be sent to ${LEGAL_CONTACT_EMAIL}.`,
+      `This policy covers the ${site.value.name} website (${siteHost}), run by ${site.value.name}${placeName.value ? `, ${placeName.value}` : ''}. Questions or requests about your information can be sent to ${contactPhrase(site.value)}.`,
     ],
   },
   {
@@ -133,7 +137,7 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
     id: 'choices',
     title: 'Your choices',
     paragraphs: [
-      `You can see and change your details and sharing choices on your profile at any time. To correct something you cannot change yourself, request a copy of your information, or ask us to remove it, email ${LEGAL_CONTACT_EMAIL}. Some records, such as giving records, may need to be kept for legal reasons.`,
+      `You can see and change your details and sharing choices on your profile at any time. To correct something you cannot change yourself, request a copy of your information, or ask us to remove it, contact ${contactPhrase(site.value)}. Some records, such as giving records, may need to be kept for legal reasons.`,
     ],
   },
   {
@@ -150,5 +154,5 @@ const sections: Array<{ id: string, title: string, paragraphs: string[], items?:
       'If we change how we handle information, we will update this page and the date above, and tell members about significant changes.',
     ],
   },
-]
+])
 </script>

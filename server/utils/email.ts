@@ -9,12 +9,13 @@
 // like the rest of the app. When giving is decided, this file and the
 // `env.EMAIL` binding below should go with it, leaving one mail stack.
 import { escapeHtml } from '../lib/mail.ts'
+import { officeEmail } from '../lib/site.ts'
 
 export const sendEmail = async (env: any, to: string, subject: string, html: string, text: string) => {
   try {
     const response = await env.EMAIL.send({
       to,
-      from: `info@lifegate.bible`,
+      from: officeEmail() ?? undefined,
       subject,
       html,
       text,

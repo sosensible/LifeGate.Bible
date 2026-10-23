@@ -91,7 +91,7 @@ definePageMeta({
   permission: { ministry: ['update'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Ministries | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Ministries' })
 
 const toast = useToast()
 const { data, error, status } = await useFetch('/api/admin/ministries')

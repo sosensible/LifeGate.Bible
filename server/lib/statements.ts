@@ -6,6 +6,7 @@ import { UNDESIGNATED_LABEL, type StatementListView, type StatementRow, type Sta
 import { categories, categoryGroups, gifts, givers, offeringCounts, statementDeliveries, statementSettings } from '../database/schema/index.ts'
 import type { Tx } from './audit.ts'
 import { db } from './db.ts'
+import { loadSite } from './site.ts'
 
 type Reader = Tx | typeof db
 
@@ -127,7 +128,7 @@ export const recordDelivery = (
 export const loadStatementSettings = (reader: Reader = db): StatementSettingsView => {
   const row = reader.select().from(statementSettings).where(eq(statementSettings.id, SETTINGS_ID)).get()
   return {
-    legalName: row?.legalName ?? 'Lifegate Baptist Church',
+    legalName: row?.legalName ?? loadSite().name,
     mailingAddress: row?.mailingAddress ?? null,
     ein: row?.ein ?? null,
     signerName: row?.signerName ?? null,

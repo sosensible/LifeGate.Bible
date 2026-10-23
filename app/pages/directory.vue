@@ -48,6 +48,7 @@
             v-for="entry in filtered"
             :key="entry.id"
             :entry="entry"
+            link-person
             :badge="'guest' in entry ? (entry.guest ? 'Guest speaker' : 'Member') : undefined"
           >
             <template v-if="tab === 'speakers' && canManageSpeakers" #actions>
@@ -77,7 +78,7 @@ definePageMeta({
 })
 import type { ArchiveSection } from '~/components/ArchiveAccordion.vue'
 
-useSeoMeta({ title: 'Members Directory | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Members Directory' })
 
 const auth = useAuthStore()
 const route = useRoute()

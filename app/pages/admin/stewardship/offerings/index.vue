@@ -65,7 +65,7 @@ definePageMeta({
   permission: { giving: ['record'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Offerings | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Offerings' })
 
 const auth = useAuthStore()
 const canRecord = computed(() => auth.can({ giving: ['record'] }))

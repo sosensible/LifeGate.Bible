@@ -90,8 +90,9 @@ export interface AdminPersonView {
   householdName: string | null
   householdRole: 'husband' | 'wife' | 'father' | 'mother' | 'guardian' | 'child' | null
   ministries: Array<{ id: string, slug: string, name: string, isLeader: boolean, showToMembers: boolean, showPublicly: boolean }>
-  // Birthday and photo are only sent when the person shares them. Whether an
-  // unshared one exists is not revealed either.
+  // A birthday is only sent when the person shares it; whether an unshared one
+  // exists is not revealed either. The photo is always sent here: staff set it.
+  // Other members see it only once the person shares it.
   birthday: string | null
   photoUrl: string | null
   sharePhone: boolean

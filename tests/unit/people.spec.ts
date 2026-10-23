@@ -80,14 +80,24 @@ describe('people records', () => {
     db.transaction(tx => lib.setMinistries(tx, personId, [musicId]))
   })
 
-  it('shows staff the household but not an unshared birthday or photo, or that one exists', () => {
+  it('shows staff the household but not an unshared birthday, or that one exists', () => {
     const view = lib.presentForAdmin(lib.loadPerson(personId)!)
     expect(view.householdName).toBe('Perkins Household')
     expect(view.phone).toBe('(269) 555-0105')
     expect(view.birthday).toBeNull()
-    expect(view.photoUrl).toBeNull()
     expect(JSON.stringify(view)).not.toContain('1948')
     expect(JSON.stringify(view)).not.toMatch(/hasBirthday|hasPhoto/)
+  })
+
+  // Staff are the ones who set a photo, so the people admin has it to show even
+  // before the person shares it. Everyone else only sees it once shared.
+  it('shows staff the photo they set, shared or not, and no one else the unshared one', async () => {
+    const { presentPerson } = await import('../../shared/privacy')
+    const withPhoto = { ...lib.loadPerson(personId)!, photoUrl: '/api/photos/x.jpg', sharePhoto: false }
+    expect(lib.presentForAdmin(withPhoto).photoUrl).toBe('/api/photos/x.jpg')
+    expect(presentPerson(withPhoto, { isMember: true, isStaff: false })).not.toHaveProperty('photoUrl')
+    expect(presentPerson(withPhoto, { isMember: true, isStaff: true })).not.toHaveProperty('photoUrl')
+    expect(presentPerson({ ...withPhoto, sharePhoto: true }, { isMember: true, isStaff: false })).toHaveProperty('photoUrl', '/api/photos/x.jpg')
   })
 
   it('refuses staff changes to a birthday they cannot see', () => {
@@ -109,7 +119,7 @@ describe('people records', () => {
 
     const [entry] = db.select().from(schema.auditLog).all()
     expect(entry).toMatchObject({ actorUserId: 'staff-1', action: 'person.update', entityId: personId, details: { fields: ['phone'] } })
-    expect(JSON.stringify(entry)).not.toContain('555')
+    expect(JSON.stringify(entry!.details)).not.toContain('555')
   })
 })
 

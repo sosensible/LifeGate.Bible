@@ -4,7 +4,9 @@ import { eq } from 'drizzle-orm'
 import { people } from '../../../../database/schema/index.ts'
 import { recordAudit } from '../../../../lib/audit.ts'
 import { db } from '../../../../lib/db.ts'
+import { photoNameOf } from '../../../../lib/photos.ts'
 import { findSpeaker } from '../../../../lib/speakers.ts'
+import { deletePhoto } from '../../../../lib/uploads.ts'
 
 export default defineEventHandler(async (event) => {
   const viewer = await requireSpeakersDeleter(event)
@@ -24,6 +26,9 @@ export default defineEventHandler(async (event) => {
       note: guestRecord ? `${current.firstName} ${current.lastName}, guest record removed` : 'no longer a speaker',
     })
   })
+
+  // A guest's record is gone, so is the photo set for it.
+  if (guestRecord) deletePhoto(photoNameOf(current.photoUrl))
 
   setResponseStatus(event, 204)
   return null

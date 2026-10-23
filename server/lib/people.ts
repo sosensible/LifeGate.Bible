@@ -64,8 +64,9 @@ export const loadPeople = (ids?: string[]): FullPerson[] => {
 export const loadPerson = (id: string): FullPerson | undefined => loadPeople([id])[0]
 
 // A record as the people admin sees it. Staff keep records, so they see names,
-// contact info, household and ministries. Birthday and photo stay opt-in even
-// here: staff neither see nor change them until the person shares them.
+// contact info, household and ministries. A birthday stays opt-in even here: staff
+// neither see nor change it until the person shares it. A photo is different: staff
+// are the ones who set it, so they always see it.
 export const presentForAdmin = (person: FullPerson): AdminPersonView => ({
   id: person.id,
   firstName: person.firstName,
@@ -82,7 +83,9 @@ export const presentForAdmin = (person: FullPerson): AdminPersonView => ({
   householdRole: person.householdRole,
   ministries: person.ministries,
   birthday: person.shareBirthday ? person.birthday : null,
-  photoUrl: person.sharePhoto ? person.photoUrl : null,
+  // Staff set the photo, so the people admin always has it to show, even before the
+  // person shares it. Members see it only once shared (shared/privacy.ts).
+  photoUrl: person.photoUrl,
   sharePhone: person.sharePhone,
   shareEmail: person.shareEmail,
   shareAddress: person.shareAddress,
@@ -94,6 +97,12 @@ export const presentForAdmin = (person: FullPerson): AdminPersonView => ({
 
 export const findPersonByUserId = (userId: string) =>
   db.select({ id: people.id }).from(people).where(eq(people.userId, userId)).get()
+
+// Who the signed-in account is in the directory, and where in a household, for
+// the privacy rules that depend on it.
+export const findViewerPerson = (userId: string) =>
+  db.select({ id: people.id, householdId: people.householdId, householdRole: people.householdRole })
+    .from(people).where(eq(people.userId, userId)).get()
 
 // Nobody may change what they cannot see. Staff see a birthday only once the
 // person shares it; until then only the person can set or change it.

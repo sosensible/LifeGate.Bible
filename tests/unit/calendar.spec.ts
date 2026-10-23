@@ -2,8 +2,8 @@
 // single occurrences that get moved or cancelled out of a series, and the
 // calendar's own time zone — so those are what is tested here.
 import { describe, expect, it, vi } from 'vitest'
-import { parseCalendar } from '../../server/lib/calendar'
-import { formatEventTime, groupByDay, groupByMonth } from '../../shared/calendar'
+import { calendarHorizon, parseCalendar } from '../../server/lib/calendar'
+import { firstOfEachSeries, formatEventTime, groupByDay, groupByMonth, splitFuture } from '../../shared/calendar'
 
 const ZONE = 'America/Detroit'
 
@@ -83,7 +83,8 @@ describe('reading the calendar feed', () => {
   it('expands a repeating event', () => {
     const events = parseCalendar(feed(weeklyService), BEFORE)
     const services = events.filter(e => e.title.startsWith('Sunday Service'))
-    expect(services.length).toBeGreaterThan(40)
+    // From 25 February to the end of May: fourteen Sundays, and none after.
+    expect(services).toHaveLength(14)
     // Every one lands on a Sunday, in the church's zone.
     for (const service of services.slice(0, 10)) {
       const weekday = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, weekday: 'long' }).format(new Date(service.start))
@@ -237,5 +238,76 @@ describe('caching the feed', () => {
   it('refuses a first read that fails, having nothing to fall back on', async () => {
     const { loadCalendar } = await load([new Error('Google is down')])
     await expect(loadCalendar()).rejects.toThrow('Google is down')
+  })
+})
+
+// How far ahead the calendar reads: the end of the month three months on.
+describe('how far ahead it reads', () => {
+  const at = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(calendarHorizon(new Date(iso), ZONE))
+
+  it('ends with the month three months from now', () => {
+    expect(at('2026-10-23T16:00:00Z')).toBe('2027-02-01, 00:00') // through 31 January
+    expect(at('2026-02-25T12:00:00Z')).toBe('2026-06-01, 00:00') // through 31 May
+  })
+
+  it('does not depend on the day of the month, or run to the next one early', () => {
+    expect(at('2026-10-01T04:30:00Z')).toBe('2027-02-01, 00:00') // 00:30 on 1 October, Detroit
+    expect(at('2026-10-31T23:30:00Z')).toBe('2027-02-01, 00:00')
+    expect(at('2026-11-01T05:00:00Z')).toBe('2027-03-01, 00:00') // midnight 1 November, Detroit
+  })
+
+  it('reaches into the year-end months without going wrong', () => {
+    expect(at('2026-09-15T12:00:00Z')).toBe('2027-01-01, 00:00')
+    expect(at('2026-12-31T12:00:00Z')).toBe('2027-04-01, 00:00') // December + 3 = March
+  })
+
+  it('reads the last Sunday inside it and none after', () => {
+    const services = parseCalendar(feed(weeklyService), BEFORE)
+    expect(services.at(-1)!.start.startsWith('2026-05-31')).toBe(true)
+    expect(services.some(e => e.start >= '2026-06-01')).toBe(false)
+  })
+
+  it('keeps a single event planned past the end, for the Future events list, but not a repeat', () => {
+    // From 10 December the range ends 31 March; the breakfast is on 4 April.
+    const events = parseCalendar(feed(oneOff, weeklyService), new Date('2025-12-10T12:00:00Z'))
+    expect(events.filter(e => e.title === 'Easter Breakfast')).toHaveLength(1)
+    expect(events.filter(e => e.title.startsWith('Sunday Service')).every(e => e.start < '2026-04-01')).toBe(true)
+  })
+
+  it('stops reading single events two years out', () => {
+    const far = (date: string) => `BEGIN:VEVENT\nDTSTART;TZID=America/Detroit:${date}T090000\nDTEND;TZID=America/Detroit:${date}T100000\nUID:${date}@google.com\nSUMMARY:Far\nEND:VEVENT`
+    const now = new Date('2026-02-25T12:00:00Z') // through the end of February 2028
+    expect(parseCalendar(feed(far('20280220')), now)).toHaveLength(1)
+    expect(parseCalendar(feed(far('20280301')), now)).toHaveLength(0)
+  })
+
+  it('splits the list at the end of the range', () => {
+    const events = parseCalendar(feed(oneOff, weeklyService), new Date('2025-12-10T12:00:00Z'))
+    const { soon, future } = splitFuture(events, calendarHorizon(new Date('2025-12-10T12:00:00Z')).toISOString())
+    expect(future.map(e => e.title)).toEqual(['Easter Breakfast'])
+    expect(soon.length + future.length).toBe(events.length)
+    expect(soon.every(e => e.start < future[0]!.start)).toBe(true)
+  })
+})
+
+describe('a repeating event in the list', () => {
+  const events = parseCalendar(feed(weeklyService, oneOff), BEFORE)
+
+  it('is marked as one of a series, and a single event is not', () => {
+    expect(events.filter(e => e.title.startsWith('Sunday Service')).every(e => e.series)).toBe(true)
+    expect(new Set(events.filter(e => e.title.startsWith('Sunday Service')).map(e => e.series)).size).toBe(1)
+    expect(events.find(e => !e.title.startsWith('Sunday Service'))!.series).toBeNull()
+  })
+
+  it('shows this one and the next, and every single event', () => {
+    const listed = firstOfEachSeries(events)
+    const services = listed.filter(e => e.title.startsWith('Sunday Service'))
+    expect(services).toHaveLength(2)
+    expect(services.map(e => e.id)).toEqual(events.filter(e => e.title.startsWith('Sunday Service')).slice(0, 2).map(e => e.id))
+    expect(listed.length).toBe(events.length - (events.filter(e => e.title.startsWith('Sunday Service')).length - 2))
+  })
+
+  it('keeps every occurrence for the month view', () => {
+    expect(groupByDay(events, ZONE).get('2026-03-29')).toHaveLength(events.filter(e => e.start.startsWith('2026-03-29')).length)
   })
 })

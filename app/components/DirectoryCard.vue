@@ -8,7 +8,10 @@
           {{ initialsOf(entry) }}
         </div>
         <div class="min-w-0">
-          <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(entry) }}</h3>
+          <h3 class="font-serif font-bold text-highlighted leading-tight">
+            <NuxtLink v-if="linkPerson" :to="`/people/${entry.id}`" class="hover:underline">{{ fullName(entry) }}</NuxtLink>
+            <template v-else>{{ fullName(entry) }}</template>
+          </h3>
           <p v-if="entry.title" class="text-muted text-[11px] uppercase tracking-wide">{{ entry.title }}</p>
         </div>
         <UBadge v-if="badge" color="neutral" variant="subtle" size="sm" class="ml-auto shrink-0 self-start">{{ badge }}</UBadge>
@@ -63,8 +66,10 @@ import type { DirectoryEntry } from '#shared/privacy'
 const props = withDefaults(defineProps<{
   entry: DirectoryEntry
   linkMinistries?: boolean
+  // The name opens that person's page. Off where the card is only a preview.
+  linkPerson?: boolean
   badge?: string
-}>(), { linkMinistries: true })
+}>(), { linkMinistries: true, linkPerson: false })
 
 const color = computed(() => avatarColor(props.entry.id))
 const hasDetails = computed(() => Boolean(props.entry.phone || props.entry.email || props.entry.address || props.entry.birthday))

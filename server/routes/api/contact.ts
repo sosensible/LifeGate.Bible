@@ -16,17 +16,24 @@
 import { contactSchema } from '../../../shared/contact.ts'
 import { contactEmail } from '../../lib/contact.ts'
 import { sendMail } from '../../lib/mail.ts'
-
-const office = () => process.env.CONTACT_EMAIL || 'info@lifegate.bible'
+import { officeEmail } from '../../lib/site.ts'
 
 export default defineEventHandler(async (event) => {
   const input = await readValidatedBody(event, contactSchema.parse)
   const { subject, html, text } = contactEmail(input)
 
+  // The office's address from /admin/site, else CONTACT_EMAIL. With neither, say so
+  // rather than sending visitors' messages to nobody, or to a stranger.
+  const office = officeEmail()
+  if (!office) {
+    console.error('[contact] No contact email is set. Set one on /admin/site, or CONTACT_EMAIL on the server.')
+    throw createError({ statusCode: 503, statusMessage: 'The contact form is not set up yet. Please telephone the church office.' })
+  }
+
   try {
     // Awaited: if this fails the visitor needs to know, because there is no
     // copy anywhere else.
-    await sendMail({ to: office(), subject, text, html })
+    await sendMail({ to: office, subject, text, html })
   }
   catch (error) {
     console.error('[contact] Could not deliver a message from the website:', error)

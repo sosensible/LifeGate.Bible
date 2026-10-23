@@ -17,7 +17,7 @@ import { clientsClaim } from 'workbox-core'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute, setCatchHandler } from 'workbox-routing'
-import { NetworkFirst, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string, revision: string | null }>
@@ -26,7 +26,13 @@ declare const self: ServiceWorkerGlobalScope & {
 // The pages worth reading on a phone with no signal, and the answers they ask
 // for once they are running. Both are member information.
 const MEMBER_PAGE = /^\/(members|directory|calendar|ministries)(\/|$)/
-const MEMBER_DATA = /^\/api\/(directory|calendar|ministries)/
+//
+// Ministry lists are deliberately left out. What a person may see of them changes
+// the moment the church names a new leader, and an offline copy would go on
+// showing a former leader the lists that are now leaders-only. They need a
+// connection, and the page asks for them in the browser, never in the
+// server-rendered HTML that this worker also stores.
+const MEMBER_DATA = /^\/api\/(directory|calendar|ministries)(?!\/[^/]+\/lists)/
 
 // The office and the sign-in flow never get the offline page: a request that
 // did not reach the server has to fail visibly rather than look like it worked.
@@ -74,6 +80,41 @@ registerRoute(
       new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: week }),
     ],
+  }),
+)
+
+// The church's own name and logo. They are chosen after the build, so they cannot
+// be precached; they are kept as they are first fetched instead, and the offline
+// page (and the header it carries) finds them here with no signal. This is the
+// church's public identity, not member information, so these caches do not carry
+// the `lifegate-offline-` prefix and are not emptied at sign-out.
+//
+// A logo's address carries its version, so an old file is never shown for a new
+// logo; the settings are re-checked each visit.
+const SITE_LOGO = /^\/(site\/(logo|icon)\/|images\/logo-|favicon-|apple-touch-icon|icon-)/
+
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET'
+    && url.origin === self.location.origin
+    && SITE_LOGO.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'lifegate-site-logo',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 24 }),
+    ],
+  }),
+)
+
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET'
+    && url.origin === self.location.origin
+    && url.pathname === '/api/site',
+  new StaleWhileRevalidate({
+    cacheName: 'lifegate-site-details',
+    plugins: [new CacheableResponsePlugin({ statuses: [200] })],
   }),
 )
 

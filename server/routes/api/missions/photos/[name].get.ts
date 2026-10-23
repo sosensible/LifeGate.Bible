@@ -2,6 +2,8 @@
 import { readPhoto } from '../../../../lib/uploads.ts'
 
 export default defineEventHandler(async (event) => {
+  // Only a page of this site may ask: no embedding elsewhere, no pasted links.
+  requireRequestFromThisSite(event)
   await requireMissionsReader(event)
   const photo = readPhoto(getRouterParam(event, 'name') ?? '')
   if (!photo) throw createError({ statusCode: 404, statusMessage: 'Not found' })
@@ -11,6 +13,7 @@ export default defineEventHandler(async (event) => {
     // Private: browsers may keep it, shared caches (Cloudflare) must not.
     'cache-control': 'private, max-age=86400',
     'x-content-type-options': 'nosniff',
+    'cross-origin-resource-policy': 'same-origin',
     'content-security-policy': "default-src 'none'",
   })
   return photo.data

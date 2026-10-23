@@ -92,7 +92,7 @@ const restore = async () => {
   }
 }
 
-useSeoMeta({ title: () => `${organization.value?.name ?? 'Missions'} | Lifegate Baptist Church`, robots: 'noindex, nofollow' })
+useSeoMeta({ title: () => `${organization.value?.name ?? 'Missions'}`, robots: 'noindex, nofollow' })
 
 const editing = ref(false)
 </script>

@@ -124,7 +124,7 @@ definePageMeta({
   permission: { sermon: ['update'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Teaching | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Teaching' })
 
 const auth = useAuthStore()
 const toast = useToast()

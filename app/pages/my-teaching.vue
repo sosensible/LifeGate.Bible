@@ -63,7 +63,7 @@ definePageMeta({
   permission: {},
   layout: 'default',
 })
-useSeoMeta({ title: 'My teaching | Lifegate Baptist Church' })
+useSeoMeta({ title: 'My teaching' })
 
 const { data, error, status } = await useFetch('/api/teaching/mine')
 const sermons = ref<AdminSermonView[]>(data.value?.sermons ?? [])

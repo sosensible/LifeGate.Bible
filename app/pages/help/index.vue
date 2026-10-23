@@ -61,7 +61,7 @@ definePageMeta({
   layout: 'default',
 })
 // Office instructions are for the people who sign in, not for search engines.
-useSeoMeta({ title: 'Help | Lifegate Baptist Church', robots: 'noindex, nofollow' })
+useSeoMeta({ title: 'Help', robots: 'noindex, nofollow' })
 
 const route = useRoute()
 // The search stays in the address, so a page of results can be shared or reloaded.

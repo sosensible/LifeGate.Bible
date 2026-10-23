@@ -74,6 +74,13 @@
           />
         </section>
 
+        <!-- Photo: set by staff -->
+        <section v-if="household" class="space-y-3">
+          <h3 class="font-serif text-lg font-bold text-highlighted">Photo</h3>
+          <AdminPhotoUpload v-model:url="photoUrl" :endpoint="`/api/admin/households/${household.id}/photo`" @changed="onPhotoChanged" />
+          <p class="text-muted text-xs">Shown to other members beside the household’s name, but only to those who can already see the household: someone in it has chosen to share it.</p>
+        </section>
+
         <!-- Name -->
         <section class="space-y-3">
           <USwitch v-model="useCustomName" label="Use a different name" :description="`Otherwise: ${generatedName ?? 'set once the adults are chosen'}`" />
@@ -132,6 +139,11 @@ const guardianIds = ref<[string | undefined, string | undefined]>([undefined, un
 const childIds = ref<string[]>([])
 const useCustomName = ref(false)
 const customName = ref('')
+// Saved as soon as it is uploaded, separately from the rest of the form.
+const photoUrl = ref<string | null>(null)
+const onPhotoChanged = (url: string | null) => {
+  if (props.household) emit('saved', { ...props.household, photoUrl: url })
+}
 
 const load = () => {
   const h = props.household
@@ -148,6 +160,7 @@ const load = () => {
   childIds.value = (h?.children ?? []).map(c => c.personId)
   useCustomName.value = h?.nameIsCustom ?? false
   customName.value = h?.nameIsCustom ? h.name : ''
+  photoUrl.value = h?.photoUrl ?? null
 }
 watch(open, (isOpen) => {
   if (isOpen) load()

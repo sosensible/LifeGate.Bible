@@ -115,7 +115,7 @@ definePageMeta({
   permission: { people: ['update'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'People | Lifegate Baptist Church' })
+useSeoMeta({ title: 'People' })
 
 const auth = useAuthStore()
 const canCreate = computed(() => auth.can({ people: ['create'] }))

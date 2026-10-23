@@ -75,6 +75,7 @@ export const loadHouseholds = (ids?: string[]): HouseholdView[] => {
           relationship: household.relationship,
           name: household.name,
           nameIsCustom: household.nameIsCustom,
+          photoUrl: household.photoUrl,
           adults,
           children,
           problems: householdProblems(household.kind, mine),

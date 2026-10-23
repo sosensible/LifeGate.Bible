@@ -75,7 +75,7 @@ const route = useRoute()
 const month = ref(currentMonth())
 const { data, error } = await useFetch(() => `/api/stewardship/ministries/${route.params.slug}/${month.value}`)
 const budget = computed(() => data.value?.budget)
-useSeoMeta({ title: () => `${budget.value?.ministry.name ?? 'Ministry'} budget | Lifegate Baptist Church` })
+useSeoMeta({ title: () => `${budget.value?.ministry.name ?? 'Ministry'} budget` })
 
 type LedgerRow = { id: string, postedOn: string, payee: string | null, memo: string | null, amountCents: number }
 const columns: TableColumn<LedgerRow>[] = [

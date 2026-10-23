@@ -85,7 +85,7 @@ definePageMeta({
   layout: 'default',
 })
 // Missionaries in some countries are put at risk by being findable online.
-useSeoMeta({ title: 'Missions | Lifegate Baptist Church', robots: 'noindex, nofollow' })
+useSeoMeta({ title: 'Missions', robots: 'noindex, nofollow' })
 
 const { data, error, refresh } = await useFetch('/api/missions')
 

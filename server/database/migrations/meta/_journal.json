@@ -127,6 +127,41 @@
       "when": 1789489950210,
       "tag": "0017_live_meetings",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792701155594,
+      "tag": "0018_ministry_lists",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1792707152351,
+      "tag": "0019_ministry_list_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792708546594,
+      "tag": "0020_ministry_list_assignees_see_all",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792770597157,
+      "tag": "0021_household_photo",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1792772111029,
+      "tag": "0022_site_settings",
+      "breakpoints": true
     }
   ]
 }

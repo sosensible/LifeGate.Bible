@@ -93,7 +93,7 @@ definePageMeta({
   permission: { stewardship: ['view'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Reports | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Reports' })
 
 // The current half and the five before it; the newest finished half by default.
 const [thisYear, thisMonthNumber] = currentMonth().split('-').map(Number) as [number, number]

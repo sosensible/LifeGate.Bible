@@ -27,6 +27,8 @@ vi.mock('workbox-routing', () => ({
 vi.mock('workbox-strategies', () => ({
   NetworkFirst: class { readonly strategy = 'NetworkFirst'; constructor(readonly options: { cacheName?: string } = {}) {} },
   NetworkOnly: class { readonly strategy = 'NetworkOnly'; constructor(readonly options = {}) {} },
+  CacheFirst: class { readonly strategy = 'CacheFirst'; constructor(readonly options: { cacheName?: string } = {}) {} },
+  StaleWhileRevalidate: class { readonly strategy = 'StaleWhileRevalidate'; constructor(readonly options: { cacheName?: string } = {}) {} },
 }))
 vi.mock('workbox-precaching', () => ({
   precacheAndRoute: vi.fn(),
@@ -117,6 +119,14 @@ describe('the answers member pages ask for', () => {
     expect(matches(`${ORIGIN}/api/ministries/youth`)).toBe(true)
   })
 
+  // What a person may see of a ministry's lists changes when its leader does; an
+  // offline copy would keep showing a former leader the leaders-only ones.
+  it('never stores a ministry’s lists', () => {
+    expect(matches(`${ORIGIN}/api/ministries/youth/lists`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/ministry-lists/abc/history`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/me/lists`)).toBe(false)
+  })
+
   it('leaves everything else alone', () => {
     expect(matches(`${ORIGIN}/api/admin/accounts`)).toBe(false)
     expect(matches(`${ORIGIN}/api/stewardship/offerings`)).toBe(false)
@@ -128,5 +138,35 @@ describe('the answers member pages ask for', () => {
 
   it('ignores another site’s answers', () => {
     expect(matches('https://example.com/api/directory')).toBe(false)
+  })
+})
+
+// The church's logo and details are chosen after the build, so the worker keeps
+// them as they are first fetched. They are public, so they must outlive a sign-out.
+describe('the church’s own logo and details', () => {
+  const routeFor = (url: string) => {
+    const hit = registered.find(([match]) =>
+      typeof match === 'function'
+      && (match as (o: { url: URL, request: { method: string } }) => boolean)({ url: new URL(url), request: { method: 'GET' } }))
+    return hit?.[1] as { strategy: string, options: { cacheName: string } } | undefined
+  }
+
+  it.each(['/site/logo/432.png?v=3', '/site/icon/192.png?v=3', '/images/logo-216.png'])('keeps %s once fetched', (path) => {
+    expect(routeFor(`${ORIGIN}${path}`)).toMatchObject({ strategy: 'CacheFirst' })
+  })
+
+  it('keeps the church’s details, and refreshes them in the background', () => {
+    expect(routeFor(`${ORIGIN}/api/site`)).toMatchObject({ strategy: 'StaleWhileRevalidate' })
+  })
+
+  // Emptied at sign-out by app/utils/offline-cache.ts if it carries this prefix.
+  it('is not member information, so its caches are not emptied at sign-out', () => {
+    expect(routeFor(`${ORIGIN}/site/logo/432.png`)?.options.cacheName).not.toMatch(/^lifegate-offline-/)
+    expect(routeFor(`${ORIGIN}/api/site`)?.options.cacheName).not.toMatch(/^lifegate-offline-/)
+  })
+
+  it('does not keep anything else under /site, or another site’s files', () => {
+    expect(routeFor(`${ORIGIN}/api/admin/site`)).toBeUndefined()
+    expect(routeFor('https://example.com/site/logo/432.png')).toBeUndefined()
   })
 })

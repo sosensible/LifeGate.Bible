@@ -288,7 +288,7 @@ const id = route.params.id as string
 const { data, error } = await useFetch(`/api/admin/giving/counts/${id}`)
 const count = ref<CountView | null>(data.value?.count ?? null)
 watch(data, value => count.value = value?.count ?? null)
-useSeoMeta({ title: () => `${count.value ? countTitle(count.value) : 'Offering count'} | Lifegate Baptist Church` })
+useSeoMeta({ title: () => `${count.value ? countTitle(count.value) : 'Offering count'}` })
 
 const isOpen = computed(() => count.value?.status === 'open')
 

@@ -4,7 +4,8 @@
 //   - The directory is members-only. The public sees nothing.
 //   - Adults' names are visible to members, with their church office (title)
 //     and the ministries they serve in (except any they hide from members).
-//   - Minors are not listed to members.
+//   - Minors are not listed to members, except to the adults who care for them:
+//     the father, mother or guardian of a household sees its minors.
 //   - Contact info (phone, email, address): staff always; members only if
 //     the person opted in.
 //   - Everything else (birthday, photo, household): opt-in for everyone,
@@ -17,10 +18,32 @@
 // to preview exactly what others will see).
 
 export interface Viewer {
+  // The viewer's own directory record, when their account is connected to one.
+  personId?: string | null
   isMember: boolean
   // Holds people:viewContact.
   isStaff: boolean
+  // The viewer's own place in a household, when their account is connected to a
+  // person. Only a father, mother or guardian of a household sees its minors.
+  householdId?: string | null
+  householdRole?: string | null
 }
+
+// The household roles that look after a household's children: every adult role.
+// A married couple are stored as husband and wife, and the household's
+// `relationship` says whether they are the children's parents or their guardians
+// (shared/households.ts); a single parent or guardians are father, mother or
+// guardian. Only `child` is not one, so a grown child does not see their minor
+// siblings on that account alone.
+export const HOUSEHOLD_CARER_ROLES = ['husband', 'wife', 'father', 'mother', 'guardian'] as const
+
+// Whether the viewer is a father, mother or guardian in the household the minor
+// lives in.
+export const isCarerOf = (viewer: Viewer, person: Pick<PersonRecord, 'isMinor' | 'householdId'>) =>
+  person.isMinor
+  && Boolean(person.householdId)
+  && person.householdId === viewer.householdId
+  && (HOUSEHOLD_CARER_ROLES as readonly string[]).includes(viewer.householdRole ?? '')
 
 export interface MinistryRef {
   slug: string
@@ -71,7 +94,7 @@ export interface DirectoryEntry {
 
 export const presentPerson = (person: PersonRecord, viewer: Viewer): DirectoryEntry | null => {
   if (!viewer.isMember && !viewer.isStaff) return null
-  if (person.isMinor && !viewer.isStaff) return null
+  if (person.isMinor && !viewer.isStaff && !isCarerOf(viewer, person)) return null
 
   const entry: DirectoryEntry = {
     id: person.id,

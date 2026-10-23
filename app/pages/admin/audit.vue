@@ -72,7 +72,7 @@ definePageMeta({
   permission: { audit: ['view'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Audit Log | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Audit Log' })
 
 const pageSize = 50
 const page = ref(1)

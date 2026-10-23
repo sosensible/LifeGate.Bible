@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-elevated rounded-lg shadow-lg p-10 sm:p-12 text-center">
-      <SiteLogo sizes="120px" alt="Lifegate Baptist Church" class="h-20 w-auto mx-auto mb-6" />
-      <h1 class="text-3xl font-bold text-primary mb-3 font-serif">Sign in to Lifegate</h1>
+      <SiteLogo sizes="120px" class="h-20 w-auto mx-auto mb-6" />
+      <h1 class="text-3xl font-bold text-primary mb-3 font-serif">Sign in to {{ site.shortName }}</h1>
 
       <template v-if="token">
         <p class="text-toned text-sm leading-relaxed mb-8">Press the button to finish signing in on this device.</p>
@@ -21,8 +21,9 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: false })
-useSeoMeta({ title: 'Sign in | Lifegate Baptist Church', robots: 'noindex, nofollow' })
+useSeoMeta({ title: 'Sign in', robots: 'noindex, nofollow' })
 
+const { site } = useSite()
 const route = useRoute()
 const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''))
 const going = ref(false)

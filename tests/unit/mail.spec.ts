@@ -29,21 +29,28 @@ describe('Cloudflare Email payload', () => {
 
 // Production on ZimaOS leaves MAIL_FROM unset on purpose: its "Install a
 // Custom App" form reads the angle brackets an RFC 5322 display name needs as
-// an unfilled placeholder and refuses to save. So the built-in default IS the
-// production sender, and changing it changes what the congregation sees.
+// an unfilled placeholder and refuses to save. So this fallback IS the production
+// sender: the church's name (from Church details) at an address from the environment.
+// (These run on a database with no settings table rows read, so the name is the
+// neutral default; tests/unit/site.spec.ts covers the name following an edit.)
 describe('who the mail comes from', () => {
   afterEach(() => vi.unstubAllEnvs())
 
-  it('falls back to the church’s own address when nothing is set', () => {
+  it('puts the configured address behind the church’s name when nothing else is set', () => {
     vi.stubEnv('MAIL_FROM', '')
-    expect(mailFrom()).toBe('Lifegate Baptist Church <no-reply@lifegate.bible>')
-    expect(parseFrom(mailFrom())).toEqual({
-      address: 'no-reply@lifegate.bible',
-      name: 'Lifegate Baptist Church',
-    })
+    vi.stubEnv('MAIL_FROM_ADDRESS', 'no-reply@church.example')
+    expect(mailFrom()).toBe('"Your Church Name" <no-reply@church.example>')
+    expect(parseFrom(mailFrom())).toEqual({ address: 'no-reply@church.example', name: 'Your Church Name' })
   })
 
-  it('takes a bare address when one is given, which is what staging uses', () => {
+  it('uses no-reply on the site’s own host when no address is configured', () => {
+    vi.stubEnv('MAIL_FROM', '')
+    vi.stubEnv('MAIL_FROM_ADDRESS', '')
+    vi.stubEnv('NUXT_PUBLIC_SITE_URL', 'https://church.example')
+    expect(parseFrom(mailFrom()).address).toBe('no-reply@church.example')
+  })
+
+  it('takes MAIL_FROM whole when one is given, which is what staging uses', () => {
     vi.stubEnv('MAIL_FROM', 'staging-no-reply@lifegate.bible')
     expect(parseFrom(mailFrom())).toEqual({ address: 'staging-no-reply@lifegate.bible' })
   })

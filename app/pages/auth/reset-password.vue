@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-elevated rounded-lg shadow-lg p-10 sm:p-12">
-      <SiteLogo sizes="120px" alt="Lifegate Baptist Church" class="h-20 w-auto mx-auto mb-6" />
+      <SiteLogo sizes="120px" class="h-20 w-auto mx-auto mb-6" />
       <h1 class="text-3xl font-bold text-primary mb-3 font-serif text-center">Choose a Password</h1>
 
       <template v-if="done">
@@ -35,7 +35,7 @@
 import { z } from 'zod'
 
 definePageMeta({ layout: false })
-useSeoMeta({ title: 'Choose a password | Lifegate Baptist Church', robots: 'noindex, nofollow' })
+useSeoMeta({ title: 'Choose a password', robots: 'noindex, nofollow' })
 
 const route = useRoute()
 // Better Auth appends ?token=... on success, or ?error=INVALID_TOKEN on failure.

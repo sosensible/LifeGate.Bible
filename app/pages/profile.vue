@@ -57,6 +57,18 @@
             </section>
 
             <!-- Sharing -->
+            <!-- The photo is added by the church office; you can look at it here before deciding to share it. -->
+            <section v-if="person.photoUrl" class="bg-elevated rounded-lg border border-default p-6 flex items-center gap-5">
+              <img :src="person.photoUrl" alt="Your photo" class="w-24 h-24 rounded-full object-cover border border-default shrink-0">
+              <div>
+                <h2 class="font-serif text-xl font-bold text-highlighted mb-1">Your photo</h2>
+                <p class="text-toned text-sm">
+                  The church office added this.
+                  {{ state.sharePhoto ? 'Other members can see it.' : 'Only you and the church office can see it. Turn on Photo below to show other members.' }}
+                </p>
+              </div>
+            </section>
+
             <section class="bg-elevated rounded-lg border border-default p-6">
               <h2 class="font-serif text-xl font-bold text-highlighted mb-1">Who can see what</h2>
               <p class="text-toned text-sm mb-5">Everyone signed in as a member sees your name, title and ministries (see Ministry rosters to hide one). Everything below is your choice.</p>
@@ -120,7 +132,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'default',
 })
-useSeoMeta({ title: 'My Profile | Lifegate Baptist Church' })
+useSeoMeta({ title: 'My Profile' })
 
 const toast = useToast()
 const { data, error } = await useFetch('/api/profile')
@@ -162,10 +174,11 @@ const dirty = computed(() =>
   person.value !== null && JSON.stringify(fromPerson(person.value)) !== JSON.stringify(state),
 )
 
-const sharingRows: Array<{ key: Exclude<PrivacyField, 'sharePhoto'>, label: string, note: string }> = [
+const sharingRows: Array<{ key: PrivacyField, label: string, note: string }> = [
   { key: 'sharePhone', label: 'Phone', note: 'Staff always see this. Turn on to show other members.' },
   { key: 'shareEmail', label: 'Email', note: 'Staff always see this. Turn on to show other members.' },
   { key: 'shareAddress', label: 'Address', note: 'Staff always see this. Turn on to show other members.' },
+  { key: 'sharePhoto', label: 'Photo', note: 'The church office adds it. Hidden from other members, staff included, unless on.' },
   { key: 'shareBirthday', label: 'Birthday', note: 'Month and day only. Hidden from everyone, staff included, unless on.' },
   { key: 'shareHousehold', label: 'Household', note: 'Hidden from everyone, staff included, unless on.' },
 ]

@@ -12,6 +12,7 @@ import { user as userTable } from '../database/schema/index.ts'
 import { recordAudit } from './audit.ts'
 import { db } from './db.ts'
 import { renderActionEmail, sendMailInBackground } from './mail.ts'
+import { loadSite } from './site.ts'
 
 const baseURL = process.env.BETTER_AUTH_URL || 'http://localhost:3007'
 
@@ -67,10 +68,10 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }, request) => {
       sendMailInBackground({
         to: user.email,
-        subject: 'Set your Lifegate password',
+        subject: `Set your ${loadSite().shortName} password`,
         ...renderActionEmail({
           heading: 'Set your password',
-          intro: `Hello ${user.name}, use the button below to choose a password for your Lifegate account.`,
+          intro: `Hello ${user.name}, use the button below to choose a password for your ${loadSite().shortName} account.`,
           actionLabel: 'Choose a password',
           actionUrl: onOrigin(url, request?.headers),
           footnote: 'This link expires in one hour. If you did not ask for this, you can ignore this email.',
@@ -120,9 +121,9 @@ export const auth = betterAuth({
         const confirmUrl = `${linkOrigin(ctx?.headers)}/auth/magic-link?token=${encodeURIComponent(token)}`
         sendMailInBackground({
           to: email,
-          subject: 'Your Lifegate sign-in link',
+          subject: `Your ${loadSite().shortName} sign-in link`,
           ...renderActionEmail({
-            heading: 'Sign in to Lifegate',
+            heading: `Sign in to ${loadSite().shortName}`,
             intro: 'Use the button below to sign in. The link works once.',
             actionLabel: 'Sign in',
             actionUrl: confirmUrl,

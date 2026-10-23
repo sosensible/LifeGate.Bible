@@ -4,7 +4,7 @@
 // without ever signing in (children, homebound members, a spouse who never
 // logs in). An account may link to at most one person via `people.userId`.
 import { relations } from 'drizzle-orm'
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import { user } from './auth.ts'
 
 const id = () => text('id').primaryKey().$defaultFn(() => crypto.randomUUID())
@@ -22,6 +22,9 @@ export const households = sqliteTable('households', {
   // Built from the adults' names unless someone typed their own.
   name: text('name').notNull(),
   nameIsCustom: integer('name_is_custom', { mode: 'boolean' }).notNull().default(false),
+  // The household's current photo, set by staff: the app route that serves it
+  // (/api/photos/<name>), with the file beside the database, never in git.
+  photoUrl: text('photo_url'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -96,6 +99,87 @@ export const ministryMembers = sqliteTable('ministry_members', {
 }, table => [
   primaryKey({ columns: [table.ministryId, table.personId] }),
   index('ministry_members_person_idx').on(table.personId),
+])
+
+// Ministry lists: checklists and delegated tasks that a ministry runs itself
+// with. See docs/specs/ministry-lists.md.
+//
+// A list belongs to the MINISTRY, never to whoever made it: who may manage it is
+// read from ministry_members.isLeader on every request, so naming a new leader
+// moves the authority with no list reassigned. `createdBy` is history only.
+export const ministryLists = sqliteTable('ministry_lists', {
+  id: id(),
+  ministryId: text('ministry_id').notNull().references(() => ministries.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  // `tasks` items can be delegated and have a due date; `list` items are a plain
+  // checklist; `routine` is a reusable template that runs are generated from.
+  kind: text('kind', { enum: ['list', 'tasks', 'routine'] }).notNull().default('list'),
+  // `leaders`: only the ministry's leaders (and pastors) can see it at all. It is
+  // filtered out of every member query, not hidden in the page. `assigned`: the
+  // leaders, plus each person holding a task on a task list.
+  audience: text('audience', { enum: ['ministry', 'leaders', 'assigned'] }).notNull().default('ministry'),
+  // Only for `assigned`: whether each assignee also sees the tasks given to other
+  // people. Off, they see just their own. Chosen by the leader.
+  assigneesSeeAll: integer('assignees_see_all', { mode: 'boolean' }).notNull().default(false),
+  ordered: integer('ordered', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdBy: text('created_by').references(() => people.id, { onDelete: 'set null' }),
+  // A routine is a template of steps. Each RUN of it is an ordinary list (a
+  // checklist or tasks, chosen when it is started) generated from the steps, so
+  // every rule, screen and record for lists applies to runs unchanged. A run
+  // points back at its routine and goes with it if the routine is deleted.
+  routineId: text('routine_id').references((): AnySQLiteColumn => ministryLists.id, { onDelete: 'cascade' }),
+  // A run is open until it is finished or a newer run replaces it. A finished
+  // run is a read-only record.
+  endedAt: integer('ended_at', { mode: 'timestamp' }),
+  endedHow: text('ended_how', { enum: ['complete', 'ended'] }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, table => [
+  index('ministry_lists_ministry_idx').on(table.ministryId),
+  index('ministry_lists_routine_idx').on(table.routineId),
+])
+
+export const ministryListItems = sqliteTable('ministry_list_items', {
+  id: id(),
+  listId: text('list_id').notNull().references(() => ministryLists.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  // Tasks only. Cleared (set null) if the person is deleted.
+  assigneeId: text('assignee_id').references(() => people.id, { onDelete: 'set null' }),
+  assignedBy: text('assigned_by').references(() => people.id, { onDelete: 'set null' }),
+  assignedAt: integer('assigned_at', { mode: 'timestamp' }),
+  dueDate: text('due_date'), // ISO date, YYYY-MM-DD
+  dueTime: text('due_time'), // HH:MM, church time
+  // Set when a roster change takes the assignee away, so the ministry's leaders
+  // can see it happened. Cleared when the task is assigned again or dismissed.
+  unassignedAt: integer('unassigned_at', { mode: 'timestamp' }),
+  unassignedNote: text('unassigned_note'),
+  // Current state of a list or task item. The history below is the record.
+  doneAt: integer('done_at', { mode: 'timestamp' }),
+  doneBy: text('done_by').references(() => people.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, table => [
+  index('ministry_list_items_list_idx').on(table.listId),
+  index('ministry_list_items_assignee_idx').on(table.assigneeId),
+])
+
+// The light history: one row per check. The item's title is copied in, so
+// deleting an item does not erase the fact it was done, and `itemId` has no
+// foreign key for the same reason. Unchecking marks the row undone rather than
+// erasing it. Deleting a list deletes its history.
+export const ministryListCompletions = sqliteTable('ministry_list_completions', {
+  id: id(),
+  listId: text('list_id').notNull().references(() => ministryLists.id, { onDelete: 'cascade' }),
+  itemId: text('item_id').notNull(),
+  itemTitle: text('item_title').notNull(),
+  doneBy: text('done_by').references(() => people.id, { onDelete: 'set null' }),
+  // Kept so the name survives the person being removed.
+  doneByName: text('done_by_name').notNull(),
+  doneAt: integer('done_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  undoneAt: integer('undone_at', { mode: 'timestamp' }),
+}, table => [
+  index('ministry_list_completions_list_idx').on(table.listId, table.doneAt),
 ])
 
 export const sermonSeries = sqliteTable('sermon_series', {
@@ -612,3 +696,30 @@ export const ministryMemberRelations = relations(ministryMembers, ({ one }) => (
   ministry: one(ministries, { fields: [ministryMembers.ministryId], references: [ministries.id] }),
   person: one(people, { fields: [ministryMembers.personId], references: [people.id] }),
 }))
+
+// The church's own details: name, address, contact, service times and the logo's
+// version. One row, id 'site'. Edited by the office on /admin/site and read by
+// every page, email and icon; see docs/specs/site-settings.md. Optional text is an
+// empty string rather than null, so a form and a page never have to tell them apart.
+//
+// Deliberately separate from `statementSettings`, the Treasurer's legal record for
+// giving statements: that is a financial document with its own owner.
+export const siteSettings = sqliteTable('site_settings', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  shortName: text('short_name').notNull(),
+  description: text('description').notNull().default(''),
+  street: text('street').notNull().default(''),
+  city: text('city').notNull().default(''),
+  region: text('region').notNull().default(''),
+  postalCode: text('postal_code').notNull().default(''),
+  phone: text('phone').notNull().default(''),
+  contactEmail: text('contact_email').notNull().default(''),
+  serviceTimes: text('service_times', { mode: 'json' }).$type<Array<{ weekday: number, time: string, label: string, note: string, onCalendar: boolean }>>().notNull(),
+  // 0 is the built-in placeholder mark; otherwise the version of the uploaded set.
+  logoVersion: integer('logo_version').notNull().default(0),
+  // The uploaded logo's proportions, so the page can reserve its space.
+  logoWidth: integer('logo_width').notNull().default(1),
+  logoHeight: integer('logo_height').notNull().default(1),
+  updatedAt: updatedAt(),
+})

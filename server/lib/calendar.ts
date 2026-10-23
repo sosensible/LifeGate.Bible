@@ -9,6 +9,7 @@
 // The feed is read at most once a day, on the first request after the cache
 // goes stale; an editor can force a re-read from the Calendar page. The cache
 // lives in this process, so a restart simply causes the next request to fetch.
+import { fromDate, startOfMonth, toCalendarDate, toCalendarDateTime, toZoned } from '@internationalized/date'
 import ICAL from 'ical.js'
 import type { CalendarEvent, CalendarPayload } from '../../shared/calendar.ts'
 import { churchTimeZone } from './live.ts'
@@ -19,10 +20,21 @@ const FEED_ID = () => process.env.CHURCH_CALENDAR_ID
 const feedUrl = () =>
   `https://calendar.google.com/calendar/ical/${encodeURIComponent(FEED_ID())}/public/basic.ics`
 
-// How far ahead to expand repeating events. A year covers anything the month
-// view can page to, and the cap stops a daily rule from running away.
-const HORIZON_DAYS = 365
+// How far ahead to read: to the end of the month three months from now (on 23
+// October, up to the end of January), in the church's own time zone. The cap
+// stops a daily rule from running away.
 const MAX_OCCURRENCES = 600
+
+// Repeating events (weekly services) stop there. A single event planned further
+// out is still kept, for the Future events list, up to this many months on.
+const FUTURE_MONTHS = 24
+
+// The first instant past the last month of the range (`months` months from now).
+// Exclusive: an event that starts then belongs to the month after.
+export const calendarHorizon = (now: Date, timeZone = churchTimeZone(), months = 3) => {
+  const monthAfterLast = startOfMonth(toCalendarDate(fromDate(now, timeZone))).add({ months: months + 1 })
+  return toZoned(toCalendarDateTime(monthAfterLast), timeZone).toDate()
+}
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 // Google pads the description with its own Meet instructions. The link is on
@@ -80,7 +92,8 @@ export const parseCalendar = (ics: string, now = new Date()): CalendarEvent[] =>
     series.get(exception.uid)?.relateException(exception.component)
   }
 
-  const horizon = new Date(now.getTime() + HORIZON_DAYS * 86_400_000)
+  const horizon = calendarHorizon(now)
+  const farHorizon = calendarHorizon(now, churchTimeZone(), FUTURE_MONTHS)
   const events: CalendarEvent[] = []
 
   const add = (event: ICAL.Event, source: ICAL.Event, start: Date, end: Date) => {
@@ -88,6 +101,7 @@ export const parseCalendar = (ics: string, now = new Date()): CalendarEvent[] =>
     const description = cleanDescription(text(source.component, 'description'))
     events.push({
       id: `${event.uid}:${start.toISOString()}`,
+      series: event.isRecurring() ? event.uid : null,
       title: source.summary?.trim() || 'Untitled event',
       start: start.toISOString(),
       end: end.toISOString(),
@@ -104,7 +118,7 @@ export const parseCalendar = (ics: string, now = new Date()): CalendarEvent[] =>
     if (!event.isRecurring()) {
       // An event already under way still counts as upcoming until it ends.
       const end = event.endDate?.toJSDate() ?? event.startDate.toJSDate()
-      if (end >= now && event.startDate.toJSDate() <= horizon) {
+      if (end >= now && event.startDate.toJSDate() < farHorizon) {
         add(event, event, event.startDate.toJSDate(), end)
       }
       continue
@@ -115,7 +129,7 @@ export const parseCalendar = (ics: string, now = new Date()): CalendarEvent[] =>
     let seen = 0
     while ((next = iterator.next()) && seen < MAX_OCCURRENCES) {
       const startsAt = next.toJSDate()
-      if (startsAt > horizon) break
+      if (startsAt >= horizon) break
       seen++
       const occurrence = event.getOccurrenceDetails(next)
       const end = occurrence.endDate.toJSDate()
@@ -137,6 +151,7 @@ const fetchCalendar = async (): Promise<CalendarPayload> => {
   }
   return {
     events: parseCalendar(ics),
+    horizon: calendarHorizon(new Date()).toISOString(),
     fetchedAt: new Date().toISOString(),
     timeZone: churchTimeZone(),
   }

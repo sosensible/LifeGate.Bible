@@ -131,7 +131,9 @@ and updating `image:` in the compose YAML.
 `/sitemap.xml` and `/robots.txt` are served live, not prerendered. Set these in
 the compose file's `environment:` and restart; no rebuild is needed:
 
-- `NUXT_PUBLIC_SITE_URL` -- the public origin (default `https://new.lifegate.bible`)
+- `NUXT_PUBLIC_SITE_URL` -- the public origin (the built-in fallback is still
+  `https://new.lifegate.bible`; production sets it explicitly, so the compose
+  value is the one that counts)
 - `NUXT_PUBLIC_INDEXABLE` -- `false` (default) sends `X-Robots-Tag: noindex` on
   every response and omits the sitemap from robots.txt; set `true` at launch.
 
@@ -234,7 +236,9 @@ sends sign-in links in production.
 2. Create an API token with email sending permission.
 3. Add to the container's environment, then restart:
    `MAIL_TRANSPORT=cloudflare`, `CLOUDFLARE_ACCOUNT_ID=...`,
-   `CLOUDFLARE_EMAIL_API_TOKEN=...`, and `MAIL_FROM` with an address on that domain.
+   `CLOUDFLARE_EMAIL_API_TOKEN=...`, and `MAIL_FROM_ADDRESS` with an address on that
+   domain. The sender's display name is the church's name from Church details
+   (below), so it is not set here.
 
 The Cloudflare transport refuses to run unless **`APP_ENV=production`** — not
 `NODE_ENV`, which is `production` on staging too and so would have let a
@@ -254,22 +258,67 @@ are missing the server refuses to start rather than serving requests against a
 schema that was never applied. `SKIP_MIGRATIONS=1` opts out, for the case where
 the schema is managed by hand.
 
-Verified from empty: an unpopulated data directory becomes 18 migrations and 33
-tables, and the second start is a no-op.
+Verified from empty: an unpopulated data directory becomes 23 migrations and 37
+tables (counting Drizzle's own bookkeeping table), and the second start is a no-op.
+
+### Church details (name, address, logo)
+
+A new deployment, and any existing one after it upgrades to this release, shows a
+neutral **"Your Church Name"** and a plain cross until the church fills these in.
+Nothing church-specific ships in the image or the repository.
+
+Sign in as an administrator or the church secretary and open **Church details**
+(account menu, `/admin/site`). Enter the name, short name, address, phone,
+contact email and service times, and upload the logo: one picture, from which the
+browser makes the page, browser-tab and phone-icon sizes. The logo is stored
+beside the database (`.data/uploads/site/`), so the one backup of that directory
+covers it, and it is never in git or in the image.
+
+Do this on **every** deployment (staging and production keep separate
+databases). Until the contact email is entered, the Contact page falls back to the
+`CONTACT_EMAIL` variable, and says the form is not set up if neither exists.
 
 ## 4. Point the tunnel at it
 
 Add an ingress rule per public hostname:
 
 ```
-new.lifegate.bible      -> service: http://<zima-ip>:3010   # production
+lifegate.bible          -> service: http://<zima-ip>:3010   # production
 staging.lifegate.bible  -> service: http://<zima-ip>:3009   # staging
 ```
 
-At go-live, production's hostname becomes `lifegate.bible`. Change the ingress
-rule, `NUXT_PUBLIC_SITE_URL` and `BETTER_AUTH_URL` together and restart — sign-in
-links are built from the last of those, so a stale value mails people the old
-host.
+Production now lives at `lifegate.bible`; it was `new.lifegate.bible` until the
+move. Staging may be routed by Caddy and a local DNS server (Pi-hole) rather than
+the tunnel, in which case the staging line above is a statement of where it must
+point, not of how.
+
+### Moving the hostname
+
+Change all of these together, then restart the app. Nothing needs rebuilding.
+
+- the ingress rule (or DNS/Caddy entry) for the hostname
+- `NUXT_PUBLIC_SITE_URL`
+- `BETTER_AUTH_URL`
+- `BETTER_AUTH_TRUSTED_ORIGINS`
+
+**Miss the last two and nobody can sign in.** Better Auth rejects any sign-in
+whose `Origin` is not in `BETTER_AUTH_TRUSTED_ORIGINS`, answering
+`403 {"code":"INVALID_ORIGIN"}` before it looks at the password. This happened
+at the `new.` -> `lifegate.bible` move. It reproduces without a browser:
+
+```
+curl -s -X POST https://lifegate.bible/api/auth/sign-in/email \
+  -H 'Origin: https://lifegate.bible' -H 'Content-Type: application/json' \
+  -d '{"email":"nobody@example.org","password":"x"}'
+```
+
+`401 INVALID_EMAIL_OR_PASSWORD` means the origin is accepted and the setting is
+right; `403 INVALID_ORIGIN` means it is not.
+
+`BETTER_AUTH_URL` is also what sign-in and reset links in emails are built from,
+so a stale value mails people the old host. To move gradually, list both origins
+in `BETTER_AUTH_TRUSTED_ORIGINS`, comma-separated, and drop the old one later.
+Session cookies belong to the hostname, so everyone signs in again after a move.
 
 If `cloudflared` runs as its own container on the same box, add it as a second
 app rather than editing `zimaos-compose.yaml` — keeping it out of that file

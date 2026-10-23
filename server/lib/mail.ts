@@ -6,6 +6,7 @@
 //                 sending domain onboarded to Email Sending.
 import nodemailer from 'nodemailer'
 import type { Transporter } from 'nodemailer'
+import { loadSite } from './site.ts'
 
 export interface MailAttachment {
   filename: string
@@ -21,12 +22,27 @@ export interface MailMessage {
   attachments?: MailAttachment[]
 }
 
-const DEFAULT_FROM = 'Lifegate Baptist Church <no-reply@lifegate.bible>'
-// Exported so the fallback can be tested: the ZimaOS production app
-// definition deliberately leaves MAIL_FROM unset, because its install form
-// rejects the angle brackets an RFC 5322 display name needs. That makes
-// DEFAULT_FROM the real sender in production, not just a convenience.
-export const mailFrom = () => process.env.MAIL_FROM || DEFAULT_FROM
+// The address mail is sent from when MAIL_FROM is not set: MAIL_FROM_ADDRESS, or
+// no-reply@ on the site's own host. The display name is never configured here: it
+// is the church's name from /admin/site.
+const senderAddress = () => {
+  if (process.env.MAIL_FROM_ADDRESS) return process.env.MAIL_FROM_ADDRESS
+  try {
+    return `no-reply@${new URL(process.env.NUXT_PUBLIC_SITE_URL || '').hostname}`
+  }
+  catch {
+    return 'no-reply@localhost'
+  }
+}
+
+// "Name" <address>, with anything that would break the header taken out of the name.
+const withDisplayName = (name: string, address: string) => `"${name.replace(/["\\<>\r\n]/g, '').trim()}" <${address}>`
+
+// Exported so the fallback can be tested: the ZimaOS app definitions leave
+// MAIL_FROM unset, because their install form rejects the angle brackets an
+// RFC 5322 display name needs. So this fallback IS the sender in production: the
+// church's name from its settings, at MAIL_FROM_ADDRESS.
+export const mailFrom = () => process.env.MAIL_FROM || withDisplayName(loadSite().name, senderAddress())
 
 let smtp: Transporter | undefined
 
@@ -149,7 +165,7 @@ export const renderActionEmail = (opts: {
   const html = `<!doctype html>
 <html><body style="margin:0;background:#faf8f2;font-family:Georgia,serif;color:#262019">
   <div style="max-width:520px;margin:0 auto;padding:32px 24px">
-    <p style="font:700 11px/1 Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#1a5c30">Lifegate Baptist Church</p>
+    <p style="font:700 11px/1 Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#1a5c30">${escapeHtml(loadSite().name)}</p>
     <h1 style="font-size:26px;margin:12px 0 16px">${escapeHtml(opts.heading)}</h1>
     <p style="font:16px/1.6 Arial,sans-serif">${escapeHtml(opts.intro)}</p>
     <p style="margin:28px 0"><a href="${url}" style="background:#1a5c30;color:#fff;text-decoration:none;font:700 14px Arial,sans-serif;padding:12px 22px;border-radius:4px;display:inline-block">${escapeHtml(opts.actionLabel)}</a></p>

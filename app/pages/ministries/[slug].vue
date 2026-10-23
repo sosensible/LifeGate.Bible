@@ -33,11 +33,15 @@
 
           <!-- Public: only people who chose to be shown publicly (the server sends no one else) -->
           <div v-if="roster.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" :class="{ 'mb-8': !ministry.fullRoster }">
-            <div v-for="m in roster" :key="m.id" class="bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center">
+            <div v-for="m in roster" :key="m.id" class="relative bg-elevated rounded-lg border border-default shadow-sm p-5 flex gap-3.5 items-center" :class="{ 'hover:border-primary transition-colors': ministry.fullRoster }">
               <img v-if="m.photoUrl" :src="m.photoUrl" :alt="fullName(m)" class="w-11 h-11 rounded-full object-cover shrink-0">
               <div v-else class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white font-bold" :style="{ backgroundColor: avatarColor(m.id) }">{{ initialsOf(m) }}</div>
               <div class="min-w-0">
-                <h3 class="font-serif font-bold text-highlighted leading-tight">{{ fullName(m) }}</h3>
+                <h3 class="font-serif font-bold text-highlighted leading-tight">
+                  <!-- A member sees the roster, and every card on it is someone whose page they may open. -->
+                  <NuxtLink v-if="ministry.fullRoster" :to="`/people/${m.id}`" class="after:absolute after:inset-0 hover:underline">{{ fullName(m) }}</NuxtLink>
+                  <template v-else>{{ fullName(m) }}</template>
+                </h3>
                 <p v-if="m.title" class="text-muted text-[11px] uppercase tracking-wide">{{ m.title }}</p>
               </div>
               <UBadge v-if="m.isLeader" color="secondary" variant="subtle" size="sm" class="ml-auto shrink-0 self-start">Leader</UBadge>
@@ -73,6 +77,9 @@
 
         </div>
       </div>
+
+      <!-- Lists and tasks (members only; fetched in the browser, see the component) -->
+      <MinistryLists v-if="auth.isMember || auth.can({ ministryList: ['view'] })" :slug="ministry.slug" />
     </template>
 
     <!-- Unknown ministry -->
@@ -96,7 +103,7 @@ const { data: ministry, error } = await useFetch(() => `/api/ministries/${encode
 
 const roster = computed(() => ministry.value?.members ?? [])
 
-useSeoMeta({ title: () => `${ministry.value?.name ?? 'Ministry'} | Lifegate Baptist Church` })
+useSeoMeta({ title: () => `${ministry.value?.name ?? 'Ministry'}` })
 
 // An unknown slug must be a real 404, not a 200 with an empty shell. Previously
 // this rendered the header with a 'Ministry' placeholder and no body, which

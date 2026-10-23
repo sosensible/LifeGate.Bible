@@ -221,7 +221,7 @@ definePageMeta({
   permission: { stewardship: ['view'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Budget | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Budget' })
 
 const auth = useAuthStore()
 const toast = useToast()

@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-muted flex items-center justify-center p-6">
     <div class="w-full max-w-md">
       <div class="bg-elevated rounded-lg shadow-lg p-10 sm:p-12">
-        <SiteLogo sizes="144px" alt="Lifegate Baptist Church" class="h-24 w-auto mx-auto mb-6" />
+        <SiteLogo sizes="144px" class="h-24 w-auto mx-auto mb-6" />
         <p class="text-center text-gold-600 text-xs font-bold tracking-[0.2em] uppercase mb-2">Members Only</p>
         <h1 class="text-3xl font-bold text-primary mb-2 text-center font-serif">{{ copy.heading }}</h1>
         <p class="text-center text-toned mb-6 text-sm leading-relaxed">{{ copy.intro }}</p>
@@ -52,7 +52,8 @@
 import { z } from 'zod'
 
 definePageMeta({ layout: false })
-useSeoMeta({ title: 'Member sign in | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Member sign in' })
+const { site } = useSite()
 
 type Mode = 'password' | 'magic' | 'forgot'
 
@@ -121,6 +122,6 @@ const sendEmail = async () => {
     errorMessage.value = 'Something went wrong sending that email. Please try again in a moment.'
     return
   }
-  notice.value = `If ${state.email} has a Lifegate account, we have sent it a link. Check your inbox.`
+  notice.value = `If ${state.email} has a ${site.value.shortName} account, we have sent it a link. Check your inbox.`
 }
 </script>

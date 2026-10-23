@@ -4,6 +4,8 @@
 import type { H3Event } from 'h3'
 import type { statement } from '../../shared/auth/permissions.ts'
 import { auth } from '../lib/auth.ts'
+import { loadListViewer } from '../lib/ministry-lists.ts'
+import { findViewerPerson } from '../lib/people.ts'
 import { servesInMissionsMinistry } from '../lib/missions.ts'
 
 // Also used by server/lib/help.ts, where a help page names what it needs.
@@ -43,12 +45,15 @@ export const hasPermission = async (userId: string, permissions: Permissions) =>
 // Who is looking, for privacy decisions. Never throws: the public is a viewer too.
 export const getViewer = async (event: H3Event) => {
   const session = await getAuthSession(event)
-  if (!session) return { session: null, isMember: false, isStaff: false }
+  if (!session) return { session: null, isMember: false, isStaff: false, personId: null, householdId: null, householdRole: null }
   const [isMember, isStaff] = await Promise.all([
     hasPermission(session.user.id, { directory: ['view'] }),
     hasPermission(session.user.id, { people: ['viewContact'] }),
   ])
-  return { session, isMember, isStaff }
+  // Who they are in the directory: a father, mother or guardian sees the minors
+  // in their own household (see shared/privacy.ts).
+  const own = findViewerPerson(session.user.id)
+  return { session, isMember, isStaff, personId: own?.id ?? null, householdId: own?.householdId ?? null, householdRole: own?.householdRole ?? null }
 }
 
 // Who is looking, for sermon visibility. Never throws.
@@ -105,6 +110,19 @@ export const requireSpeakersDeleter = async (event: H3Event) => {
   const viewer = await requireSpeakersEditor(event)
   if (!viewer.canDelete) throw createError({ statusCode: 403, statusMessage: 'Only staff and administrators can do that' })
   return viewer
+}
+
+// Ministry lists: who is looking, as the roster and the staff overview see them.
+// Leader and member access comes from ministry_members, not a role; only the
+// read-only staff overview is a permission. See server/lib/ministry-lists.ts.
+export const requireListViewer = async (event: H3Event) => {
+  const session = await requireSession(event)
+  const [isMember, staffView, staffViewLeadersOnly] = await Promise.all([
+    hasPermission(session.user.id, { memberArea: ['view'] }),
+    hasPermission(session.user.id, { ministryList: ['view'] }),
+    hasPermission(session.user.id, { ministryList: ['viewLeadersOnly'] }),
+  ])
+  return { session, viewer: loadListViewer(session.user.id, { isMember, staffView, staffViewLeadersOnly }) }
 }
 
 // Stewardship: what the signed-in person may do with the church budget.

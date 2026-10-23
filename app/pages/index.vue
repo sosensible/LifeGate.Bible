@@ -3,7 +3,7 @@
     <!-- Hero -->
     <section class="bg-muted py-24 px-6">
       <div class="max-w-5xl mx-auto">
-        <p class="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-4">Eau Claire, Michigan</p>
+        <p v-if="placeName" class="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-4">{{ placeName }}</p>
         <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold font-serif text-highlighted leading-[1.05] mb-6">
           Where Life<br>Meets <span class="text-secondary italic">the Word.</span>
         </h1>
@@ -12,7 +12,7 @@
           <span class="text-toned text-sm italic">"I am the way, the truth, and the life." — John 14:6</span>
         </div>
         <p class="text-lg text-toned leading-relaxed max-w-xl mb-9">
-          A Baptist church family in Eau Claire, Michigan — gathering in faith, friendship, and the love of Scripture.
+          A Baptist church family<template v-if="placeName"> in {{ placeName }}</template> — gathering in faith, friendship, and the love of Scripture.
         </p>
         <div class="flex gap-4 flex-wrap">
           <UButton color="primary" size="xl" class="uppercase tracking-wide font-bold">Plan Your Visit</UButton>
@@ -22,22 +22,13 @@
     </section>
 
     <!-- Service times -->
-    <section class="bg-secondary-900 py-8 px-6">
-      <div class="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-        <div>
-          <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Sunday School</p>
-          <p class="text-2xl font-bold font-serif text-white mb-1">10:00 AM</p>
-          <p class="text-secondary-200 text-sm">All Ages</p>
-        </div>
-        <div class="sm:border-l sm:border-r border-white/15">
-          <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Sunday Worship</p>
-          <p class="text-2xl font-bold font-serif text-white mb-1">11:00 AM</p>
-          <p class="text-secondary-200 text-sm">Main Service</p>
-        </div>
-        <div>
-          <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Wednesday Evening</p>
-          <p class="text-2xl font-bold font-serif text-white mb-1">6:30 PM</p>
-          <p class="text-secondary-200 text-sm">Prayer &amp; Study</p>
+    <section v-if="shown.length" class="bg-secondary-900 py-8 px-6">
+      <div class="max-w-5xl mx-auto grid grid-cols-1 gap-8 text-center" :class="site.serviceTimes.length <= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'">
+        <div v-for="(service, i) in shown" :key="i" :class="i ? 'sm:border-l border-white/15' : ''">
+          <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">{{ service.label }}</p>
+          <p class="text-2xl font-bold font-serif text-white mb-1">{{ service.time }}</p>
+          <p v-if="service.changed" class="text-gold-400 text-xs font-bold mb-1">{{ service.day }}, {{ service.changed }} (changed)</p>
+          <p v-if="service.note" class="text-secondary-200 text-sm">{{ service.note }}</p>
         </div>
       </div>
       <!-- Only while a live meeting is scheduled -->
@@ -53,7 +44,7 @@
           <p class="text-gold-600 text-xs font-bold tracking-[0.2em] uppercase mb-4">Who We Are</p>
           <h2 class="text-4xl font-bold font-serif text-primary leading-tight mb-5">Growing Together<br>in Grace</h2>
           <p class="text-toned leading-relaxed mb-4">
-            Lifegate Baptist Church is a family of believers committed to the Word of God. We are a congregation in Eau Claire, Michigan, welcoming all who seek His truth and grace.
+            {{ site.name }} is a family of believers committed to the Word of God. We are a congregation<template v-if="placeName"> in {{ placeName }}</template>, welcoming all who seek His truth and grace.
           </p>
           <p class="text-toned leading-relaxed mb-7">
             Whether you are new to faith or rooted in Scripture, there is a place for you here. We would love to worship alongside you.
@@ -61,7 +52,7 @@
           <NuxtLink to="/about" class="text-secondary font-bold text-sm border-b-2 border-gold-500 pb-1 inline-block">Learn More About Us →</NuxtLink>
         </div>
         <div class="shrink-0">
-          <SiteLogo sizes="288px" alt="Lifegate Baptist Church crest" class="w-72 max-w-full" />
+          <SiteLogo sizes="288px" alt="" class="w-72 max-w-full" />
         </div>
       </div>
     </section>
@@ -75,23 +66,22 @@
           <p class="text-parchment-300 leading-relaxed mb-7 max-w-md">
             Come as you are. Our doors are open to everyone seeking truth, community, and grace. No prerequisites — just come.
           </p>
-          <UButton size="lg" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold">Get Directions</UButton>
+          <UButton v-if="directionsUrl" :to="directionsUrl" target="_blank" size="lg" class="bg-gold-500 text-highlighted hover:bg-gold-600 uppercase tracking-wide font-bold">Get Directions</UButton>
         </div>
         <div class="flex-1 flex flex-col gap-7">
           <div>
             <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-1.5">Address</p>
-            <p class="text-parchment-100 leading-relaxed">Lifegate Baptist Church<br>Eau Claire, Michigan 49111</p>
+            <p class="text-parchment-100 leading-relaxed">{{ site.name }}<template v-for="line in addressLines" :key="line"><br>{{ line }}</template></p>
           </div>
-          <div>
+          <div v-if="site.contactEmail || site.phone">
             <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-1.5">Contact</p>
-            <p class="text-parchment-100">info@lifegate.bible</p>
+            <p v-if="site.phone" class="text-parchment-100">{{ site.phone }}</p>
+            <p v-if="site.contactEmail" class="text-parchment-100">{{ site.contactEmail }}</p>
           </div>
-          <div>
+          <div v-if="shown.length">
             <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-1.5">Service Times</p>
             <p class="text-parchment-100 leading-relaxed">
-              Sun 10:00 AM — Sunday School (All Ages)<br>
-              Sun 11:00 AM — Worship Service<br>
-              Wed 6:30 PM — Prayer &amp; Study
+              <template v-for="(service, i) in shown" :key="i"><br v-if="i">{{ serviceTimeLine(service) }}</template>
             </p>
           </div>
         </div>
@@ -102,7 +92,7 @@
     <footer class="bg-primary-900 border-t-4 border-gold-500 py-14 px-6">
       <div class="max-w-5xl mx-auto flex flex-wrap gap-12">
         <div class="max-w-xs">
-          <SiteLogo sizes="120px" loading="lazy" alt="Lifegate Baptist Church" class="h-20 w-auto mb-4 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_5px_rgba(255,255,255,0.8))_drop-shadow(0_0_10px_rgba(255,255,255,0.5))]" />
+          <SiteLogo sizes="120px" loading="lazy" class="h-20 w-auto mb-4 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_5px_rgba(255,255,255,0.8))_drop-shadow(0_0_10px_rgba(255,255,255,0.5))]" />
           <p class="text-white/60 text-sm font-bold leading-relaxed">Rooted in Faith.<br>Planted in Community.</p>
         </div>
         <div class="flex-1"></div>
@@ -120,14 +110,15 @@
         <div>
           <p class="text-gold-400 text-xs font-bold tracking-[0.15em] uppercase mb-4">Contact</p>
           <div class="flex flex-col gap-2.5">
-            <span class="text-white/70 text-sm font-bold">Eau Claire, Michigan 49111</span>
-            <span class="text-white/70 text-sm font-bold">info@lifegate.bible</span>
+            <span v-if="cityLine" class="text-white/70 text-sm font-bold">{{ cityLine }}</span>
+            <span v-if="site.phone" class="text-white/70 text-sm font-bold">{{ site.phone }}</span>
+            <span v-if="site.contactEmail" class="text-white/70 text-sm font-bold">{{ site.contactEmail }}</span>
           </div>
         </div>
       </div>
       <div class="max-w-5xl mx-auto mt-8 pt-6 border-t border-white/10">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <p class="text-white/40 text-xs font-bold">© 2026 Lifegate Baptist Church · Eau Claire, Michigan · All Rights Reserved</p>
+          <p class="text-white/40 text-xs font-bold">© {{ new Date().getFullYear() }} {{ site.name }}<template v-if="placeName"> · {{ placeName }}</template> · All Rights Reserved</p>
           <div class="flex gap-4">
             <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
             <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
@@ -139,11 +130,19 @@
 </template>
 
 <script setup lang="ts">
+import { serviceShown, serviceTimeLine } from '../../shared/site'
+
 definePageMeta({
   layout: 'default',
 })
 
 const auth = useAuthStore()
+const { site, placeName, cityLine, addressLines, directionsUrl } = useSite()
+
+// Each service as it is next going to happen: the Google calendar's date when it
+// has the service (so a moved one reads true), the usual day and time otherwise.
+const { data: upcoming } = await useFetch('/api/site/services', { key: 'services', default: () => null })
+const shown = computed(() => upcoming.value ?? site.value.serviceTimes.map(serviceShown))
 
 // One Google Meet the viewer may join opens directly; anything else goes to
 // the Teaching page, which plays YouTube and asks members to sign in.

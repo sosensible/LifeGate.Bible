@@ -84,6 +84,16 @@
           </div>
         </section>
 
+        <!-- Photo: set by staff, at any time -->
+        <section v-if="person" class="space-y-3">
+          <h3 class="font-serif text-lg font-bold text-highlighted">Photo</h3>
+          <AdminPhotoUpload v-model:url="photoUrl" :endpoint="`/api/admin/people/${person.id}/photo`" round @changed="onPhotoChanged" />
+          <p class="text-muted text-xs">
+            <template v-if="person.sharePhoto">Shown to other members: {{ person.firstName }} has shared it.</template>
+            <template v-else>Hidden from other members until {{ person.firstName }} turns on “Photo with everyone”. {{ person.firstName }} can look at it on their own page before deciding.</template>
+          </p>
+        </section>
+
         <!-- Sharing -->
         <section v-if="canManagePrivacy" class="space-y-3">
           <h3 class="font-serif text-lg font-bold text-highlighted">Sharing</h3>
@@ -176,6 +186,12 @@ const blankPrivacy = (): Record<PrivacyField, boolean> => ({
 const state = reactive(blank())
 const privacy = reactive(blankPrivacy())
 const accountEmail = ref('')
+// The photo is set on its own, not with the rest of the form: it is saved as soon
+// as it is uploaded, and the page's list is told straight away.
+const photoUrl = ref<string | null>(null)
+const onPhotoChanged = (url: string | null) => {
+  if (props.person) emit('saved', { ...props.person, photoUrl: url })
+}
 
 // Names are required; birthday is only validated when it is shown.
 const formSchema = personSchema.extend({ birthday: contactFields.birthday.optional() })
@@ -187,6 +203,7 @@ const birthdayVisible = computed(() => Boolean(props.person?.shareBirthday))
 const load = () => {
   const p = props.person
   accountEmail.value = p?.email ?? ''
+  photoUrl.value = p?.photoUrl ?? null
   Object.assign(state, p
     ? {
         firstName: p.firstName, lastName: p.lastName, title: p.title ?? '', isMinor: p.isMinor,

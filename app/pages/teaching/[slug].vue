@@ -109,7 +109,7 @@ else if (error.value) {
 }
 
 useSeoMeta({
-  title: () => `${sermon.value?.title ?? 'Message'} | Lifegate Baptist Church`,
+  title: () => `${sermon.value?.title ?? 'Message'}`,
   description: () => sermon.value?.description?.slice(0, 160) ?? undefined,
 })
 </script>

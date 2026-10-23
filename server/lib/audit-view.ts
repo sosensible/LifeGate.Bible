@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizz
 import type { AuditEntryView } from '../../shared/audit.ts'
 import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, givers, households, liveMeetings, ministries, offeringCounts, missionaries, missionOrganizations, people, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
 import { db } from './db.ts'
+import { loadSite } from './site.ts'
 
 export interface AuditQuery {
   page: number
@@ -78,6 +79,8 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
     case 'count':
       return new Map(db.select({ id: offeringCounts.id, countedOn: offeringCounts.countedOn, label: offeringCounts.label }).from(offeringCounts)
         .where(inArray(offeringCounts.id, ids)).all().map(r => [r.id, r.label ? `${r.label}, ${r.countedOn}` : r.countedOn]))
+    case 'site':
+      return new Map(ids.map(id => [id, loadSite().name]))
     case 'user':
       return new Map(db.select({ id: user.id, email: user.email }).from(user)
         .where(inArray(user.id, ids)).all().map(r => [r.id, r.email]))

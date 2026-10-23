@@ -40,6 +40,7 @@ definePageMeta({
 })
 
 const tiles = [
+  { to: '/me', icon: 'i-lucide-id-card', title: 'My Page', description: 'Your page: how others see you, and what is waiting for you across the church.' },
   { to: '/teaching', icon: 'i-lucide-book-open', title: 'Teaching', description: 'Watch and listen to preaching, lessons, and Bible studies from Lifegate.' },
   { to: '/calendar', icon: 'i-lucide-calendar-days', title: 'Church Calendar', description: 'Upcoming services, events, and gatherings for the whole church family.' },
   { to: '/directory', icon: 'i-lucide-users', title: 'Members Directory', description: 'Find fellow members of Lifegate and the details they have chosen to share.' },

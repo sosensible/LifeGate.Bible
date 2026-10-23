@@ -146,34 +146,17 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Lifegate Baptist Church',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Lifegate Baptist Church - Eau Claire, Michigan' },
         { name: 'theme-color', content: '#164826' },
         // Installed on a home screen, these make it open as an app rather than
         // in a browser tab. iPhone reads the apple- ones and ignores the
-        // manifest's `display`.
+        // manifest's `display`. The name, description, icons and manifest link
+        // come from the church's settings: see app/app.vue.
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'apple-mobile-web-app-title', content: 'Lifegate' },
-      ],
-      link: [
-        // Icons made from the church crest (public/logo.png): favicons for browser tabs,
-        // an opaque apple-touch-icon for iPhone home screens (iOS shows transparency as
-        // black). The 192/512 icons for Android are listed in the PWA manifest below.
-        // ?v= busts the browser's aggressive icon cache; bump it if the icons change.
-        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48x48.png?v=3' },
-        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png?v=3' },
-        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png?v=3' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=3' },
-        // @vite-pwa/nuxt writes /manifest.webmanifest but does not add this
-        // link on Nuxt 4 (its Nuxt integration still asks for kit 3). Without
-        // the link a browser will not offer to install the site, so it is
-        // written here rather than left to the module.
-        { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
     },
   },
@@ -183,25 +166,9 @@ export default defineNuxtConfig({
   // these caches the moment someone signs out or a different person signs in.
   pwa: {
     registerType: 'autoUpdate',
-    manifest: {
-      id: '/',
-      name: 'Lifegate Baptist Church',
-      short_name: 'Lifegate',
-      description: 'Lifegate Baptist Church — Eau Claire, Michigan',
-      // Installed, it opens at the members area; signed out that lands on login,
-      // which is where someone who installed the app wants to be.
-      start_url: '/members',
-      scope: '/',
-      display: 'standalone',
-      orientation: 'portrait',
-      theme_color: '#164826',
-      background_color: '#ffffff',
-      icons: [
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ],
-    },
+    // The manifest is served by server/routes/manifest.webmanifest.get.ts, built
+    // from the church's settings (name, short name, icons), not written at build time.
+    manifest: false,
     // The worker is written by hand (service-worker/sw.ts) rather than
     // generated. Workbox's generated `navigateFallback` answers every matching
     // navigation with the offline page whether or not the network is up, which
@@ -212,21 +179,13 @@ export default defineNuxtConfig({
     filename: 'sw.ts',
     injectManifest: {
       // The app's own code and fonts. No page and no API answer is precached.
-      // The offline page carries the site header, so the crest has to be here
-      // too or it shows a broken image exactly when nothing can be fetched.
-      // The header asks for 72px, which picks the 216 and 432 widths; the 864
-      // pair is never requested at that size and is left out.
+      // The church's logo is not here either: it is chosen after the build, so
+      // the worker keeps it as it is first fetched (see sw.ts). The offline page
+      // carries the site header, so its crest is kept the same way.
       globPatterns: [
         '**/*.{js,css,woff2}',
         'offline/index.html',
-        'icon-*.png',
-        'favicon*.png',
-        // Every AVIF width: the header asks for 72px, but a browser is allowed
-        // to reuse a wider copy it already holds (the home page's hero asks for
-        // 864), and offline it must find whichever one it settles on.
-        'images/logo-*.avif',
-        // PNG only up to 432 — that is the `src` fallback and the widest a
-        // 72px slot can ask for. The 864 PNG is 367 kB and stays out.
+        // The built-in placeholder mark, for a site that has not uploaded its own.
         'images/logo-{216,432}.png',
       ],
     },

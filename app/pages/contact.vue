@@ -25,8 +25,8 @@
                 </div>
                 <div>
                   <h4 class="font-bold text-highlighted mb-1">Our Location</h4>
-                  <p class="text-toned text-sm leading-relaxed">123 Faith Street<br />Springfield, IL 62701</p>
-                  <a href="https://maps.google.com" target="_blank" class="text-primary hover:text-primary-900 text-xs font-bold mt-2 inline-block">View on Map →</a>
+                  <p class="text-toned text-sm leading-relaxed"><template v-for="(line, i) in addressLines" :key="line"><br v-if="i">{{ line }}</template></p>
+                  <a v-if="directionsUrl" :href="directionsUrl" target="_blank" class="text-primary hover:text-primary-900 text-xs font-bold mt-2 inline-block">View on Map →</a>
                 </div>
               </div>
 
@@ -39,7 +39,7 @@
                 </div>
                 <div>
                   <h4 class="font-bold text-highlighted mb-1">Phone</h4>
-                  <p class="text-toned text-sm">(217) 555-0123</p>
+                  <p class="text-toned text-sm">{{ site.phone || 'Please write to us by email.' }}</p>
                   <p class="text-muted text-xs mt-1">Mon–Fri, 9am–5pm CST</p>
                 </div>
               </div>
@@ -53,7 +53,7 @@
                 </div>
                 <div>
                   <h4 class="font-bold text-highlighted mb-1">Email</h4>
-                  <p class="text-toned text-sm"><a :href="`mailto:${LEGAL_CONTACT_EMAIL}`" class="hover:text-primary">{{ LEGAL_CONTACT_EMAIL }}</a></p>
+                  <p class="text-toned text-sm"><a v-if="site.contactEmail" :href="`mailto:${site.contactEmail}`" class="hover:text-primary">{{ site.contactEmail }}</a><template v-else>Use the form on this page.</template></p>
                   <p class="text-muted text-xs mt-1">We'll respond within 24 hours</p>
                 </div>
               </div>
@@ -154,8 +154,8 @@
             <svg class="w-12 h-12 text-muted mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
             </svg>
-            <p class="text-toned font-bold mb-2">123 Faith Street, Springfield, IL 62701</p>
-            <a href="https://maps.google.com" target="_blank" class="text-primary hover:text-primary-900 text-sm font-bold">Open in Google Maps →</a>
+            <p class="text-toned font-bold mb-2">{{ addressLines.join(', ') }}</p>
+            <a v-if="directionsUrl" :href="directionsUrl" target="_blank" class="text-primary hover:text-primary-900 text-sm font-bold">Open in Google Maps →</a>
           </div>
         </div>
       </div>
@@ -167,6 +167,8 @@
 definePageMeta({
   layout: 'default',
 })
+
+const { site, addressLines, directionsUrl } = useSite()
 
 const submitting = ref(false)
 const contactError = ref('')

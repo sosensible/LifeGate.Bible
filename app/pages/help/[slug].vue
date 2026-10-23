@@ -45,7 +45,7 @@ const slug = computed(() => route.params.slug as string)
 const { data } = await useFetch(() => `/api/help/${slug.value}`)
 
 useSeoMeta({
-  title: () => `${data.value?.page.title ?? 'Help'} | Lifegate Baptist Church`,
+  title: () => `${data.value?.page.title ?? 'Help'}`,
   robots: 'noindex, nofollow',
 })
 

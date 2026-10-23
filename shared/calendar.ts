@@ -7,6 +7,9 @@ export interface CalendarEvent {
   // Stable per occurrence: the event's UID and the instant it starts, so a
   // weekly service gives a different id each Sunday.
   id: string
+  // The repeating event this is one of (a weekly service), or null for a single
+  // event. The list view shows only the next couple of a series.
+  series: string | null
   title: string
   start: string
   end: string
@@ -18,12 +21,36 @@ export interface CalendarEvent {
   description: string | null
 }
 
+// For the Upcoming list: a repeating event is shown this time and the next, not
+// every week it comes round. Single events are all kept. (The month view shows
+// every occurrence, so it uses the events as they are.) Expects the events in
+// date order, as the calendar sends them.
+export const firstOfEachSeries = (events: CalendarEvent[], count = 2) => {
+  const seen = new Map<string, number>()
+  return events.filter((event) => {
+    if (!event.series) return true
+    const n = (seen.get(event.series) ?? 0) + 1
+    seen.set(event.series, n)
+    return n <= count
+  })
+}
+
 export interface CalendarPayload {
   events: CalendarEvent[]
+  // Where the near range ends. Events from then on are the single ones planned
+  // further ahead, listed as Future events; repeats stop here.
+  horizon: string
   // When the feed was last read, so the page can say how fresh it is.
   fetchedAt: string
   timeZone: string
 }
+
+// Splits the date-ordered list into what is coming up in the near range and the
+// single events planned beyond it.
+export const splitFuture = (events: CalendarEvent[], horizon: string) => ({
+  soon: events.filter(event => event.start < horizon),
+  future: events.filter(event => event.start >= horizon),
+})
 
 export interface CalendarMonth {
   key: string

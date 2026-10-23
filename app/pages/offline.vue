@@ -5,7 +5,7 @@
   <div>
     <div class="bg-primary-800 py-10 px-6">
       <div class="max-w-5xl mx-auto">
-        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Lifegate Baptist Church</p>
+        <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">{{ site.name }}</p>
         <h1 class="text-4xl font-bold font-serif text-white">No connection</h1>
       </div>
     </div>
@@ -38,6 +38,12 @@ useHead({
   title: 'No connection',
   meta: [{ name: 'robots', content: 'noindex' }],
 })
+
+// This page is built ahead of time, so it starts with the built-in name and mark.
+// Once running it asks for the church's own; the service worker answers that from
+// the copy it kept the last time the phone was online.
+const { site } = useSite()
+onMounted(() => refreshNuxtData('site'))
 
 const retry = () => reloadNuxtApp({ persistState: false })
 </script>

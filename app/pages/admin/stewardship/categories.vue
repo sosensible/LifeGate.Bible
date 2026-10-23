@@ -184,7 +184,7 @@ definePageMeta({
   permission: { stewardship: ['view'] },
   layout: 'default',
 })
-useSeoMeta({ title: 'Categories | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Categories' })
 
 const auth = useAuthStore()
 const toast = useToast()

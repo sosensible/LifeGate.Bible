@@ -1,3 +1,4 @@
+import { officeEmail } from '~~/server/lib/site'
 import { sendEmail, giftEmailTemplate, adminGiftNotificationTemplate } from '~~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
@@ -30,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
     // Send notification to admin
     const adminTemplate = adminGiftNotificationTemplate(firstName, lastName, amount, fund, email)
-    await sendEmail(event.context.cloudflare?.env, 'info@lifegate.bible', `New Gift Received: $${amount.toFixed(2)}`, adminTemplate.html, adminTemplate.text)
+    await sendEmail(event.context.cloudflare?.env, officeEmail() ?? '', `New Gift Received: $${amount.toFixed(2)}`, adminTemplate.html, adminTemplate.text)
 
     // TODO: Integrate with Stripe/payment processor
     const checkoutUrl = `/giving/checkout?id=${result.meta.last_row_id}`

@@ -111,6 +111,8 @@ export interface HouseholdView {
   relationship: HouseholdRelationship
   name: string
   nameIsCustom: boolean
+  // Set by staff. Members see it only where they can already see the household.
+  photoUrl: string | null
   adults: HouseholdMemberView[]
   children: HouseholdMemberView[]
   // Why the household does not meet the rules yet (e.g. created before them).

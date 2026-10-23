@@ -36,7 +36,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'default',
 })
-useSeoMeta({ title: 'Ministry budgets | Lifegate Baptist Church' })
+useSeoMeta({ title: 'Ministry budgets' })
 
 const { data, error } = await useFetch('/api/stewardship/ministries')
 const ministries = computed(() => data.value?.ministries ?? [])

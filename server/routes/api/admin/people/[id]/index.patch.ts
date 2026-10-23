@@ -3,6 +3,7 @@ import { emptyToNull, personUpdateSchema } from '../../../../../../shared/people
 import { people } from '../../../../../database/schema/index.ts'
 import { db } from '../../../../../lib/db.ts'
 import { refreshHouseholdName } from '../../../../../lib/households.ts'
+import { reconcileAssignments } from '../../../../../lib/ministry-lists.ts'
 import { assertReferencesExist, assertStaffCanReview, loadPerson, presentForAdmin, recordAudit, setMinistries } from '../../../../../lib/people.ts'
 
 export default defineEventHandler(async (event) => {
@@ -29,6 +30,9 @@ export default defineEventHandler(async (event) => {
     db.transaction((tx) => {
       if (Object.keys(values).length) tx.update(people).set({ ...values, ...extra }).where(eq(people.id, id)).run()
       if (ministryIds) setMinistries(tx, id, ministryIds, leaderMinistryIds)
+      // Leaving a ministry, losing the lead, or becoming a guest takes this person's
+      // open tasks away; the ministry's leaders are told on its Lists section.
+      reconcileAssignments(tx)
       // "James & Sarah Mitchell Household" follows a change to James's or Sarah's name.
       if (values.firstName !== undefined || values.lastName !== undefined) refreshHouseholdName(tx, person.householdId)
       recordAudit(tx, { actorUserId: session.user.id, action: 'person.update', entityType: 'person', entityId: id, fields })
