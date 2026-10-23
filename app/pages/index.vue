@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { serviceShown, serviceTimeLine } from '../../shared/site'
+import { serviceShown, serviceTimeLine } from '#shared/site'
 
 definePageMeta({
   layout: 'default',

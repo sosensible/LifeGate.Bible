@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { contactPhrase } from '../../shared/site'
+import { contactPhrase } from '#shared/site'
 
 definePageMeta({ layout: 'default' })
 const { site, placeName } = useSite()

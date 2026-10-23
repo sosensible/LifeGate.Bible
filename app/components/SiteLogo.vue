@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { LOGO_WIDTHS } from '../../shared/site-logo'
+import { LOGO_WIDTHS } from '#shared/site-logo'
 
 defineOptions({ inheritAttrs: false })
 

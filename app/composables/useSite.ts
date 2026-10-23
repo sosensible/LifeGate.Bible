@@ -2,9 +2,9 @@
 // during server rendering and handed to the browser, so the first paint is
 // already right. If the request fails the neutral defaults stand in, so a page
 // never breaks over it.
-import { SITE_DEFAULTS, addressLines, cityLine, placeName } from '../../shared/site'
-import type { SiteView } from '../../shared/site'
-import { iconSrc, logoSrc } from '../../shared/site-logo'
+import { SITE_DEFAULTS, addressLines, cityLine, placeName } from '#shared/site'
+import type { SiteView } from '#shared/site'
+import { iconSrc, logoSrc } from '#shared/site-logo'
 
 export const useSite = () => {
   const { data } = useAsyncData<SiteView>('site', () => $fetch<SiteView>('/api/site'), { default: () => SITE_DEFAULTS })
