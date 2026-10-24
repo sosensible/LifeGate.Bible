@@ -1,7 +1,7 @@
 // Reading the audit log for the viewer: filtered, paged, with names instead of ids.
 import { and, count, desc, eq, gte, inArray, lt, ne, sql, type SQL } from 'drizzle-orm'
 import type { AuditEntryView } from '../../shared/audit.ts'
-import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, givers, households, liveMeetings, ministries, offeringCounts, missionaries, missionOrganizations, people, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
+import { auditLog, categories, categoryGroups, financeAccounts, financeTransactions, givers, households, liveMeetings, ministries, offeringCounts, missionaries, missionOrganizations, people, notificationChannels, recurringTransactions, sermonSeries, sermons, user } from '../database/schema/index.ts'
 import { db } from './db.ts'
 import { loadSite } from './site.ts'
 
@@ -79,6 +79,9 @@ const labelsFor = (entityType: string, ids: string[]): Map<string, string> => {
     case 'count':
       return new Map(db.select({ id: offeringCounts.id, countedOn: offeringCounts.countedOn, label: offeringCounts.label }).from(offeringCounts)
         .where(inArray(offeringCounts.id, ids)).all().map(r => [r.id, r.label ? `${r.label}, ${r.countedOn}` : r.countedOn]))
+    case 'notificationChannel':
+      return new Map(db.select({ id: notificationChannels.id, name: notificationChannels.name }).from(notificationChannels)
+        .where(inArray(notificationChannels.id, ids)).all().map(r => [r.id, r.name]))
     case 'site':
       return new Map(ids.map(id => [id, loadSite().name]))
     case 'user':

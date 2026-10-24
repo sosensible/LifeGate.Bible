@@ -1,0 +1,1 @@
+ALTER TABLE `site_settings` ADD `notify_min_gap_seconds` integer DEFAULT 30 NOT NULL;

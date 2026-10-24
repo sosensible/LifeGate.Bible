@@ -162,6 +162,20 @@
       "when": 1792772111029,
       "tag": "0022_site_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792867927073,
+      "tag": "0023_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792869178541,
+      "tag": "0024_notification_gap",
+      "breakpoints": true
     }
   ]
 }

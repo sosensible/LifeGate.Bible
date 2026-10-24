@@ -5,7 +5,7 @@ import { createError } from 'h3'
 import type { MinistryAdminView, MinistryInput } from '../../shared/ministries.ts'
 import { PROTECTED_MINISTRY_SLUGS } from '../../shared/ministries.ts'
 import { slugify } from '../../shared/missions.ts'
-import { ministries, ministryCategoryAccess, ministryMembers } from '../database/schema/index.ts'
+import { ministries, ministryCategoryAccess, ministryMembers, notificationChannels } from '../database/schema/index.ts'
 import type { Tx } from './audit.ts'
 import { db } from './db.ts'
 
@@ -60,8 +60,11 @@ const uniqueSlug = (reader: Reader, name: string) => {
 export const createMinistry = (tx: Tx, input: MinistryInput) => {
   assertNameFree(tx, input.name)
   const last = tx.select({ max: sql<number | null>`max(${ministries.sortOrder})` }).from(ministries).get()?.max ?? -1
-  return tx.insert(ministries).values({ ...input, slug: uniqueSlug(tx, input.name), sortOrder: last + 1 })
+  const id = tx.insert(ministries).values({ ...input, slug: uniqueSlug(tx, input.name), sortOrder: last + 1 })
     .returning({ id: ministries.id }).get().id
+  // Every ministry has somewhere to send its first message.
+  tx.insert(notificationChannels).values({ ministryId: id, name: 'General', description: 'News and reminders for everyone serving here.' }).run()
+  return id
 }
 
 // The slug does not change with the name, so shared links keep working.

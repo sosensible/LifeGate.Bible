@@ -31,8 +31,9 @@ const MEMBER_PAGE = /^\/(members|directory|calendar|ministries)(\/|$)/
 // the moment the church names a new leader, and an offline copy would go on
 // showing a former leader the lists that are now leaders-only. They need a
 // connection, and the page asks for them in the browser, never in the
-// server-rendered HTML that this worker also stores.
-const MEMBER_DATA = /^\/api\/(directory|calendar|ministries)(?!\/[^/]+\/lists)/
+// server-rendered HTML that this worker also stores. The same goes for a
+// ministry's notification channels and what its leaders have sent.
+const MEMBER_DATA = /^\/api\/(directory|calendar|ministries)(?!\/[^/]+\/(lists|channels|notifications|task-notify))/
 
 // The office and the sign-in flow never get the offline page: a request that
 // did not reach the server has to fail visibly rather than look like it worked.

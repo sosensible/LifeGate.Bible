@@ -18,7 +18,7 @@ services:
     # Published by .github/workflows/image.yml. Make the GHCR package public
     # once, so this pulls without a registry login (CasaOS has no UI for one).
     # Pin a version rather than :latest so a reinstall is reproducible.
-    image: ghcr.io/sosensible/lifegate-church:1.2.1
+    image: ghcr.io/sosensible/lifegate-church:1.3.0
     container_name: lifegate-production
     restart: unless-stopped
     environment:
@@ -92,11 +92,14 @@ x-casaos:
   index: /
   port_map: "3010"
   scheme: http
-  icon: ""
+  # The picture ZimaOS shows for the app. It is the site's own icon: the church's logo once
+  # one is uploaded under Church details, a plain cross until then. ZimaOS reads it when
+  # the app is installed or updated, so a new logo shows after the next update.
+  icon: https://lifegate.bible/site/icon/192.png
   title:
     en_US: Lifegate Baptist Church
   category: Others
-  version: "1.2.1"
+  version: "1.3.0"
   tagline:
     en_US: Lifegate Baptist Church - Eau Claire, Michigan
   description:

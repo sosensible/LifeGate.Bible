@@ -82,6 +82,10 @@ export const ministries = sqliteTable('ministries', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  // How the person is told when a leader gives them a task in this ministry: by
+  // email, by a message in their Notifications, or both. A list can choose
+  // differently (ministry_lists.task_notify). Changed by the ministry's leaders.
+  taskNotify: text('task_notify', { enum: ['email', 'message', 'both'] }).notNull().default('both'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -121,6 +125,9 @@ export const ministryLists = sqliteTable('ministry_lists', {
   // Only for `assigned`: whether each assignee also sees the tasks given to other
   // people. Off, they see just their own. Chosen by the leader.
   assigneesSeeAll: integer('assignees_see_all', { mode: 'boolean' }).notNull().default(false),
+  // For a list of tasks: how an assignee is told, instead of the ministry's choice.
+  // Empty means "as the ministry does".
+  taskNotify: text('task_notify', { enum: ['email', 'message', 'both'] }),
   ordered: integer('ordered', { mode: 'boolean' }).notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   createdBy: text('created_by').references(() => people.id, { onDelete: 'set null' }),
@@ -717,9 +724,83 @@ export const siteSettings = sqliteTable('site_settings', {
   contactEmail: text('contact_email').notNull().default(''),
   serviceTimes: text('service_times', { mode: 'json' }).$type<Array<{ weekday: number, time: string, label: string, note: string, onCalendar: boolean }>>().notNull(),
   // 0 is the built-in placeholder mark; otherwise the version of the uploaded set.
+  // Messages (notifications). Not part of what /api/site shows the public.
+  notifyMaxPerDay: integer('notify_max_per_day').notNull().default(5),
+  notifyKeepDays: integer('notify_keep_days').notNull().default(90),
+  // The least time between two messages on one channel, so they reach people in the
+  // order they were sent.
+  notifyMinGapSeconds: integer('notify_min_gap_seconds').notNull().default(30),
+  // Push to a device is held between these times, church time (when push exists).
+  quietStart: text('quiet_start').notNull().default('21:00'),
+  quietEnd: text('quiet_end').notNull().default('07:00'),
   logoVersion: integer('logo_version').notNull().default(0),
   // The uploaded logo's proportions, so the page can reserve its space.
   logoWidth: integer('logo_width').notNull().default(1),
   logoHeight: integer('logo_height').notNull().default(1),
   updatedAt: updatedAt(),
+})
+
+// ---------------------------------------------------------------------------
+// Notifications. See docs/specs/push-notifications.md.
+//
+// A CHANNEL is a named stream of messages that belongs to a ministry (or, with no
+// ministry, to the whole church). Members of the ministry follow its channels by
+// default and can mute any of them; leaders of the ministry send to them. Who is a
+// leader or a member is read from the roster on every call, never copied here.
+export const notificationChannels = sqliteTable('notification_channels', {
+  id: id(),
+  // Empty for a church-wide channel.
+  ministryId: text('ministry_id').references(() => ministries.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  // A retired channel keeps its history and takes no new messages.
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+}, table => [index('notification_channels_ministry_idx').on(table.ministryId)])
+
+// A row means this person has muted the channel. Everyone who may follow a channel
+// follows it until they do.
+export const channelMutes = sqliteTable('channel_mutes', {
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  channelId: text('channel_id').notNull().references(() => notificationChannels.id, { onDelete: 'cascade' }),
+}, table => [primaryKey({ columns: [table.userId, table.channelId] })])
+
+// What was sent. `channel` messages are written by a leader (or an announcer) to a
+// channel; `task` notices are written by the site when someone is given a task, so
+// they say what happened and carry none of the task's text.
+export const notifications = sqliteTable('notifications', {
+  id: id(),
+  kind: text('kind', { enum: ['channel', 'task'] }).notNull(),
+  channelId: text('channel_id').references(() => notificationChannels.id, { onDelete: 'cascade' }),
+  // The ministry it concerns, which decides who may still read it. Empty for a
+  // church-wide message.
+  ministryId: text('ministry_id').references(() => ministries.id, { onDelete: 'cascade' }),
+  senderUserId: text('sender_user_id').references(() => user.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  // A page on this site to open when it is tapped.
+  url: text('url'),
+  createdAt: createdAt(),
+}, table => [
+  index('notifications_channel_idx').on(table.channelId, table.createdAt),
+  index('notifications_created_idx').on(table.createdAt),
+])
+
+// One row per person a notification went to: the person's own log, and what a
+// leader's sent list counts. Never shown to anyone but the person (leaders see
+// numbers only).
+export const notificationReceipts = sqliteTable('notification_receipts', {
+  notificationId: text('notification_id').notNull().references(() => notifications.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  readAt: integer('read_at', { mode: 'timestamp' }),
+}, table => [
+  primaryKey({ columns: [table.notificationId, table.userId] }),
+  index('notification_receipts_user_idx').on(table.userId),
+])
+
+// The members (with accounts) who may send to a church-wide channel. Chosen by
+// whoever edits Church details.
+export const churchNotificationSenders = sqliteTable('church_notification_senders', {
+  userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
 })

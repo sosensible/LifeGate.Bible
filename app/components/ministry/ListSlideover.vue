@@ -24,6 +24,15 @@
           description="Off: each person sees only the tasks given to them. Either way only the person a task is given to can tick it off, and the leaders."
         />
 
+        <UFormField
+          v-if="kindNow !== 'list'"
+          label="When someone is given a task"
+          name="taskNotify"
+          :description="kindNow === 'routine' ? 'Applies to runs of this routine that are started as tasks.' : undefined"
+        >
+          <USelect v-model="state.taskNotify" :items="taskNotifyItems" class="w-full" />
+        </UFormField>
+
         <USwitch v-model="state.ordered" label="Numbered steps" description="Items are shown in order, 1, 2, 3." />
       </UForm>
     </template>
@@ -37,6 +46,7 @@
 
 <script setup lang="ts">
 import { KIND_LABELS, listInputSchema, type MinistryListView } from '#shared/ministry-lists'
+import { TASK_NOTIFY, TASK_NOTIFY_LABELS } from '#shared/notifications'
 
 const props = defineProps<{ list: MinistryListView | null, ministrySlug: string }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -60,7 +70,15 @@ const audienceItems = computed(() => [
     : []),
 ])
 
-const state = reactive({ name: '', kind: 'list' as 'list' | 'tasks' | 'routine', audience: 'ministry' as 'ministry' | 'leaders' | 'assigned', ordered: false, assigneesSeeAll: false })
+// How a person is told they were given a task. "As the ministry does" leaves it to
+// the ministry's own choice (shown on its Notifications).
+const taskNotifyItems = [
+  { value: 'ministry', label: 'As the ministry does' },
+  ...TASK_NOTIFY.map(value => ({ value, label: TASK_NOTIFY_LABELS[value] })),
+]
+const noticeOf = (choice: string) => choice === 'ministry' ? null : choice
+
+const state = reactive({ name: '', kind: 'list' as 'list' | 'tasks' | 'routine', audience: 'ministry' as 'ministry' | 'leaders' | 'assigned', ordered: false, assigneesSeeAll: false, taskNotify: 'ministry' as string })
 
 // Choosing a kind that has no tasks takes that audience away.
 watch(() => state.kind, (kind) => {
@@ -70,8 +88,8 @@ watch(() => state.kind, (kind) => {
 watch(open, (isOpen) => {
   if (!isOpen) return
   Object.assign(state, props.list
-    ? { name: props.list.name, kind: props.list.kind, audience: props.list.audience, ordered: props.list.ordered, assigneesSeeAll: props.list.assigneesSeeAll }
-    : { name: '', kind: 'list', audience: 'ministry', ordered: false, assigneesSeeAll: false })
+    ? { name: props.list.name, kind: props.list.kind, audience: props.list.audience, ordered: props.list.ordered, assigneesSeeAll: props.list.assigneesSeeAll, taskNotify: props.list.taskNotify ?? 'ministry' }
+    : { name: '', kind: 'list', audience: 'ministry', ordered: false, assigneesSeeAll: false, taskNotify: 'ministry' })
 }, { immediate: true })
 
 const saving = ref(false)
@@ -81,12 +99,12 @@ const save = async () => {
     if (props.list) {
       // A run follows its routine's audience, so it is never sent one.
       const body = props.list.routineId
-        ? { name: state.name, ordered: state.ordered }
-        : { name: state.name, audience: state.audience, ordered: state.ordered, assigneesSeeAll: state.audience === 'assigned' && state.assigneesSeeAll }
+        ? { name: state.name, ordered: state.ordered, taskNotify: noticeOf(state.taskNotify) }
+        : { name: state.name, audience: state.audience, ordered: state.ordered, assigneesSeeAll: state.audience === 'assigned' && state.assigneesSeeAll, taskNotify: noticeOf(state.taskNotify) }
       await $fetch(`/api/ministry-lists/${props.list.id}`, { method: 'PATCH', body })
     }
     else {
-      await $fetch(`/api/ministries/${encodeURIComponent(props.ministrySlug)}/lists`, { method: 'POST', body: { ...state } })
+      await $fetch(`/api/ministries/${encodeURIComponent(props.ministrySlug)}/lists`, { method: 'POST', body: { ...state, taskNotify: noticeOf(state.taskNotify) } })
     }
     toast.add({ title: props.list ? 'Changes saved' : 'List created', color: 'success', icon: 'i-lucide-circle-check' })
     emit('saved')

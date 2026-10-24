@@ -2,6 +2,7 @@
 // who may see and do what live in server/lib/ministry-lists.ts; see
 // docs/specs/ministry-lists.md.
 import { z } from 'zod'
+import { taskNotifySchema, type TaskNotify } from './notifications.ts'
 
 // A routine is a template of steps. Starting a run generates an ordinary list
 // from it, either a checklist (`list`) or tasks (`tasks`), so there are only two
@@ -37,6 +38,9 @@ export const listInputSchema = z.object({
   audience: z.enum(LIST_AUDIENCES).default('ministry'),
   ordered: z.boolean().default(false),
   assigneesSeeAll: z.boolean().default(false),
+  // How an assignee is told of a task; empty means as the ministry does. Only
+  // meaningful for tasks, and for a routine's runs of tasks.
+  taskNotify: taskNotifySchema.nullable().default(null),
 }).refine(list => list.audience !== 'assigned' || list.kind === 'tasks', { message: ASSIGNED_AUDIENCE_ERROR, path: ['audience'] })
 export type ListInput = z.infer<typeof listInputSchema>
 
@@ -47,6 +51,7 @@ export const listPatchSchema = z.object({
   audience: z.enum(LIST_AUDIENCES),
   ordered: z.boolean(),
   assigneesSeeAll: z.boolean(),
+  taskNotify: taskNotifySchema.nullable(),
 }).partial().refine(patch => Object.keys(patch).length > 0, 'Nothing to change')
 export type ListPatch = z.infer<typeof listPatchSchema>
 
@@ -108,6 +113,8 @@ export interface MinistryListView {
   ordered: boolean
   // On an `assigned` list: whether assignees also see other people's tasks.
   assigneesSeeAll: boolean
+  // Empty: the ministry's choice stands.
+  taskNotify: TaskNotify | null
   items: ListItemView[]
   canManage: boolean
   canAdd: boolean
@@ -133,6 +140,8 @@ export interface RosterOption {
   id: string
   name: string
   isLeader: boolean
+  // Has an account, so can be told when given a task. Only leaders are sent this.
+  canNotify: boolean
 }
 
 export interface MinistryListsPayload {

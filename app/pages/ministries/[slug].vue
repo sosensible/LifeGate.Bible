@@ -80,6 +80,9 @@
 
       <!-- Lists and tasks (members only; fetched in the browser, see the component) -->
       <MinistryLists v-if="auth.isMember || auth.can({ ministryList: ['view'] })" :slug="ministry.slug" />
+
+      <!-- Notifications for the leaders to send (members only; shows itself only to leaders) -->
+      <MinistryNotifications v-if="auth.isMember" :slug="ministry.slug" />
     </template>
 
     <!-- Unknown ministry -->

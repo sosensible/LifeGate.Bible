@@ -118,6 +118,7 @@ if (error.value) {
 }
 
 const page = computed(() => data.value!)
+
 useSeoMeta({ title: () => `${page.value ? fullName(page.value) : 'Member'}` })
 
 // Each detail the viewer may see. On your own page, the ones others cannot see are

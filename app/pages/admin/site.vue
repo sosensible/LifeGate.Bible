@@ -125,6 +125,9 @@
             <p class="text-muted text-xs">Changes show on the site, in emails and in the phone app straight away.</p>
           </div>
         </UForm>
+
+        <!-- Messages: the limits, and who may announce to everyone -->
+        <AdminMessageSettings />
       </div>
     </div>
   </div>

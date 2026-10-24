@@ -26,6 +26,10 @@ export const ACTION_LABELS: Record<string, string> = {
   'ministry.update': 'Edited ministry',
   'ministry.delete': 'Removed ministry',
   'site.update': 'Changed the church’s details',
+  'notification.send': 'Sent a notification',
+  'notification.channel': 'Changed a notification channel',
+  'notification.settings': 'Changed the message settings',
+  'notification.taskNotify': 'Changed how tasks are announced',
   'site.logo': 'Changed the church’s logo',
   'ministryList.create': 'Added ministry list',
   'ministryList.update': 'Edited ministry list',
@@ -122,6 +126,7 @@ export const ACTION_LABELS: Record<string, string> = {
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   user: 'Accounts',
   site: 'Church details',
+  notificationChannel: 'Notification channels',
   person: 'People',
   household: 'Households',
   ministry: 'Ministries',

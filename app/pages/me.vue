@@ -26,5 +26,7 @@ definePageMeta({ middleware: 'auth', layout: 'default' })
 useSeoMeta({ title: 'My page' })
 
 const { data } = await useFetch<{ personId: string | null }>('/api/me/person')
-if (data.value?.personId) await navigateTo(`/people/${data.value.personId}`, { replace: true })
+// The query goes with it, so /me?tab=notifications opens that tab.
+const route = useRoute()
+if (data.value?.personId) await navigateTo({ path: `/people/${data.value.personId}`, query: route.query }, { replace: true })
 </script>

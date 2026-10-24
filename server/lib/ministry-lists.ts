@@ -222,6 +222,7 @@ const buildViews = (reader: Reader, viewer: ListViewer, rows: ListWithMinistry[]
       audience: list.audience,
       ordered: list.ordered,
       assigneesSeeAll: list.assigneesSeeAll,
+      taskNotify: list.taskNotify,
       // On a "leaders and assigned people" list, an assignee gets only their own tasks.
       items: items
         .filter(item => item.listId === list.id && (seesAllItems(viewer, list) || (item.assigneeId !== null && item.assigneeId === viewer.personId)))
@@ -275,7 +276,7 @@ export const loadMinistryLists = (viewer: ListViewer, ministryId: string, reader
 // Who a leader may give a task to: adults on the roster who have not asked to be
 // left off it. The same people the ministry page lists.
 export const loadAssignable = (ministryId: string, reader: Reader = db): RosterOption[] =>
-  reader.select({ id: people.id, firstName: people.firstName, lastName: people.lastName, isLeader: ministryMembers.isLeader })
+  reader.select({ id: people.id, firstName: people.firstName, lastName: people.lastName, isLeader: ministryMembers.isLeader, userId: people.userId })
     .from(ministryMembers).innerJoin(people, eq(people.id, ministryMembers.personId))
     .where(and(
       eq(ministryMembers.ministryId, ministryId),
@@ -284,7 +285,7 @@ export const loadAssignable = (ministryId: string, reader: Reader = db): RosterO
       eq(people.isMinor, false),
     ))
     .orderBy(asc(people.lastName), asc(people.firstName)).all()
-    .map(row => ({ id: row.id, name: personName(row), isLeader: row.isLeader }))
+    .map(row => ({ id: row.id, name: personName(row), isLeader: row.isLeader, canNotify: row.userId !== null }))
 
 export const loadMinistryListsPayload = (viewer: ListViewer, ministryId: string, reader: Reader = db): MinistryListsPayload => {
   const canManage = viewer.leads.has(ministryId)
@@ -397,6 +398,8 @@ export const createList = (tx: Tx, viewer: ListViewer, ministryId: string, input
     audience: input.audience,
     ordered: input.ordered,
     assigneesSeeAll: input.audience === 'assigned' && input.assigneesSeeAll,
+    // Only tasks (and a routine's runs of tasks) are announced.
+    taskNotify: input.kind === 'list' ? null : input.taskNotify,
     sortOrder: nextSortOrder(tx, 'lists', ministryId),
     createdBy: viewer.personId,
   }).returning({ id: ministryLists.id }).get().id
@@ -445,7 +448,10 @@ export const updateList = (tx: Tx, viewer: ListViewer, listId: string, patch: Li
   // The "see everyone's tasks" choice only means something on an `assigned` list,
   // so moving to another audience puts it back.
   const finalAudience = patch.audience ?? list.audience
-  const wanted: ListPatch = finalAudience === 'assigned' ? patch : { ...patch, assigneesSeeAll: false }
+  const audienceFixed: ListPatch = finalAudience === 'assigned' ? patch : { ...patch, assigneesSeeAll: false }
+  // A plain checklist has no tasks to announce.
+  const { taskNotify: _unused, ...withoutNotify } = audienceFixed
+  const wanted: ListPatch = list.kind === 'list' ? withoutNotify : audienceFixed
   const fields = (Object.keys(wanted) as Array<keyof ListPatch>).filter(field => wanted[field] !== list[field])
   if (fields.length) tx.update(ministryLists).set(Object.fromEntries(fields.map(field => [field, wanted[field]]))).where(eq(ministryLists.id, listId)).run()
   // Every run, finished ones too, follows: a past run of a leaders-only routine
@@ -637,6 +643,8 @@ export const startRun = (tx: Tx, viewer: ListViewer, routineId: string, style: R
     sortOrder: routine.sortOrder,
     createdBy: viewer.personId,
     routineId,
+    // A run of tasks announces them as its routine says.
+    taskNotify: style === 'tasks' ? routine.taskNotify : null,
   }).returning({ id: ministryLists.id }).get().id
   // The steps are copied, so editing the template later never changes a run.
   tx.insert(ministryListItems).values(steps.map((step, index) => ({ listId: id, title: step.title, sortOrder: index }))).run()

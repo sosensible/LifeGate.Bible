@@ -25,6 +25,11 @@
               class="w-full"
               @update:model-value="touched = true"
             />
+            <!-- Who can be told they were given it: only people with an account can. -->
+            <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+              <span class="inline-flex items-center gap-1"><UIcon name="i-lucide-bell" class="size-3.5" />can be told</span>
+              <span class="inline-flex items-center gap-1"><UIcon name="i-lucide-bell-off" class="size-3.5" />has no account, so you will need to tell them</span>
+            </p>
           </UFormField>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -62,7 +67,9 @@ const dueDate = computed({ get: () => state.dueDate ?? '', set: (value: string) 
 const dueTime = computed({ get: () => state.dueTime ?? '', set: (value: string) => { state.dueTime = value || null } })
 
 // On a leaders-only list the choice is leaders; elsewhere, the whole roster.
-const assignable = computed(() => props.people.filter(person => props.list.audience !== 'leaders' || person.isLeader))
+const assignable = computed(() => props.people
+  .filter(person => props.list.audience !== 'leaders' || person.isLeader)
+  .map(person => ({ ...person, icon: person.canNotify ? 'i-lucide-bell' : 'i-lucide-bell-off' })))
 
 // A task may be held by someone who keeps their name private. Their id is not
 // sent to us, so saving must not read "no one chosen" as "take it away".
@@ -87,8 +94,11 @@ const save = async () => {
       body.dueTime = state.dueTime
       if (!hiddenAssignee.value || touched.value) body.assigneeId = state.assigneeId ?? null
     }
-    if (props.item) await $fetch(`/api/ministry-lists/${props.list.id}/items/${props.item.id}`, { method: 'PATCH', body })
-    else await $fetch(`/api/ministry-lists/${props.list.id}/items`, { method: 'POST', body })
+    const result = props.item
+      ? await $fetch<{ notice: string | null }>(`/api/ministry-lists/${props.list.id}/items/${props.item.id}`, { method: 'PATCH', body })
+      : await $fetch<{ notice: string | null }>(`/api/ministry-lists/${props.list.id}/items`, { method: 'POST', body })
+    // Saved either way; if the person cannot be told, the leader hears it here.
+    if (result?.notice) toast.add({ title: 'Saved, but they will not be told', description: result.notice, color: 'warning', icon: 'i-lucide-bell-off', duration: 10000 })
     emit('saved')
     open.value = false
   }

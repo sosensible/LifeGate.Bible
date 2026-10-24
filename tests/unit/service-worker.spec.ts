@@ -127,6 +127,17 @@ describe('the answers member pages ask for', () => {
     expect(matches(`${ORIGIN}/api/me/lists`)).toBe(false)
   })
 
+  // Who may read a ministry's messages changes with its roster, and a person's log
+  // is theirs alone: neither is kept for reading offline.
+  it('never stores a ministry’s channels or notifications, or a person’s log', () => {
+    expect(matches(`${ORIGIN}/api/ministries/youth/channels`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/ministries/youth/notifications`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/ministries/youth/task-notify`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/me/notifications`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/me/channels`)).toBe(false)
+    expect(matches(`${ORIGIN}/api/ministries/youth`)).toBe(true)
+  })
+
   it('leaves everything else alone', () => {
     expect(matches(`${ORIGIN}/api/admin/accounts`)).toBe(false)
     expect(matches(`${ORIGIN}/api/stewardship/offerings`)).toBe(false)

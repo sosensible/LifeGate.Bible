@@ -8,6 +8,12 @@
       <UButton to="/profile" icon="i-lucide-user-round-cog" color="neutral" variant="outline">Edit my profile</UButton>
     </div>
 
+    <!-- What is waiting for you, and a second place to read the messages sent to you, in case an alert was missed. -->
+    <UTabs v-model="tab" :items="tabs" :content="false" class="w-full" />
+
+    <NotificationsTab v-if="tab === 'notifications'" />
+
+    <template v-else>
     <UAlert v-if="listsError" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="apiErrorMessage(listsError, 'Your lists could not be loaded. They need a connection.')" />
 
     <MinistryMyLists v-if="lists && (lists.assigned.length || lists.ministries.length)" :data="lists" @changed="refreshLists()" />
@@ -42,6 +48,7 @@
     </section>
 
     <p v-if="nothingWaiting" class="text-sm text-muted">Nothing is waiting for you right now: no tasks, lists, messages or ministry budgets.</p>
+    </template>
   </section>
 </template>
 
@@ -54,6 +61,20 @@ import type { MyListsPayload } from '#shared/ministry-lists'
 const { data: lists, error: listsError, status: listsStatus, refresh: refreshLists } = useFetch<MyListsPayload>('/api/me/lists', { server: false, lazy: true })
 const { data: teaching, status: teachingStatus } = useFetch('/api/teaching/mine', { server: false, lazy: true })
 const { data: budgets, status: budgetsStatus } = useFetch('/api/stewardship/ministries', { server: false, lazy: true })
+
+// The second tab is in the address (?tab=notifications), so a notification, or the
+// link /me?tab=notifications, opens it.
+const route = useRoute()
+const tab = computed({
+  get: () => (route.query.tab === 'notifications' ? 'notifications' : 'waiting'),
+  set: value => navigateTo({ query: value === 'waiting' ? {} : { tab: value } }, { replace: true }),
+})
+// How many are unread, shared with the tab's own screen under the same key.
+const { data: log } = useFetch<{ unread: number }>('/api/me/notifications', { key: 'my-notifications', server: false, lazy: true })
+const tabs = computed(() => [
+  { label: 'Waiting for you', value: 'waiting', icon: 'i-lucide-inbox' },
+  { label: 'Notifications', value: 'notifications', icon: 'i-lucide-bell', badge: log.value?.unread ? log.value.unread : undefined },
+])
 
 const loaded = computed(() => [listsStatus.value, teachingStatus.value, budgetsStatus.value].every(status => status === 'success' || status === 'error'))
 const nothingWaiting = computed(() => loaded.value && !listsError.value

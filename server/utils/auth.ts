@@ -5,6 +5,7 @@ import type { H3Event } from 'h3'
 import type { statement } from '../../shared/auth/permissions.ts'
 import { auth } from '../lib/auth.ts'
 import { loadListViewer } from '../lib/ministry-lists.ts'
+import { loadNotifyViewer } from '../lib/notifications.ts'
 import { findViewerPerson } from '../lib/people.ts'
 import { servesInMissionsMinistry } from '../lib/missions.ts'
 
@@ -123,6 +124,15 @@ export const requireListViewer = async (event: H3Event) => {
     hasPermission(session.user.id, { ministryList: ['viewLeadersOnly'] }),
   ])
   return { session, viewer: loadListViewer(session.user.id, { isMember, staffView, staffViewLeadersOnly }) }
+}
+
+// Notifications: a signed-in member, and what the roster lets them do. Staff and
+// administrators get nothing extra: a person's log is theirs alone.
+export const requireNotifyViewer = async (event: H3Event) => {
+  const session = await requireSession(event)
+  const isMember = await hasPermission(session.user.id, { memberArea: ['view'] })
+  if (!isMember) throw createError({ statusCode: 403, statusMessage: 'Not allowed' })
+  return { session, viewer: loadNotifyViewer(session.user.id, isMember) }
 }
 
 // Stewardship: what the signed-in person may do with the church budget.

@@ -14,7 +14,7 @@ services:
   lifegate:
     # The same published image as production. Promote by pointing production at
     # a tag that has already run here.
-    image: ghcr.io/sosensible/lifegate-church:1.2.1
+    image: ghcr.io/sosensible/lifegate-church:1.3.0
     container_name: lifegate-staging
     restart: unless-stopped
     environment:
@@ -70,11 +70,12 @@ x-casaos:
   index: /
   port_map: "3009"
   scheme: http
-  icon: ""
+  # The site's own icon (see deploy/zimaos-compose.yaml).
+  icon: https://staging.lifegate.bible/site/icon/192.png
   title:
     en_US: Lifegate (staging)
   category: Others
-  version: "1.2.1"
+  version: "1.3.0"
   tagline:
     en_US: Rehearsal copy - fake data, no real mail
   description:
