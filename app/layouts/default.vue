@@ -44,11 +44,12 @@
         <div class="flex gap-4">
           <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
           <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
-          <UButton v-if="!standalone" variant="link" color="neutral" size="xs" class="p-0 text-white/60 text-xs font-bold hover:text-white" @click="open">Install the app</UButton>
+          <UButton v-if="auth.isAuthenticated && !standalone" variant="link" color="neutral" size="xs" class="p-0 text-white/60 text-xs font-bold hover:text-white" @click="open">Install the app</UButton>
         </div>
       </div>
     </footer>
-    <InstallGuide />
+    <!-- Only for people signed in, who are the ones offered the app. -->
+    <InstallGuide v-if="auth.isAuthenticated" />
   </div>
 </template>
 
