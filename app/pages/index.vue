@@ -122,6 +122,7 @@
           <div class="flex gap-4">
             <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
             <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
+            <UButton v-if="!standalone" variant="link" color="neutral" size="xs" class="p-0 text-white/60 text-xs font-bold hover:text-white" @click="open">Install the app</UButton>
           </div>
         </div>
       </div>
@@ -137,6 +138,7 @@ definePageMeta({
 })
 
 const auth = useAuthStore()
+const { open, standalone } = useInstallGuide()
 const { site, placeName, cityLine, addressLines, directionsUrl } = useSite()
 
 // Each service as it is next going to happen: the Google calendar's date when it

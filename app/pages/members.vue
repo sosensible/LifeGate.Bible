@@ -12,11 +12,12 @@
     <!-- Hub cards -->
     <div class="bg-default py-12 px-6">
       <div class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <NuxtLink
-          v-for="tile in tiles"
-          :key="tile.to"
-          :to="tile.to"
-          class="bg-elevated rounded-lg border border-default shadow-sm p-7 block hover:border-primary transition-colors group"
+        <component
+          :is="tile.to ? NuxtLink : 'button'"
+          v-for="tile in shownTiles"
+          :key="tile.title"
+          v-bind="tile.to ? { to: tile.to } : { type: 'button', onClick: open }"
+          class="text-left bg-elevated rounded-lg border border-default shadow-sm p-7 block hover:border-primary transition-colors group"
         >
           <div class="flex items-start gap-4">
             <div class="w-12 h-12 rounded-lg bg-primary-800 flex items-center justify-center shrink-0">
@@ -27,7 +28,7 @@
               <p class="text-toned text-sm leading-relaxed">{{ tile.description }}</p>
             </div>
           </div>
-        </NuxtLink>
+        </component>
       </div>
     </div>
   </div>
@@ -39,7 +40,11 @@ definePageMeta({
   layout: 'default',
 })
 
-const tiles = [
+const NuxtLink = resolveComponent('NuxtLink')
+const { open, standalone } = useInstallGuide()
+
+// A tile with a `to` is a link; one without is a button that opens the install dialog.
+const tiles: Array<{ to?: string, icon: string, title: string, description: string }> = [
   { to: '/me', icon: 'i-lucide-id-card', title: 'My Page', description: 'Your page: how others see you, and what is waiting for you across the church.' },
   { to: '/teaching', icon: 'i-lucide-book-open', title: 'Teaching', description: 'Watch and listen to preaching, lessons, and Bible studies from Lifegate.' },
   { to: '/calendar', icon: 'i-lucide-calendar-days', title: 'Church Calendar', description: 'Upcoming services, events, and gatherings for the whole church family.' },
@@ -47,5 +52,9 @@ const tiles = [
   { to: '/missions', icon: 'i-lucide-globe', title: 'Missions', description: 'The missionaries we support, their prayer requests and letters.' },
   { to: '/ministries', icon: 'i-lucide-hand-heart', title: 'Ministries', description: 'Explore how our church serves and find a place to get involved.' },
   { to: '/profile', icon: 'i-lucide-user-round-cog', title: 'My Profile', description: 'Keep your details current and choose what the directory shows about you.' },
+  { icon: 'i-lucide-smartphone', title: 'Install the App', description: 'Add the church app to your phone’s home screen or your computer. It opens in its own window, and pages you have visited can be read without a signal.' },
 ]
+
+// The install tile goes once the site is already running as an app.
+const shownTiles = computed(() => tiles.filter(tile => tile.to || !standalone.value))
 </script>

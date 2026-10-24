@@ -44,9 +44,11 @@
         <div class="flex gap-4">
           <NuxtLink to="/privacy" class="text-white/60 text-xs font-bold hover:text-white">Privacy Policy</NuxtLink>
           <NuxtLink to="/terms" class="text-white/60 text-xs font-bold hover:text-white">Terms of Use</NuxtLink>
+          <UButton v-if="!standalone" variant="link" color="neutral" size="xs" class="p-0 text-white/60 text-xs font-bold hover:text-white" @click="open">Install the app</UButton>
         </div>
       </div>
     </footer>
+    <InstallGuide />
   </div>
 </template>
 
@@ -56,6 +58,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 const auth = useAuthStore()
 const route = useRoute()
 const { site, placeName } = useSite()
+const { open, standalone } = useInstallGuide()
 
 const siteLinks = computed<NavigationMenuItem[]>(() => [
   { label: 'About', icon: 'i-lucide-info', to: '/about' },

@@ -120,6 +120,12 @@ export default defineNuxtConfig({
       indexable: false,
     },
   },
+  // <pwa-install> is a web component (the install dialog), not a Vue component.
+  vue: {
+    compilerOptions: {
+      isCustomElement: tag => tag === 'pwa-install',
+    },
+  },
   modules: [
     '@nuxt/ui',
     '@nuxtjs/google-fonts',
