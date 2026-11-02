@@ -5,6 +5,7 @@
 // front matter, in the order they should appear.
 export const HELP_AREAS = [
   'Offerings and giving',
+  'Video and teaching',
 ] as const
 export type HelpArea = typeof HELP_AREAS[number]
 

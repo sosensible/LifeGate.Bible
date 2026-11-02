@@ -1,6 +1,6 @@
 {
   "name": "lifegate-church",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "type": "module",
   "private": true,
   "scripts": {
@@ -25,6 +25,8 @@
     "@nuxt/ui": "^4.11.1",
     "@nuxtjs/google-fonts": "^3.2.0",
     "@pinia/nuxt": "^1.0.2",
+    "@tus/file-store": "^2.1.2",
+    "@tus/server": "^2.4.7",
     "better-auth": "^1.7.4",
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",

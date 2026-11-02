@@ -4,8 +4,9 @@ import { createError } from 'h3'
 import { byBibleOrder } from '../../shared/bible.ts'
 import { sermonSlug, type AdminSermonView, type SermonInput, type SermonView, type SpeakerChoice } from '../../shared/sermons.ts'
 import { availability, type HoldParty, type SharingView, type TeacherShare } from '../../shared/sermon-sharing.ts'
+import { presentPush } from '../../shared/hosted-video.ts'
 import { parseYouTubeId } from '../../shared/youtube.ts'
-import { people, sermonHolds, sermonSeries, sermons } from '../database/schema/index.ts'
+import { people, sermonFiles, sermonHolds, sermonSeries, sermons, videoPushes } from '../database/schema/index.ts'
 import type { Tx } from './audit.ts'
 import { db } from './db.ts'
 
@@ -13,6 +14,14 @@ export type SermonRow = typeof sermons.$inferSelect & {
   seriesName: string | null
   // The pauses currently placed on it, each by its own party.
   holds: Array<{ party: HoldParty, at: Date }>
+  // The church server's own copy of the video, if it keeps one.
+  localFile: { size: number, storedAt: Date } | null
+  // Where sending the stored copy on to the church video host stands, if it has been asked for.
+  hostPush: { state: 'queued' | 'sending' | 'sent' | 'failed', attempts: number, lastError: string | null } | null
+  // The same for sending it to the church's YouTube channel.
+  youtubePush: { state: 'queued' | 'sending' | 'sent' | 'failed', attempts: number, lastError: string | null } | null
+  // The same for bringing a copy in from the church video host.
+  hostPull: { state: 'queued' | 'sending' | 'sent' | 'failed', attempts: number, lastError: string | null } | null
 }
 
 export interface SermonViewer {
@@ -37,9 +46,19 @@ export const loadSermons = (where?: { id?: string, slug?: string }): SermonRow[]
   const holds = rows.length
     ? db.select().from(sermonHolds).where(inArray(sermonHolds.sermonId, rows.map(row => row.sermon.id))).all()
     : []
+  const files = rows.length
+    ? db.select().from(sermonFiles).where(inArray(sermonFiles.sermonId, rows.map(row => row.sermon.id))).all()
+    : []
+  const pushes = rows.length
+    ? db.select().from(videoPushes).where(inArray(videoPushes.sermonId, rows.map(row => row.sermon.id))).all()
+    : []
   return rows.map(({ sermon, seriesName }) => ({
     ...sermon,
     seriesName,
+    localFile: files.find(file => file.sermonId === sermon.id) ?? null,
+    hostPush: pushes.find(push => push.sermonId === sermon.id && push.target === 'host') ?? null,
+    youtubePush: pushes.find(push => push.sermonId === sermon.id && push.target === 'youtube') ?? null,
+    hostPull: pushes.find(push => push.sermonId === sermon.id && push.target === 'pull') ?? null,
     holds: holds.filter(hold => hold.sermonId === sermon.id).map(hold => ({ party: hold.party, at: hold.placedAt })),
   }))
 }
@@ -89,6 +108,10 @@ export const presentAdminSermon = (sermon: SermonRow): AdminSermonView => ({
   ...presentSermon(sermon),
   sharing: presentSharing(sermon),
   publishWhenReady: sermon.publishWhenReadyBy !== null,
+  localCopy: sermon.localFile ? { size: sermon.localFile.size, storedAt: sermon.localFile.storedAt.toISOString() } : null,
+  hostPush: presentPush(sermon.hostPush),
+  youtubePush: presentPush(sermon.youtubePush),
+  hostPull: presentPush(sermon.hostPull),
   speakerPersonId: sermon.speakerPersonId,
   status: sermon.status,
   publishedAt: sermon.publishedAt?.toISOString() ?? null,

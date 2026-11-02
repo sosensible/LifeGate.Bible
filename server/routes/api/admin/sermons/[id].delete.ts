@@ -1,16 +1,21 @@
 // Removes the sermon from the site. A YouTube video stays on YouTube; a hosted copy is
 // removed from the video host too, so it does not go on costing storage.
+import { rmSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import { sermons } from '../../../../database/schema/index.ts'
 import { db } from '../../../../lib/db.ts'
 import { recordAudit } from '../../../../lib/audit.ts'
 import { bunnyConfig, deleteHostedVideo } from '../../../../lib/bunny.ts'
+import { absolutePath, loadLocalFile } from '../../../../lib/local-files.ts'
+import { localVideoFolder } from '../../../../lib/local-video.ts'
 import { loadSermon } from '../../../../lib/sermons.ts'
 
 export default defineEventHandler(async (event) => {
   const session = await requirePermission(event, { sermon: ['delete'] })
   const id = getRouterParam(event, 'id')!
   const hostedVideoId = loadSermon({ id })?.hostedVideoId
+  const folder = localVideoFolder()
+  const localPath = folder ? loadLocalFile(id)?.relativePath : undefined
 
   const deleted = db.transaction((tx) => {
     const row = tx.delete(sermons).where(eq(sermons.id, id)).returning({ id: sermons.id }).get()
@@ -18,6 +23,9 @@ export default defineEventHandler(async (event) => {
     return row
   })
   if (!deleted) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
+
+  // Its copy on this server goes with it. The record went with the message; the file is removed here.
+  if (folder && localPath) rmSync(absolutePath(folder, localPath), { force: true })
 
   // The message is gone either way; a copy the host could not remove is only left costing.
   const config = bunnyConfig()

@@ -122,6 +122,10 @@ watch(() => auth.user?.id, (id) => {
   }
 })
 
+const appVersion = useRuntimeConfig().public.appVersion
+// Anyone who runs part of the site is shown which release it is.
+const isAdmin = computed(() => auth.can({ siteSettings: ['update'] }) || auth.can({ audit: ['view'] }) || auth.can({ sermon: ['update'] }) || auth.can({ user: ['list'] }))
+
 // Help pages exist for the office jobs; only those roles get the menu entry.
 const hasHelp = computed(() => auth.can({ giving: ['record'] }) || auth.can({ stewardship: ['view'] }))
 
@@ -137,6 +141,7 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => accountMenuGroups<Dropd
     ...(myLists.value.ministries.length ? [{ label: 'My lists', icon: 'i-lucide-list-checks', to: '/my-lists' }] : []),
     ...(auth.can({ people: ['update'] }) ? [{ label: 'People', icon: 'i-lucide-users-round', to: '/admin/people' }] : []),
     ...(auth.can({ sermon: ['update'] }) ? [{ label: 'Manage teaching', icon: 'i-lucide-video', to: '/admin/teaching' }] : []),
+    ...(auth.can({ liveMeeting: ['manage'] }) ? [{ label: 'Shared broadcasts', icon: 'i-lucide-radio', to: '/admin/broadcasts' }] : []),
     ...(auth.can({ ministry: ['update'] }) ? [{ label: 'Ministries', icon: 'i-lucide-hand-heart', to: '/admin/ministries' }] : []),
     ...(auth.can({ stewardship: ['view'] })
       ? [{ label: 'Stewardship', icon: 'i-lucide-hand-coins', to: '/admin/stewardship' }]
@@ -152,5 +157,7 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => accountMenuGroups<Dropd
     ...(hasHelp.value ? [{ label: 'Help', icon: 'i-lucide-circle-question-mark', to: '/help' }] : []),
   ],
   signOut: [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
+  // Which release this is, for those who run the site to check against.
+  footer: isAdmin.value ? [{ label: `Version ${appVersion}`, icon: 'i-lucide-tag', type: 'label' as const }] : [],
 }))
 </script>

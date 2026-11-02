@@ -204,6 +204,48 @@
       "when": 1793639330096,
       "tag": "0028_publish_when_ready",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1793640589033,
+      "tag": "0029_youtube_connection",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1793641336869,
+      "tag": "0030_integration_secrets",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1793641857977,
+      "tag": "0031_sermon_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1793642311826,
+      "tag": "0032_video_pushes",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1793645244044,
+      "tag": "0033_folder_moves",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1793645766727,
+      "tag": "0034_broadcasts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 // Sermon validation and shapes, shared by the admin form and the server routes.
 import { z } from 'zod'
 import { BIBLE_BOOKS } from './bible.ts'
-import type { HostedVideoView } from './hosted-video.ts'
+import type { HostedVideoView, HostPushView } from './hosted-video.ts'
 import type { SharingView } from './sermon-sharing.ts'
 import { parseYouTubeId } from './youtube.ts'
 
@@ -94,6 +94,14 @@ export interface AdminSermonView extends SermonView {
   sharing: SharingView
   // Set to publish itself as soon as its hosted video is ready.
   publishWhenReady: boolean
+  // The church server's own copy of the video, if it keeps one: how big, and when stored.
+  localCopy: { size: number, storedAt: string } | null
+  // Where sending that copy on to the church video host stands, if it has been asked for.
+  hostPush: HostPushView | null
+  // The same for sending it to the church's YouTube channel.
+  youtubePush: HostPushView | null
+  // The same for bringing a copy in from the church video host.
+  hostPull: HostPushView | null
 }
 
 // A speaker to pick in the sermon form.

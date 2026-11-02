@@ -838,3 +838,116 @@ export const notificationReceipts = sqliteTable('notification_receipts', {
 export const churchNotificationSenders = sqliteTable('church_notification_senders', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
 })
+
+// The church's YouTube channel, connected once by someone who may change the church's details
+// so the site can post a message's video to it (server/lib/youtube.ts). One row. The refresh
+// token is the key to uploading, so it is kept encrypted, never shown, and removed on disconnect.
+export const youtubeConnection = sqliteTable('youtube_connection', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull(),
+  channelTitle: text('channel_title').notNull(),
+  refreshTokenEncrypted: text('refresh_token_encrypted').notNull(),
+  connectedBy: text('connected_by').references(() => user.id, { onDelete: 'set null' }),
+  connectedAt: integer('connected_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+})
+
+// Keys and ids for outside services (the video host, YouTube), entered on Church details
+// instead of in the server's environment. Every value is kept encrypted (server/lib/secret-box.ts)
+// and the secret ones are never sent back to a browser. See server/lib/integration-secrets.ts.
+export const integrationSecrets = sqliteTable('integration_secrets', {
+  name: text('name').primaryKey(),
+  valueEncrypted: text('value_encrypted').notNull(),
+  updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+})
+
+// The church's own copy of a message's video, kept in the folder chosen on Church details
+// (server/lib/local-files.ts). This is the master copy: the file on disk, with its checksum, so
+// the video survives the video host or YouTube going away. The path is relative to the chosen
+// folder, so the folder can be moved later.
+export const sermonFiles = sqliteTable('sermon_files', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  sermonId: text('sermon_id').notNull().references(() => sermons.id, { onDelete: 'cascade' }),
+  relativePath: text('relative_path').notNull(),
+  fileName: text('file_name').notNull(),
+  size: integer('size').notNull(),
+  sha256: text('sha256').notNull(),
+  storedBy: text('stored_by').references(() => user.id, { onDelete: 'set null' }),
+  storedAt: integer('stored_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, table => [uniqueIndex('sermon_files_sermon_idx').on(table.sermonId)])
+
+// Sending the stored copy of a message's video on to the places it is shown from (server/lib/video-push.ts).
+// One row per message and place, so the office can see what is waiting, working, done or stuck, and
+// the site can try again. It records which version of the file (its checksum) was sent, so a
+// replaced file is sent again and an unchanged one is not.
+export const PUSH_TARGETS = ['host', 'youtube', 'pull'] as const
+export const PUSH_STATES = ['queued', 'sending', 'sent', 'failed'] as const
+export const videoPushes = sqliteTable('video_pushes', {
+  sermonId: text('sermon_id').notNull().references(() => sermons.id, { onDelete: 'cascade' }),
+  target: text('target', { enum: PUSH_TARGETS }).notNull(),
+  state: text('state', { enum: PUSH_STATES }).notNull(),
+  sha256: text('sha256').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  lastError: text('last_error'),
+  nextAttemptAt: integer('next_attempt_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, table => [primaryKey({ columns: [table.sermonId, table.target] })])
+
+// Moving the stored videos to another folder (server/lib/folder-move.ts). One row, the move in
+// progress or the last one. The old folder stays in use until every file has been copied and
+// checked in the new one; only then is the choice switched.
+export const FOLDER_MOVE_STATES = ['running', 'failed', 'done'] as const
+export const folderMoves = sqliteTable('folder_moves', {
+  id: text('id').primaryKey(),
+  fromPath: text('from_path').notNull(),
+  toPath: text('to_path').notNull(),
+  state: text('state', { enum: FOLDER_MOVE_STATES }).notNull(),
+  filesTotal: integer('files_total').notNull(),
+  filesMoved: integer('files_moved').notNull().default(0),
+  bytesTotal: integer('bytes_total').notNull(),
+  bytesMoved: integer('bytes_moved').notNull().default(0),
+  lastError: text('last_error'),
+  startedBy: text('started_by').references(() => user.id, { onDelete: 'set null' }),
+  startedAt: integer('started_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+})
+
+// Shared broadcasts (server/lib/broadcasts.ts): a locked page here for a stream that comes from elsewhere.
+export const broadcasts = sqliteTable('broadcasts', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description'),
+  // Where the stream is shown from (an https address; {viewer} is replaced by an opaque id for the person watching).
+  streamUrl: text('stream_url').notNull(),
+  audience: text('audience', { enum: ['members', 'members_and_guests'] }).notNull().default('members'),
+  // The most people who may take a seat in total; empty means no limit.
+  maxViewers: integer('max_viewers'),
+  isOpen: integer('is_open', { mode: 'boolean' }).notNull().default(false),
+  opensAt: integer('opens_at', { mode: 'timestamp' }),
+  closesAt: integer('closes_at', { mode: 'timestamp' }),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+})
+
+// A code made for one guest. Only a hash of the code is kept, so it can be shown once, when made.
+// The first browser to use it is remembered (as a hash), and any other browser is turned away.
+export const broadcastPasses = sqliteTable('broadcast_passes', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  broadcastId: text('broadcast_id').notNull().references(() => broadcasts.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  codeHash: text('code_hash').notNull(),
+  deviceHash: text('device_hash'),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  usedAt: integer('used_at', { mode: 'timestamp' }),
+  revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+}, table => [uniqueIndex('broadcast_passes_code_idx').on(table.broadcastId, table.codeHash)])
+
+// A seat: one person who has been let in. Members are kept by account, guests by pass.
+export const broadcastSeats = sqliteTable('broadcast_seats', {
+  broadcastId: text('broadcast_id').notNull().references(() => broadcasts.id, { onDelete: 'cascade' }),
+  viewerKey: text('viewer_key').notNull(),
+  takenAt: integer('taken_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, table => [primaryKey({ columns: [table.broadcastId, table.viewerKey] })])

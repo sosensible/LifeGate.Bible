@@ -21,7 +21,7 @@
           />
         </section>
 
-        <AdminHostedVideoField v-model:file="pendingFile" v-model:publish-when-ready="publishWhenReady" :sermon="current" :can-publish="canPublish" @changed="onHostedChanged" />
+        <AdminHostedVideoField v-model:file="pendingFile" v-model:publish-when-ready="publishWhenReady" v-model:post-to-youtube="postToYouTube" :sermon="current" :can-publish="canPublish" @changed="onHostedChanged" />
 
         <!-- Message -->
         <section class="space-y-4">
@@ -211,6 +211,7 @@ const latest = ref<AdminSermonView | null>(null)
 // A video chosen while adding a message: it uploads once the message is saved.
 const pendingFile = ref<File | null>(null)
 const publishWhenReady = ref(false)
+const postToYouTube = ref(true)
 const uploads = useHostedVideoUploads()
 watch(pendingFile, (picked) => {
   if (!picked) return
@@ -225,6 +226,9 @@ const current = computed(() => latest.value ?? props.sermon)
 watch(() => props.sermon, value => latest.value = value, { immediate: true })
 const onHostedChanged = (changed: AdminSermonView) => {
   latest.value = changed
+  // A video posted to YouTube in the background fills in the link, so saving this form
+  // does not clear it.
+  if (changed.videoId && !state.video) state.video = youTubeWatchUrl(changed.videoId)
   emit('saved', changed)
 }
 
@@ -275,7 +279,7 @@ const save = async () => {
     emit('saved', sermon)
     // A video chosen with a new message uploads in the background from here.
     if (!props.sermon && pendingFile.value) {
-      void uploads.start(sermon, pendingFile.value, { publishWhenReady: canPublish.value && publishWhenReady.value && state.status === 'draft' })
+      void uploads.start(sermon, pendingFile.value, { publishWhenReady: canPublish.value && publishWhenReady.value && state.status === 'draft', youtube: postToYouTube.value })
     }
     toast.add({ title: props.sermon ? 'Changes saved' : `“${sermon.title}” added`, description: !props.sermon && pendingFile.value ? 'Its video is uploading in the background.' : undefined, color: 'success', icon: 'i-lucide-circle-check' })
     pendingFile.value = null

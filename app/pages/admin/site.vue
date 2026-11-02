@@ -5,6 +5,7 @@
         <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Church Office</p>
         <h1 class="text-4xl font-bold font-serif text-white">Church details</h1>
         <p class="text-white/70 mt-2 max-w-2xl">The name, address, contact details, service times and logo that the website, its emails and the phone app show.</p>
+        <p class="text-white/50 text-xs mt-3">Site version {{ appVersion }}</p>
       </div>
     </div>
 
@@ -126,6 +127,9 @@
           </div>
         </UForm>
 
+        <!-- Video: where a message's video is kept and posted -->
+        <AdminVideoSettings />
+
         <!-- Messages: the limits, and who may announce to everyone -->
         <AdminMessageSettings />
       </div>
@@ -134,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+const appVersion = useRuntimeConfig().public.appVersion
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { WEEKDAYS, siteSchema, type SiteInput } from '#shared/site'
 import { ICON_SIZES, LOGO_WIDTHS, iconPartName, logoPartName } from '#shared/site-logo'

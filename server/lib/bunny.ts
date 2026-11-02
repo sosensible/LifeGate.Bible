@@ -2,11 +2,16 @@
 // YouTube link. The host holds the file; this site decides who may watch it, by giving a
 // short-lived signed link only to someone who may (server/routes/api/sermons/[slug]/playback.get.ts).
 //
-// Nothing here is used until BUNNY_LIBRARY_ID, BUNNY_API_KEY and BUNNY_TOKEN_KEY are set.
-import { createHash } from 'node:crypto'
+// Nothing here is used until the library's number and its two keys are entered on Church details
+// (or set in the server's environment as BUNNY_LIBRARY_ID, BUNNY_API_KEY and BUNNY_TOKEN_KEY).
+import { createHash, createHmac } from 'node:crypto'
+import { createError } from 'h3'
 import type { HostedVideoState } from '../../shared/hosted-video.ts'
+import { integrationValue } from './integration-secrets.ts'
 
 const API = 'https://video.bunnycdn.com'
+// The host's address. Only a test changes it, to talk to a stand-in.
+export const bunnyApi = () => process.env.BUNNY_API_BASE || API
 const EMBED = 'https://iframe.mediadelivery.net/embed'
 
 export interface BunnyConfig {
@@ -18,9 +23,9 @@ export interface BunnyConfig {
 }
 
 export const bunnyConfig = (): BunnyConfig | null => {
-  const libraryId = process.env.BUNNY_LIBRARY_ID?.trim()
-  const apiKey = process.env.BUNNY_API_KEY?.trim()
-  const tokenKey = process.env.BUNNY_TOKEN_KEY?.trim()
+  const libraryId = integrationValue('bunny.libraryId')
+  const apiKey = integrationValue('bunny.apiKey')
+  const tokenKey = integrationValue('bunny.tokenKey')
   return libraryId && apiKey && tokenKey ? { libraryId, apiKey, tokenKey } : null
 }
 
@@ -38,7 +43,7 @@ export const PLAY_LINK_SECONDS = 60 * 60
 // What a browser needs to upload one file straight to the host, resumably, without ever
 // seeing the API key: the signature covers this library, this video and this expiry.
 export const uploadTicket = (config: BunnyConfig, videoId: string, expires: number) => ({
-  endpoint: `${API}/tusupload`,
+  endpoint: `${bunnyApi()}/tusupload`,
   libraryId: config.libraryId,
   videoId,
   expires,
@@ -66,7 +71,7 @@ export class BunnyError extends Error {
 }
 
 const call = async (config: BunnyConfig, path: string, init: RequestInit, doFetch: Fetch) => {
-  const response = await doFetch(`${API}/library/${config.libraryId}${path}`, {
+  const response = await doFetch(`${bunnyApi()}/library/${config.libraryId}${path}`, {
     ...init,
     headers: { 'accept': 'application/json', 'content-type': 'application/json', ...init.headers, 'AccessKey': config.apiKey },
   })
@@ -89,6 +94,35 @@ export const hostedVideoState = async (config: BunnyConfig, videoId: string, doF
 
 // A video already gone from the host is gone: nothing left to remove.
 export const deleteHostedVideo = async (config: BunnyConfig, videoId: string, doFetch: Fetch = fetch) => {
-  const response = await doFetch(`${API}/library/${config.libraryId}/videos/${encodeURIComponent(videoId)}`, { method: 'DELETE', headers: { AccessKey: config.apiKey } })
+  const response = await doFetch(`${bunnyApi()}/library/${config.libraryId}/videos/${encodeURIComponent(videoId)}`, { method: 'DELETE', headers: { AccessKey: config.apiKey } })
   if (!response.ok && response.status !== 404) throw new BunnyError(`The video host would not remove it (${response.status}).`)
+}
+
+// ---- Bringing the original file back --------------------------------------------------
+
+// "vz-abc123-xyz.b-cdn.net" from whatever was typed or pasted (with or without https:// and a path).
+export const normalizeCdnHost = (input: string) => {
+  const host = input.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase()
+  // A port is allowed, though a real delivery hostname has none, so a stand-in can be tried locally.
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:\d{1,5})?$/.test(host) && !/^(localhost|127\.0\.0\.1)(:\d{1,5})?$/.test(host)) {
+    throw createError({ statusCode: 400, statusMessage: 'Enter the library’s delivery hostname, like vz-abc123-xyz.b-cdn.net, with no https:// or slashes.' })
+  }
+  return host
+}
+
+// The address of the original uploaded file, signed the way a delivery address with token
+// authentication on needs it: HMAC-SHA256 of the path and the expiry (no IP, no extra settings),
+// URL-safe base64. With token authentication off the host ignores the extra parts.
+export const originalFileUrl = (config: BunnyConfig, cdnHost: string, videoId: string, expires: number) => {
+  const path = `/${videoId}/original`
+  const hash = createHmac('sha256', config.tokenKey).update(`${path}${expires}`).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  // Only a test, talking to a stand-in over plain http, ever changes the scheme.
+  return `${process.env.BUNNY_API_BASE ? 'http' : 'https'}://${cdnHost}${path}?token=HS256-${hash}&expires=${expires}`
+}
+
+// What the host says about a video: whether it still holds the original, and that original's checksum.
+export const getHostedVideoInfo = async (config: BunnyConfig, videoId: string, doFetch: Fetch = fetch) => {
+  const response = await call(config, `/videos/${encodeURIComponent(videoId)}`, { method: 'GET' }, doFetch)
+  const video = await response.json() as { hasOriginal?: boolean | null, originalHash?: string | null, status?: number }
+  return { hasOriginal: video.hasOriginal === true, originalHash: video.originalHash ? video.originalHash.toLowerCase() : null, status: video.status ?? 0 }
 }

@@ -39,3 +39,22 @@ export const detailsFromFileName = (fileName: string): { title: string, date: st
     .replace(/\s+/g, ' ')
   return { title: rest, date }
 }
+
+// ---- Sending the stored copy on to the church video host ---------------------------
+
+// After this many failed tries it stops until someone presses Send again.
+export const MAX_PUSH_ATTEMPTS = 8
+
+export interface HostPushView {
+  state: 'queued' | 'sending' | 'sent' | 'failed'
+  attempts: number
+  // Why the last try failed, while it is failed.
+  error: string | null
+  // Failed, but the site will try again by itself.
+  willRetry: boolean
+}
+
+export const presentPush = (push: { state: HostPushView['state'], attempts: number, lastError: string | null } | null | undefined): HostPushView | null =>
+  push
+    ? { state: push.state, attempts: push.attempts, error: push.state === 'failed' ? push.lastError : null, willRetry: push.state === 'failed' && push.attempts < MAX_PUSH_ATTEMPTS }
+    : null

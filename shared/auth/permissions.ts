@@ -35,6 +35,10 @@ export const statement = {
   // The church's name, address, logo, contact details and service times
   // (/admin/site). Reading them is public; this is who may change them.
   siteSettings: ['update'],
+  // The keys and connections to outside services: the church video host and YouTube
+  // (server/lib/integration-secrets.ts). Administrators only, not even the church secretary
+  // who keeps the church's details, because these are the site's own keys.
+  integrations: ['manage'],
   // Ministry lists (server/lib/ministry-lists.ts). This is ONLY the read-only
   // overview staff get across every ministry. Running a ministry's lists comes
   // from the roster -- its leaders manage them, its members work them -- not
@@ -141,6 +145,7 @@ export const admin = ac.newRole({
   liveMeeting: ['manage'],
   ministry: ['update'],
   siteSettings: ['update'],
+  integrations: ['manage'],
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],
   contactMessage: ['view'],

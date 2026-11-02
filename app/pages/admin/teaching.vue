@@ -45,8 +45,17 @@
                     {{ HOSTED_VIDEO_LABELS[row.original.hosted.state] }}
                   </UBadge>
                   <UIcon v-if="row.original.videoId" name="i-lucide-circle-play" class="w-4 h-4 text-primary" aria-label="Has a YouTube video" />
+                  <UBadge v-if="row.original.localCopy" size="sm" variant="subtle" color="neutral" icon="i-lucide-hard-drive">Stored here</UBadge>
+                  <UBadge v-if="row.original.hostPull && row.original.hostPull.state !== 'sent'" size="sm" variant="subtle" :color="row.original.hostPull.state === 'failed' ? 'error' : 'info'" :icon="row.original.hostPull.state === 'failed' ? 'i-lucide-circle-alert' : 'i-lucide-download'">
+                    {{ row.original.hostPull.state === 'failed' ? `Copy from host failed${row.original.hostPull.willRetry ? ', will retry' : ''}` : 'Copying from host' }}
+                  </UBadge>
+                  <template v-for="place in [{ name: 'host', push: row.original.hostPush }, { name: 'YouTube', push: row.original.youtubePush }]" :key="place.name">
+                    <UBadge v-if="place.push && place.push.state !== 'sent'" size="sm" variant="subtle" :color="place.push.state === 'failed' ? 'error' : 'info'" :icon="place.push.state === 'failed' ? 'i-lucide-circle-alert' : 'i-lucide-send'">
+                      {{ place.push.state === 'failed' ? `${place.name} send failed${place.push.willRetry ? ', will retry' : ''}` : place.push.state === 'sending' ? `Sending to ${place.name}` : `Waiting to send to ${place.name}` }}
+                    </UBadge>
+                  </template>
                   <UBadge v-if="row.original.publishWhenReady" size="sm" variant="subtle" color="neutral" icon="i-lucide-clock">Publishes when ready</UBadge>
-                  <span v-if="!row.original.videoId && !row.original.hosted && !uploads.progress.value[row.original.id]" class="text-muted text-xs">None</span>
+                  <span v-if="!row.original.videoId && !row.original.hosted && !row.original.localCopy && !uploads.progress.value[row.original.id]" class="text-muted text-xs">None</span>
                 </div>
               </template>
               <template #access-cell="{ row }">

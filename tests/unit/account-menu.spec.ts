@@ -51,4 +51,11 @@ describe('the account menu', () => {
     accountMenuGroups({ personal: [], others, support: [], signOut: [] })
     expect(others.map(entry => entry.label)).toEqual(['B', 'A'])
   })
+
+  it('puts the site version last, after Sign out, and leaves it out when there is none', () => {
+    const base = { personal: [item('My Page')], others: [], support: [], signOut: [item('Sign Out')] }
+    expect(labels(accountMenuGroups({ ...base, footer: [item('Version 1.4.0')] }))).toEqual([['My Page'], ['Sign Out'], ['Version 1.4.0']])
+    expect(labels(accountMenuGroups({ ...base, footer: [] }))).toEqual([['My Page'], ['Sign Out']])
+    expect(labels(accountMenuGroups(base))).toEqual([['My Page'], ['Sign Out']])
+  })
 })

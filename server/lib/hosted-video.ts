@@ -1,6 +1,7 @@
 // Keeping a message's hosted video copy in step with the video host (server/lib/bunny.ts).
 // The host holds the file; the message keeps only its id and whether it is ready.
 import { eq } from 'drizzle-orm'
+import { MAX_PUSH_ATTEMPTS } from '../../shared/hosted-video.ts'
 import { createError } from 'h3'
 import { sermons } from '../database/schema/index.ts'
 import { recordAudit, type Tx } from './audit.ts'
@@ -99,7 +100,11 @@ export const refreshHostedVideo = async (config: BunnyConfig, sermonId: string, 
 export const setPublishWhenReady = (sermonId: string, userId: string | null, audit: (tx: Tx) => void = () => {}) => {
   const sermon = requireSermon(sermonId)
   if (userId) {
-    if (!sermon.hostedVideoId || sermon.hostedVideoState === 'failed') {
+    // A copy on the host that has not failed, or a send to the host still on its way.
+    const copyOk = Boolean(sermon.hostedVideoId) && sermon.hostedVideoState !== 'failed'
+    const onItsWay = (push: typeof sermon.hostPush) => Boolean(push) && push!.state !== 'sent' && (push!.state !== 'failed' || push!.attempts < MAX_PUSH_ATTEMPTS)
+    const sending = onItsWay(sermon.hostPush) || onItsWay(sermon.youtubePush)
+    if (!copyOk && !sending) {
       throw createError({ statusCode: 409, statusMessage: 'Upload a video first.' })
     }
     if (sermon.status === 'published') throw createError({ statusCode: 409, statusMessage: 'This message is already published.' })

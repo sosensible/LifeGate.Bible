@@ -1,3 +1,5 @@
+import pkg from './package.json' with { type: 'json' }
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devServer: {
@@ -68,8 +70,9 @@ export default defineNuxtConfig({
     },
     scheduledTasks: {
       '0 5,11,17,23 * * *': ['stewardship:sync'],
-      '0 6 * * *': ['stewardship:recurring'],
+      '0 6 * * *': ['stewardship:recurring', 'local-files:sweep'],
       '*/2 * * * *': ['hosted-video:refresh'],
+      '* * * * *': ['video-pushes:run', 'folder-move:run'],
     },
     prerender: {
       crawlLinks: false,
@@ -102,6 +105,10 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
+      // The release this build is, from package.json, so an administrator can confirm which
+      // version they are looking at (the account menu and Church details show it).
+      appVersion: pkg.version,
+
       // Public origin this deployment answers on, used for the absolute <loc>
       // URLs in /sitemap.xml and the Sitemap: line in /robots.txt.
       // Runtime override (no rebuild): NUXT_PUBLIC_SITE_URL=https://new.lifegate.bible
