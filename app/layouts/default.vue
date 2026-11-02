@@ -122,9 +122,7 @@ watch(() => auth.user?.id, (id) => {
   }
 })
 
-const appVersion = useRuntimeConfig().public.appVersion
-// Anyone who runs part of the site is shown which release it is.
-const isAdmin = computed(() => auth.can({ siteSettings: ['update'] }) || auth.can({ audit: ['view'] }) || auth.can({ sermon: ['update'] }) || auth.can({ user: ['list'] }))
+const appVersion = useAppVersion()
 
 // Help pages exist for the office jobs; only those roles get the menu entry.
 const hasHelp = computed(() => auth.can({ giving: ['record'] }) || auth.can({ stewardship: ['view'] }))
@@ -157,7 +155,7 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => accountMenuGroups<Dropd
     ...(hasHelp.value ? [{ label: 'Help', icon: 'i-lucide-circle-question-mark', to: '/help' }] : []),
   ],
   signOut: [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
-  // Which release this is, for those who run the site to check against.
-  footer: isAdmin.value ? [{ label: `Version ${appVersion}`, icon: 'i-lucide-tag', type: 'label' as const }] : [],
+  // Which release this is, for an Admin to check against (nobody else is told).
+  footer: appVersion.value ? [{ label: `Version ${appVersion.value}`, icon: 'i-lucide-tag', type: 'label' as const }] : [],
 }))
 </script>

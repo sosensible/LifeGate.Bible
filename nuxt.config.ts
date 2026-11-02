@@ -104,11 +104,12 @@ export default defineNuxtConfig({
     '/offline': { prerender: true },
   },
   runtimeConfig: {
+    // The release this build is, from package.json, so an Admin can confirm which version they
+    // are looking at. Deliberately NOT under `public`: that is copied into every page's HTML,
+    // and a version number tells a stranger which known flaws to try. Only the Admin-only
+    // /api/admin/version route reads it.
+    appVersion: pkg.version,
     public: {
-      // The release this build is, from package.json, so an administrator can confirm which
-      // version they are looking at (the account menu and Church details show it).
-      appVersion: pkg.version,
-
       // Public origin this deployment answers on, used for the absolute <loc>
       // URLs in /sitemap.xml and the Sitemap: line in /robots.txt.
       // Runtime override (no rebuild): NUXT_PUBLIC_SITE_URL=https://new.lifegate.bible
