@@ -2,7 +2,7 @@
 // video copies go without typing a path. Folders only: no file names or contents are ever sent.
 // Works on any system the site runs on: "/" on Linux, macOS and in a container, and the list of
 // drives on Windows. Only used behind the Admin-only integrations right (see the routes).
-import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { accessSync, constants, existsSync, mkdirSync, readdirSync, statfsSync, statSync } from 'node:fs'
 import { dirname, join, parse } from 'node:path'
 import { createError } from 'h3'
 import { localVideoFolder, normalizeFolder } from './local-video.ts'
@@ -14,12 +14,33 @@ export interface FolderListing {
   folders: { name: string, path: string }[]
   // True when the list was cut short.
   more: boolean
+  // Whether the server may put files in this folder, and the room on its disk. Asked of the
+  // operating system without writing anything, so just looking leaves no trace. The full test
+  // (a real file written and removed) happens when the folder is saved.
+  writable: boolean
+  freeBytes: number | null
 }
 
 export const MAX_FOLDERS = 500
 const windows = () => process.platform === 'win32'
 
 const drives = () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => `${letter}:\\`).filter(drive => existsSync(drive))
+
+const roomIn = (path: string) => {
+  let writable = false
+  try {
+    accessSync(path, constants.W_OK | constants.X_OK)
+    writable = true
+  }
+  catch {}
+  try {
+    const stats = statfsSync(path)
+    return { writable, freeBytes: Number(stats.bavail) * Number(stats.bsize) }
+  }
+  catch {
+    return { writable, freeBytes: null }
+  }
+}
 
 const isFolder = (path: string) => {
   try {
@@ -34,7 +55,7 @@ const isFolder = (path: string) => {
 // top; an empty string asks for the top itself.
 export const listFolder = (input?: string | null): FolderListing => {
   const wanted = input === undefined || input === null ? localVideoFolder() : input.trim()
-  if (!wanted && windows()) return { path: null, parent: null, folders: drives().map(drive => ({ name: drive, path: drive })), more: false }
+  if (!wanted && windows()) return { path: null, parent: null, folders: drives().map(drive => ({ name: drive, path: drive })), more: false, writable: false, freeBytes: null }
   const path = wanted ? normalizeFolder(wanted) : parse(process.cwd()).root
   if (!isFolder(path)) throw createError({ statusCode: 404, statusMessage: 'That folder was not found on the server.' })
   let entries
@@ -55,6 +76,7 @@ export const listFolder = (input?: string | null): FolderListing => {
     parent: up !== path ? up : windows() ? '' : null,
     folders: folders.slice(0, MAX_FOLDERS),
     more: folders.length > MAX_FOLDERS,
+    ...roomIn(path),
   }
 }
 

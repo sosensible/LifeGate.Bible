@@ -1,5 +1,5 @@
 // Looking through the server's folders and making a new one, for choosing where video copies go.
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -40,6 +40,24 @@ describe('looking through folders', () => {
     expect(listing.folders[0]!.path).toBe(join(dir, 'tree', '2 first'))
     expect(listing.path).toBe(join(dir, 'tree'))
     expect(listing.more).toBe(false)
+  })
+
+  it('says whether the server can save files in the folder, and how much room there is', () => {
+    const open = lib.listFolder(join(dir, 'tree'))
+    expect(open.writable).toBe(true)
+    expect(open.freeBytes).toBeGreaterThan(0)
+    const shut = join(dir, 'read-only')
+    mkdirSync(shut)
+    chmodSync(shut, 0o555)
+    // Running as the superuser ignores permissions, so only check where they apply.
+    if (process.getuid?.() !== 0) expect(lib.listFolder(shut).writable).toBe(false)
+    chmodSync(shut, 0o755)
+  })
+
+  it('does not leave anything behind by looking', () => {
+    const before = readdirSync(join(dir, 'tree')).length
+    lib.listFolder(join(dir, 'tree'))
+    expect(readdirSync(join(dir, 'tree')).length).toBe(before)
   })
 
   it('names the folder above, so a person can go up', () => {

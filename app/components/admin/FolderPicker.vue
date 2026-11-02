@@ -8,6 +8,14 @@
         </div>
 
         <UAlert v-if="error" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="error" />
+        <p v-else-if="listing?.path && listing.writable" class="flex items-center gap-1.5 text-sm text-success">
+          <UIcon name="i-lucide-circle-check" class="size-4 shrink-0" />
+          The server can save files in this folder<template v-if="listing.freeBytes !== null"> · about {{ Math.round(listing.freeBytes / 1e9) }} GB free</template>.
+        </p>
+        <p v-else-if="listing?.path" class="flex items-center gap-1.5 text-sm text-warning">
+          <UIcon name="i-lucide-triangle-alert" class="size-4 shrink-0" />
+          The server can look here but cannot save files in it. Pick another folder, or make one that it can.
+        </p>
 
         <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
           <p v-if="loading" class="text-muted p-3 text-sm">Looking…</p>
@@ -31,7 +39,7 @@
     </template>
     <template #footer>
       <UButton color="neutral" variant="outline" @click="open = false">Cancel</UButton>
-      <UButton icon="i-lucide-check" :disabled="!listing?.path" @click="choose">Use this folder</UButton>
+      <UButton icon="i-lucide-check" :disabled="!listing?.path || !listing.writable" @click="choose">Use this folder</UButton>
     </template>
   </UModal>
 </template>
@@ -39,7 +47,7 @@
 <script setup lang="ts">
 // Lets an Admin look through the server's folders and make a new one, instead of typing a path.
 // Folders only. The server decides what can be seen; this only asks (see server/lib/folder-browser.ts).
-interface Listing { path: string | null, parent: string | null, folders: { name: string, path: string }[], more: boolean }
+interface Listing { path: string | null, parent: string | null, folders: { name: string, path: string }[], more: boolean, writable: boolean, freeBytes: number | null }
 
 const props = defineProps<{ start?: string }>()
 const emit = defineEmits<{ choose: [path: string] }>()
