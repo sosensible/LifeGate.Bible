@@ -14,7 +14,7 @@ services:
   lifegate:
     # The same published image as production. Promote by pointing production at
     # a tag that has already run here.
-    image: ghcr.io/sosensible/lifegate-church:1.4.1
+    image: ghcr.io/sosensible/lifegate-church:1.4.2
     container_name: lifegate-staging
     restart: unless-stopped
     environment:
@@ -58,6 +58,8 @@ services:
       # Its own directory. Pointing both environments at one path would let a
       # rehearsal write to the real records.
       - /DATA/AppData/lifegate-staging/data:/app/.data
+      # Its own folder for video copies, apart from production's (see the production file).
+      - /DATA/AppData/lifegate-staging/videos:/videos
 
     ports:
       - target: 3000
@@ -75,7 +77,7 @@ x-casaos:
   title:
     en_US: Lifegate (staging)
   category: Others
-  version: "1.4.1"
+  version: "1.4.2"
   tagline:
     en_US: Rehearsal copy - fake data, no real mail
   description:

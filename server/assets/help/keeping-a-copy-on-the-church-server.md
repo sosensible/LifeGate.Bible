@@ -17,8 +17,10 @@ Only an **Admin** can set this up.
 ## 1. Choose a folder
 
 1. Open **Church details** from your account menu, then open the **Video** section.
-2. Under **Copy on the church server**, type the **full path** of a folder on the server, for
-   example `/data/teaching-videos`. Write it as the server sees it, starting with `/`.
+2. Under **Copy on the church server**, press **Browse**. Look through the server's folders,
+   press **Make folder** if you need a new one, then **Use this folder**. You can also type the
+   **full path** instead, written as the server sees it (it starts with `/`, or with a drive
+   letter on Windows).
 3. Press **Save folder**. The site makes the folder if it is missing, checks it can write there,
    and shows **On** with how much free space is left.
 

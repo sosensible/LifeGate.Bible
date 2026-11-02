@@ -114,6 +114,34 @@ database into an image you push anywhere.
 > app definitions, migrations run at startup, and the native module is built for
 > amd64. What remains is a **backup job** — see [Backups](#5-backups).
 
+### Video folder
+
+The church can keep its own copy of each teaching video (Church details > Video >
+Copy on the church server). Those files are large (roughly 1.5 to 2 GB a message), so they
+get their own folder rather than sharing the database's.
+
+The setting is a plain folder path, so it works the same on any system the site runs on. An
+Admin chooses it on Church details with **Browse**, which lists the server's folders and can
+make a new one. It shows folders only (never file names), is limited to Admins, and only sees
+what the site's own user may open.
+
+**In a container** the site only sees what you mount. Mount a host folder at `/videos`
+(`-v /path/on/host:/videos` with plain Docker, or the `volumes:` line in the ZimaOS files),
+then choose `/videos`, or a folder made inside it. A folder anywhere else in the container
+disappears when the site is updated.
+
+**Permissions.** The image runs as user `node` (uid 1000). The mounted folder must be writable
+by it, or Church details says the server cannot write there:
+
+```bash
+sudo chown 1000:1000 /path/on/host   # or: sudo chmod 775 /path/on/host with a shared group
+```
+
+**Without a container** (a Node process on Linux, macOS or Windows), choose any folder the
+account running the site can write to, such as `/srv/lifegate/videos` or `D:\Teaching videos`.
+
+Back the folder up like the data folder: it holds the only church-owned copy of each video.
+
 ### Always build for amd64
 
 The classic failure mode is pushing an arm64 image from an Apple Silicon laptop;

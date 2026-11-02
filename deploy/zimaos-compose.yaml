@@ -18,7 +18,7 @@ services:
     # Published by .github/workflows/image.yml. Make the GHCR package public
     # once, so this pulls without a registry login (CasaOS has no UI for one).
     # Pin a version rather than :latest so a reinstall is reproducible.
-    image: ghcr.io/sosensible/lifegate-church:1.4.1
+    image: ghcr.io/sosensible/lifegate-church:1.4.2
     container_name: lifegate-production
     restart: unless-stopped
     environment:
@@ -80,6 +80,13 @@ services:
       # volume, because the importer rejects top-level `volumes:` -- and
       # because a visible path is one you can point a backup job at.
       - /DATA/AppData/lifegate-production/data:/app/.data
+      # Where the church keeps its own copy of each teaching video (Church details >
+      # Video > Copy on the church server). The site looks through folders and makes
+      # new ones from that screen, but only inside what is mounted here: choose
+      # /videos, or a folder made inside it. Point the left side at a bigger disk if
+      # you like. The site runs as user 1000 (node), so that folder must be writable
+      # by it. See deploy/README.md, "Video folder".
+      - /DATA/AppData/lifegate-production/videos:/videos
 
     ports:
       - target: 3000
@@ -99,7 +106,7 @@ x-casaos:
   title:
     en_US: Lifegate Baptist Church
   category: Others
-  version: "1.4.1"
+  version: "1.4.2"
   tagline:
     en_US: Lifegate Baptist Church - Eau Claire, Michigan
   description:

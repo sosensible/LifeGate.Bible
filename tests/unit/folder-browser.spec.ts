@@ -1,0 +1,118 @@
+// Looking through the server's folders and making a new one, for choosing where video copies go.
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+const dir = mkdtempSync(join(tmpdir(), 'lifegate-folder-browser-'))
+process.env.DATABASE_PATH = join(dir, 'test.db')
+
+let lib: typeof import('../../server/lib/folder-browser')
+
+beforeAll(async () => {
+  // Starting with nothing chosen reads the saved folder setting, so the database needs its tables.
+  const { db } = await import('../../server/lib/db')
+  const { migrate } = await import('drizzle-orm/better-sqlite3/migrator')
+  migrate(db, { migrationsFolder: 'server/database/migrations' })
+  lib = await import('../../server/lib/folder-browser')
+  for (const name of ['Beta', 'alpha', '10 later', '2 first', '.hidden']) mkdirSync(join(dir, 'tree', name), { recursive: true })
+  writeFileSync(join(dir, 'tree', 'a-file.txt'), 'not a folder')
+  mkdirSync(join(dir, 'elsewhere'))
+  symlinkSync(join(dir, 'elsewhere'), join(dir, 'tree', 'linked'))
+  symlinkSync(join(dir, 'tree', 'a-file.txt'), join(dir, 'tree', 'linked-file'))
+})
+afterAll(() => rmSync(dir, { recursive: true, force: true }))
+
+const statusOf = (run: () => unknown) => {
+  try {
+    run()
+  }
+  catch (error) {
+    return (error as { statusCode?: number }).statusCode
+  }
+  return undefined
+}
+
+describe('looking through folders', () => {
+  it('lists only folders, in a natural order, leaving out hidden ones and files', () => {
+    const listing = lib.listFolder(join(dir, 'tree'))
+    expect(listing.folders.map(folder => folder.name)).toEqual(['2 first', '10 later', 'alpha', 'Beta', 'linked'])
+    expect(listing.folders[0]!.path).toBe(join(dir, 'tree', '2 first'))
+    expect(listing.path).toBe(join(dir, 'tree'))
+    expect(listing.more).toBe(false)
+  })
+
+  it('names the folder above, so a person can go up', () => {
+    expect(lib.listFolder(join(dir, 'tree', 'alpha')).parent).toBe(join(dir, 'tree'))
+  })
+
+  it('has no folder above the top', () => {
+    const top = lib.listFolder('/')
+    expect(top.parent === null || top.parent === '').toBe(true)
+  })
+
+  it('starts at the top of the system when nothing is chosen yet and no folder is set', () => {
+    expect(lib.listFolder().path).toBe('/')
+    expect(lib.listFolder('').path).toBe('/')
+  })
+
+  it('refuses a path that is not a full path, or tries to climb out', () => {
+    expect(statusOf(() => lib.listFolder('tree'))).toBe(400)
+    expect(statusOf(() => lib.listFolder(`${dir}/tree/../..`))).toBe(400)
+  })
+
+  it('says plainly when the folder is not there, or is a file', () => {
+    expect(statusOf(() => lib.listFolder(join(dir, 'nope')))).toBe(404)
+    expect(statusOf(() => lib.listFolder(join(dir, 'tree', 'a-file.txt')))).toBe(404)
+  })
+
+  it('says plainly when the server may not look inside', () => {
+    const locked = join(dir, 'locked')
+    mkdirSync(locked)
+    chmodSync(locked, 0o000)
+    // Running as the superuser ignores permissions, so only check where they apply.
+    if (process.getuid?.() !== 0) expect(statusOf(() => lib.listFolder(locked))).toBe(403)
+    chmodSync(locked, 0o755)
+  })
+
+  it('cuts a very long list short and says so', () => {
+    const big = join(dir, 'big')
+    mkdirSync(big)
+    for (let i = 0; i < lib.MAX_FOLDERS + 3; i++) mkdirSync(join(big, `f${String(i).padStart(4, '0')}`))
+    const listing = lib.listFolder(big)
+    expect(listing.folders).toHaveLength(lib.MAX_FOLDERS)
+    expect(listing.more).toBe(true)
+  })
+})
+
+describe('making a folder', () => {
+  it('makes one folder inside an existing one', () => {
+    const made = lib.createFolder(join(dir, 'tree'), '  Teaching videos  ')
+    expect(made).toEqual({ path: join(dir, 'tree', 'Teaching videos'), name: 'Teaching videos' })
+    expect(existsSync(made.path)).toBe(true)
+  })
+
+  it('does not make the folders above it', () => {
+    expect(statusOf(() => lib.createFolder(join(dir, 'missing-parent'), 'child'))).toBe(404)
+    expect(existsSync(join(dir, 'missing-parent'))).toBe(false)
+  })
+
+  it('refuses a name that is a path, or would not be a plain folder name', () => {
+    for (const name of ['', '   ', '.', '..', 'a/b', 'a\\b', '../escape', 'bad:name', 'what?', 'trailing.', 'x'.repeat(101), 'tab\there']) {
+      expect(statusOf(() => lib.createFolder(join(dir, 'tree'), name)), name).toBe(400)
+    }
+    expect(existsSync(join(dir, 'escape'))).toBe(false)
+  })
+
+  it('says so when the name is taken, and leaves what is there alone', () => {
+    expect(statusOf(() => lib.createFolder(join(dir, 'tree'), 'alpha'))).toBe(409)
+  })
+
+  it('says plainly when the server may not write there', () => {
+    const closed = join(dir, 'closed')
+    mkdirSync(closed)
+    chmodSync(closed, 0o555)
+    if (process.getuid?.() !== 0) expect(statusOf(() => lib.createFolder(closed, 'child'))).toBe(403)
+    chmodSync(closed, 0o755)
+  })
+})

@@ -58,7 +58,10 @@
 
               <form v-if="!local?.move || local.move.state === 'done'" class="space-y-3" @submit.prevent="confirmingMove = true">
                 <UFormField label="Move the stored videos to another folder" help="Every video is copied and checked against its checksum first. Only when all are safely in the new folder does the site switch, and then the old files are removed. Uploads wait while it runs.">
-                  <UInput v-model="form.moveTo" placeholder="/data/new-teaching-videos" autocomplete="off" class="w-full" />
+                  <div class="flex items-center gap-2">
+                    <UInput v-model="form.moveTo" placeholder="Full path of the new folder" autocomplete="off" class="flex-1" />
+                    <UButton color="neutral" variant="outline" icon="i-lucide-folder-search" @click="browsing = 'moveTo'">Browse</UButton>
+                  </div>
                 </UFormField>
                 <div class="flex flex-wrap items-center gap-2">
                   <UButton type="submit" icon="i-lucide-folder-input" :disabled="!form.moveTo.trim()">Move the stored videos</UButton>
@@ -69,7 +72,10 @@
 
             <form v-else class="space-y-4" @submit.prevent="saveLocal">
               <UFormField label="Folder on the server" :help="localHelp">
-                <UInput v-model="form.localPath" placeholder="/data/teaching-videos" autocomplete="off" class="w-full" />
+                <div class="flex items-center gap-2">
+                  <UInput v-model="form.localPath" placeholder="Full path of the folder" autocomplete="off" class="flex-1" />
+                  <UButton color="neutral" variant="outline" icon="i-lucide-folder-search" @click="browsing = 'localPath'">Browse</UButton>
+                </div>
               </UFormField>
               <p v-if="local?.writable && local.freeBytes !== null" class="text-muted text-sm">About {{ formatFree(local.freeBytes) }} free on that disk. One message is roughly 1.5 to 2 GB.</p>
               <div class="flex flex-wrap items-center gap-2">
@@ -90,7 +96,7 @@
           <section class="rounded-lg border border-default p-5 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 class="font-serif text-xl font-bold text-highlighted">Church video host</h3>
+                <h3 class="font-serif text-xl font-bold text-highlighted">Church video host <span class="text-muted text-base font-normal">(Bunny Stream)</span></h3>
                 <p class="text-muted text-sm">Our own copy of each video, played only for people who may watch it.</p>
               </div>
               <UBadge variant="subtle" :color="targets.host ? 'success' : 'neutral'" :icon="targets.host ? 'i-lucide-circle-check' : 'i-lucide-plug-zap'">
@@ -119,7 +125,7 @@
               </UFormField>
               <UButton type="submit" icon="i-lucide-save" :loading="saving === 'host'" :disabled="!hostChanged">Save video host</UButton>
             </form>
-            <p class="text-muted text-xs">Where to find each one is in the <NuxtLink to="/help/setting-up-the-video-host" class="text-primary hover:underline">video host guide</NuxtLink>.</p>
+            <p class="text-muted text-xs">These are Bunny Stream’s own settings. Where to find each one is in the <NuxtLink to="/help/setting-up-the-video-host" class="text-primary hover:underline">video host guide</NuxtLink>.</p>
           </section>
 
           <!-- YouTube -->
@@ -168,6 +174,8 @@
         </template>
       </div>
 
+      <AdminFolderPicker :open="browsing !== null" :start="browsing ? form[browsing] : ''" @update:open="closeBrowser" @choose="chosenFolder" />
+
       <UModal v-model:open="confirmingMove" title="Move the stored videos?" :description="`${local?.stored.count ?? 0} videos (${formatFree(local?.stored.bytes ?? 0)}) will be copied to ${form.moveTo.trim()} and each one checked. The site switches to the new folder only when all are safely there. Uploads wait while it runs.`">
         <template #footer>
           <UButton color="neutral" variant="outline" @click="confirmingMove = false">Cancel</UButton>
@@ -211,6 +219,14 @@ const loadError = ref<unknown>(null)
 const form = reactive({ libraryId: '', apiKey: '', tokenKey: '', cdnHost: '', clientId: '', clientSecret: '', localPath: '', moveTo: '' })
 type LocalStatus = { path: string | null, writable: boolean, freeBytes: number | null, stored: { count: number, bytes: number }, move: FolderMoveView | null }
 const local = ref<LocalStatus | null>(null)
+// Which folder box the folder chooser is filling in, while it is open.
+const browsing = ref<'localPath' | 'moveTo' | null>(null)
+const closeBrowser = (open: boolean) => {
+  if (!open) browsing.value = null
+}
+const chosenFolder = (path: string) => {
+  if (browsing.value) form[browsing.value] = path
+}
 
 const load = async () => {
   if (!canManage.value) return
