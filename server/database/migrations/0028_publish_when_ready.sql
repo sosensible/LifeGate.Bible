@@ -1,0 +1,1 @@
+ALTER TABLE `sermons` ADD `publish_when_ready_by` text REFERENCES user(id);

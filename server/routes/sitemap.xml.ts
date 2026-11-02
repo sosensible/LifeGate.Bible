@@ -1,6 +1,7 @@
-import { and, asc, desc, eq } from 'drizzle-orm'
-import { ministries, sermons } from '../database/schema/index.ts'
+import { asc } from 'drizzle-orm'
+import { ministries } from '../database/schema/index.ts'
 import { db } from '../lib/db.ts'
+import { loadSermons, sermonAvailability } from '../lib/sermons.ts'
 
 // Public XML sitemap.
 //
@@ -50,10 +51,10 @@ export default defineEventHandler((event) => {
     ...STATIC_PATHS,
     ...db.select({ slug: ministries.slug }).from(ministries).orderBy(asc(ministries.name)).all()
       .map(m => `/ministries/${m.slug}`),
-    // Only published public sermons. Members-only ones would bounce to sign-in.
-    ...db.select({ slug: sermons.slug }).from(sermons)
-      .where(and(eq(sermons.status, 'published'), eq(sermons.visibility, 'public')))
-      .orderBy(desc(sermons.preachedOn)).all()
+    // Only messages anyone may see. Members-only ones would bounce to sign-in, and one
+    // its teacher, the pastor or an administrator has paused or limited is not for
+    // search engines to find.
+    ...loadSermons().filter(sermon => sermonAvailability(sermon).audience === 'public')
       .map(s => `/teaching/${s.slug}`),
   ]
 

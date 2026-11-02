@@ -6,7 +6,10 @@
           <p class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase mb-2">Church Office</p>
           <h1 class="text-4xl font-bold font-serif text-white">Accounts</h1>
         </div>
-        <UButton v-if="canCreate" color="secondary" icon="i-lucide-user-plus" @click="openEditor(null)">Add account</UButton>
+        <div class="flex flex-wrap gap-2">
+          <UButton variant="outline" icon="i-lucide-shield-check" class="text-white ring-white/40 hover:bg-white/10" @click="rolesOpen = true">Roles</UButton>
+          <UButton v-if="canCreate" color="secondary" icon="i-lucide-user-plus" @click="openEditor(null)">Add account</UButton>
+        </div>
       </div>
     </div>
 
@@ -35,25 +38,41 @@
           </div>
 
           <div class="bg-elevated rounded-lg border border-default overflow-x-auto">
-            <UTable :data="filtered" :columns="columns" empty="No accounts match that search.">
+            <UTable :data="paged" :columns="columns" empty="No accounts match that search.">
               <template #account-cell="{ row }">
-                <button type="button" class="text-left group" @click="openEditor(row.original)">
-                  <span class="block font-bold text-highlighted group-hover:text-primary">
-                    {{ row.original.name }}
-                    <UBadge v-if="row.original.id === auth.user?.id" size="sm" variant="subtle" color="neutral" class="ml-1">You</UBadge>
-                  </span>
-                  <span class="block text-muted text-xs">{{ row.original.email }}</span>
-                </button>
+                <div class="flex items-center gap-3">
+                  <!-- The avatar goes to the member's page; an account with none opens the account instead. -->
+                  <NuxtLink v-if="row.original.person" :to="`/people/${row.original.person.id}`" class="shrink-0" :aria-label="`Open ${row.original.person.firstName} ${row.original.person.lastName}’s page`">
+                    <UAvatar :src="row.original.person.photoUrl ?? undefined" :alt="row.original.name" :text="initialsOfName(row.original.name)" size="md" />
+                  </NuxtLink>
+                  <button v-else type="button" class="shrink-0" :aria-label="`Manage ${row.original.name}`" @click="openEditor(row.original)">
+                    <UAvatar :alt="row.original.name" :text="initialsOfName(row.original.name)" size="md" />
+                  </button>
+                  <button type="button" class="text-left group min-w-0" @click="openEditor(row.original)">
+                    <span class="block font-bold text-highlighted group-hover:text-primary">
+                      {{ row.original.name }}
+                      <UBadge v-if="row.original.id === auth.user?.id" size="sm" variant="subtle" color="neutral" class="ml-1">You</UBadge>
+                    </span>
+                    <span class="block text-muted text-xs">{{ row.original.email }}</span>
+                  </button>
+                </div>
               </template>
               <template #roles-cell="{ row }">
+                <!-- Being a member is what almost everyone is, and is shown by the directory link instead. -->
                 <div class="flex flex-wrap gap-1">
-                  <UBadge v-for="role in row.original.roles" :key="role" size="sm" variant="subtle" :color="role === 'admin' ? 'error' : 'primary'">{{ ROLE_INFO[role].label }}</UBadge>
+                  <UBadge v-for="role in shownRoles(row.original)" :key="role" size="sm" variant="subtle" :color="role === 'admin' ? 'error' : 'primary'">{{ ROLE_INFO[role].label }}</UBadge>
                   <span v-if="!row.original.roles.length" class="text-muted text-xs">No role</span>
+                  <span v-else-if="!shownRoles(row.original).length" class="text-muted text-xs">—</span>
                 </div>
               </template>
               <template #person-cell="{ row }">
-                <span v-if="row.original.person" class="text-toned text-xs">{{ row.original.person.firstName }} {{ row.original.person.lastName }}</span>
-                <UBadge v-else-if="needsDirectoryEntry(row.original)" size="sm" variant="subtle" color="warning" icon="i-lucide-user-round-x">Not in directory</UBadge>
+                <NuxtLink v-if="row.original.person" :to="`/people/${row.original.person.id}`" class="text-primary hover:underline text-xs inline-flex items-center gap-1">
+                  <UIcon name="i-lucide-id-card" class="size-3.5" />{{ row.original.person.firstName }} {{ row.original.person.lastName }}
+                </NuxtLink>
+                <div v-else-if="needsDirectoryEntry(row.original)" class="flex flex-wrap items-center gap-2">
+                  <UBadge size="sm" variant="subtle" color="warning" icon="i-lucide-user-round-x">Not in directory</UBadge>
+                  <UButton v-if="canCreateEntry" size="xs" variant="outline" color="neutral" icon="i-lucide-user-round-plus" :loading="creatingEntry === row.original.id" @click="createEntry(row.original)">Create entry</UButton>
+                </div>
                 <span v-else class="text-toned text-xs">—</span>
               </template>
               <template #lastSignIn-cell="{ row }">
@@ -69,25 +88,16 @@
               </template>
             </UTable>
           </div>
-        </section>
 
-        <!-- What each role does -->
-        <section>
-          <h2 class="font-serif text-2xl font-bold text-highlighted mb-1">Roles</h2>
-          <p class="text-toned text-sm mb-4">An account can hold several roles; it gets everything each one allows. Roles are defined in the site’s code, so adding a new kind of role is a development change.</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="role in ASSIGNABLE_ROLES" :key="role" class="bg-elevated rounded-lg border border-default p-5">
-              <p class="font-bold text-highlighted">{{ ROLE_INFO[role].label }}</p>
-              <p class="text-toned text-sm mb-3">{{ ROLE_INFO[role].description }}</p>
-              <div class="flex flex-wrap gap-1">
-                <UBadge v-for="label in permissionLabels(role)" :key="label" size="sm" variant="outline" color="neutral">{{ label }}</UBadge>
-              </div>
-            </div>
+          <div v-if="filtered.length > pageSize" class="flex flex-wrap items-center justify-between gap-3 mt-4">
+            <p class="text-muted text-sm">{{ firstShown }}–{{ lastShown }} of {{ filtered.length }}</p>
+            <UPagination v-model:page="page" :total="filtered.length" :items-per-page="pageSize" />
           </div>
         </section>
       </div>
     </div>
 
+    <AdminRolesModal v-model:open="rolesOpen" />
     <AdminAccountSlideover v-model:open="editorOpen" :account="editing" @saved="onSaved" @removed="onRemoved" />
   </div>
 </template>
@@ -95,7 +105,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { needsDirectoryEntry, type AccountView } from '#shared/accounts'
-import { ASSIGNABLE_ROLES, permissionLabels, ROLE_INFO } from '#shared/auth/role-info'
+import type { AssignableRole } from '#shared/auth/role-info'
+import { ROLE_INFO } from '#shared/auth/role-info'
 
 definePageMeta({
   middleware: 'auth',
@@ -105,7 +116,18 @@ definePageMeta({
 useSeoMeta({ title: 'Accounts' })
 
 const auth = useAuthStore()
+const toast = useToast()
 const canCreate = computed(() => auth.can({ user: ['create', 'set-role'] }))
+// Making a directory entry for an account is directory work as well as account work.
+const canCreateEntry = computed(() => auth.can({ user: ['list'], people: ['create', 'update'] }))
+const rolesOpen = ref(false)
+
+// "Jane Q Public" -> JP. An account has one name; this is only for its avatar.
+const initialsOfName = (name: string) => {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return ((words[0]?.[0] ?? '') + (words.length > 1 ? words[words.length - 1]![0]! : '')).toUpperCase()
+}
+const shownRoles = (account: AccountView): AssignableRole[] => account.roles.filter(role => role !== 'member')
 
 const { data, error } = await useFetch('/api/admin/accounts')
 const accounts = ref<AccountView[]>(data.value?.accounts ?? [])
@@ -114,7 +136,7 @@ watch(data, value => accounts.value = value?.accounts ?? [])
 const columns: TableColumn<AccountView>[] = [
   { id: 'account', header: 'Account' },
   { id: 'roles', header: 'Roles' },
-  { id: 'person', header: 'Directory' },
+  { id: 'person', header: 'Member' },
   { id: 'lastSignIn', header: 'Last sign-in' },
   { id: 'status', header: '' },
   { id: 'actions', header: '' },
@@ -134,6 +156,30 @@ const filtered = computed(() => {
     [a.name, a.email, ...a.roles.map(r => ROLE_INFO[r].label)].some(value => value.toLowerCase().includes(q)),
   )
 })
+
+// Twelve at a time, so the list stays short enough to scan.
+const pageSize = 12
+const page = ref(1)
+watch([search, onlyNotInDirectory], () => { page.value = 1 })
+const paged = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+const firstShown = computed(() => (page.value - 1) * pageSize + 1)
+const lastShown = computed(() => Math.min(page.value * pageSize, filtered.value.length))
+
+const creatingEntry = ref<string | null>(null)
+const createEntry = async (account: AccountView) => {
+  creatingEntry.value = account.id
+  try {
+    const result = await $fetch<{ account: AccountView }>(`/api/admin/accounts/${account.id}/person`, { method: 'POST' })
+    accounts.value = accounts.value.map(a => a.id === account.id ? result.account : a)
+    toast.add({ title: 'Directory entry created', description: `${account.name} is now in the directory. Fill in the rest on the People page.`, color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (error) {
+    toast.add({ title: 'Not created', description: apiErrorMessage(error), color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    creatingEntry.value = null
+  }
+}
 
 const editorOpen = ref(false)
 const editing = ref<AccountView | null>(null)

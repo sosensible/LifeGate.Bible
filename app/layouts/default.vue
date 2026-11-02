@@ -125,9 +125,13 @@ watch(() => auth.user?.id, (id) => {
 // Help pages exist for the office jobs; only those roles get the menu entry.
 const hasHelp = computed(() => auth.can({ giving: ['record'] }) || auth.can({ stewardship: ['view'] }))
 
-const accountMenu = computed<DropdownMenuItem[][]>(() => [
-  [
-    ...(auth.isMember ? [{ label: 'My Page', icon: 'i-lucide-id-card', to: '/me' }, { label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }] : []),
+const accountMenu = computed<DropdownMenuItem[][]>(() => accountMenuGroups<DropdownMenuItem & { label: string }>({
+  // Your own page and profile, apart from the rest.
+  personal: auth.isMember
+    ? [{ label: 'My Page', icon: 'i-lucide-id-card', to: '/me' }, { label: 'My Profile', icon: 'i-lucide-user-round', to: '/profile' }]
+    : [],
+  // Everything else you can open, alphabetical (see app/utils/account-menu.ts).
+  others: [
     ...(ministryBudgets.value.ministries.length ? [{ label: 'Ministry budget', icon: 'i-lucide-wallet', to: '/ministry-budget' }] : []),
     ...(myTeaching.value.sermons.length ? [{ label: 'My teaching', icon: 'i-lucide-book-open', to: '/my-teaching' }] : []),
     ...(myLists.value.ministries.length ? [{ label: 'My lists', icon: 'i-lucide-list-checks', to: '/my-lists' }] : []),
@@ -140,10 +144,13 @@ const accountMenu = computed<DropdownMenuItem[][]>(() => [
     ...(auth.can({ stewardship: ['grantAccess'] }) && !auth.can({ stewardship: ['view'] }) ? [{ label: 'Ministry budget access', icon: 'i-lucide-shield-check', to: '/admin/stewardship/ministry-access' }] : []),
     ...(auth.can({ user: ['list'] }) ? [{ label: 'Accounts', icon: 'i-lucide-key-round', to: '/admin/accounts' }] : []),
     ...(auth.can({ siteSettings: ['update'] }) ? [{ label: 'Church details', icon: 'i-lucide-church', to: '/admin/site' }] : []),
-    ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
   ],
-  // Help for office work: shown to those who have at least one help page.
-  ...(hasHelp.value ? [[{ label: 'Help', icon: 'i-lucide-circle-question-mark', to: '/help' }]] : []),
-  [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
-].filter(group => group.length))
+  // The audit log sits above Help. Help is for office work: shown to those who have at
+  // least one help page.
+  support: [
+    ...(auth.can({ audit: ['view'] }) ? [{ label: 'Audit log', icon: 'i-lucide-scroll-text', to: '/admin/audit' }] : []),
+    ...(hasHelp.value ? [{ label: 'Help', icon: 'i-lucide-circle-question-mark', to: '/help' }] : []),
+  ],
+  signOut: [{ label: 'Sign Out', icon: 'i-lucide-log-out', onSelect: handleLogout }],
+}))
 </script>

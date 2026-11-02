@@ -37,8 +37,17 @@
                 <span class="text-toned">{{ row.original.speaker }}</span>
               </template>
               <template #video-cell="{ row }">
-                <UIcon v-if="row.original.videoId" name="i-lucide-circle-play" class="w-4 h-4 text-primary" aria-label="Has video" />
-                <span v-else class="text-muted text-xs">None</span>
+                <div class="flex flex-wrap items-center gap-1">
+                  <UBadge v-if="uploads.progress.value[row.original.id]" size="sm" variant="subtle" :color="uploads.progress.value[row.original.id]!.phase === 'failed' ? 'error' : 'info'" :icon="uploads.progress.value[row.original.id]!.phase === 'failed' ? 'i-lucide-circle-alert' : 'i-lucide-upload'">
+                    {{ uploads.progress.value[row.original.id]!.phase === 'failed' ? 'Upload stopped' : uploads.progress.value[row.original.id]!.phase === 'starting' ? 'Starting…' : `Uploading ${uploads.progress.value[row.original.id]!.percent}%` }}
+                  </UBadge>
+                  <UBadge v-else-if="row.original.hosted" size="sm" variant="subtle" :color="row.original.hosted.state === 'ready' ? 'success' : row.original.hosted.state === 'failed' ? 'error' : 'warning'" :icon="row.original.hosted.state === 'ready' ? 'i-lucide-circle-check' : row.original.hosted.state === 'failed' ? 'i-lucide-circle-alert' : 'i-lucide-loader-circle'">
+                    {{ HOSTED_VIDEO_LABELS[row.original.hosted.state] }}
+                  </UBadge>
+                  <UIcon v-if="row.original.videoId" name="i-lucide-circle-play" class="w-4 h-4 text-primary" aria-label="Has a YouTube video" />
+                  <UBadge v-if="row.original.publishWhenReady" size="sm" variant="subtle" color="neutral" icon="i-lucide-clock">Publishes when ready</UBadge>
+                  <span v-if="!row.original.videoId && !row.original.hosted && !uploads.progress.value[row.original.id]" class="text-muted text-xs">None</span>
+                </div>
               </template>
               <template #access-cell="{ row }">
                 <UBadge variant="subtle" :color="row.original.visibility === 'public' ? 'primary' : 'neutral'" :icon="row.original.visibility === 'public' ? 'i-lucide-globe' : 'i-lucide-lock'">
@@ -46,13 +55,18 @@
                 </UBadge>
               </template>
               <template #status-cell="{ row }">
-                <UBadge variant="subtle" :color="row.original.status === 'published' ? 'success' : 'warning'">
-                  {{ row.original.status === 'published' ? 'Published' : 'Draft' }}
-                </UBadge>
+                <div class="flex flex-wrap gap-1">
+                  <UBadge variant="subtle" :color="row.original.status === 'published' ? 'success' : 'warning'">
+                    {{ row.original.status === 'published' ? 'Published' : 'Draft' }}
+                  </UBadge>
+                  <UBadge v-if="row.original.sharing.availability.blockedBy.length" variant="subtle" color="warning" icon="i-lucide-pause">{{ blockedSentence(row.original.sharing.availability.blockedBy) }}</UBadge>
+                  <UBadge v-else-if="row.original.sharing.teacherShare === 'members'" variant="subtle" color="info" icon="i-lucide-users">Limited by teacher</UBadge>
+                </div>
               </template>
               <template #actions-cell="{ row }">
                 <div class="flex gap-1 justify-end">
                   <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-external-link" :to="`/teaching/${row.original.slug}`" :aria-label="`View ${row.original.title}`" />
+                  <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-share-2" :aria-label="`Who can see ${row.original.title}`" @click="openSharing(row.original)" />
                   <UButton size="xs" variant="ghost" color="primary" icon="i-lucide-pencil" :aria-label="`Edit ${row.original.title}`" @click="openEditor(row.original)" />
                 </div>
               </template>
@@ -101,6 +115,8 @@
       @series-created="series.push($event)"
     />
 
+    <SermonSharingModal v-model:open="sharingOpen" :sermon="sharingSermon" @changed="onSaved" />
+
     <UModal
       :open="removingSeries !== null"
       title="Remove this series?"
@@ -118,6 +134,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { AdminSermonView, SeriesView } from '#shared/sermons'
+import { HOSTED_VIDEO_LABELS } from '#shared/hosted-video'
+import { blockedSentence } from '#shared/sermon-sharing'
 
 definePageMeta({
   middleware: 'auth',
@@ -171,6 +189,20 @@ const editing = ref<AdminSermonView | null>(null)
 const openEditor = (sermon: AdminSermonView | null) => {
   editing.value = sermon
   editorOpen.value = true
+}
+
+// A video upload, check or removal from anywhere changes a message here as it happens.
+const uploads = useHostedVideoUploads()
+uploads.onChanged((changed) => {
+  sermons.value = sermons.value.map(s => s.id === changed.id ? changed : s)
+})
+
+const sharingOpen = ref(false)
+const sharingId = ref<string | null>(null)
+const sharingSermon = computed(() => sermons.value.find(s => s.id === sharingId.value) ?? null)
+const openSharing = (sermon: AdminSermonView) => {
+  sharingId.value = sermon.id
+  sharingOpen.value = true
 }
 
 const newestFirst = (a: AdminSermonView, b: AdminSermonView) => b.preachedOn.localeCompare(a.preachedOn)

@@ -176,6 +176,34 @@
       "when": 1792869178541,
       "tag": "0024_notification_gap",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1793046487089,
+      "tag": "0025_count_counters",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1793630020133,
+      "tag": "0026_sermon_sharing",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1793637735166,
+      "tag": "0027_hosted_video",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1793639330096,
+      "tag": "0028_publish_when_ready",
+      "breakpoints": true
     }
   ]
 }

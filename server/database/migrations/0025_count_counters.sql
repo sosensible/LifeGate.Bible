@@ -1,0 +1,1 @@
+ALTER TABLE `offering_counts` ADD `counter_user_ids` text;

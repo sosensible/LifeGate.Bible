@@ -60,6 +60,17 @@
             <NuxtLink :to="{ path: '/teaching', query: { series: sermon.series.name } }" class="text-primary hover:underline">More from {{ sermon.series.name }}</NuxtLink>
           </div>
           <UBadge v-if="sermon.visibility === 'members'" variant="subtle" color="neutral" icon="i-lucide-lock">Members only</UBadge>
+          <div v-if="sharing">
+            <p class="text-gold-600 text-[10px] tracking-[0.15em] uppercase mb-2">Sharing</p>
+            <SermonSharing
+              :sermon-id="sermon.id"
+              :sharing="sharing"
+              :visibility="sermon.visibility"
+              :can-teach="isTeacher"
+              :hold-parties="holdParties"
+              @changed="saved => sharing = saved.sharing"
+            />
+          </div>
         </aside>
       </div>
     </div>
@@ -67,6 +78,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import type { SharingView } from '#shared/sermon-sharing'
 import type { AdminSermonView } from '#shared/sermons'
 
 definePageMeta({
@@ -78,6 +90,12 @@ const slug = computed(() => String(route.params.slug))
 const { data, error } = await useFetch(() => `/api/sermons/${encodeURIComponent(slug.value)}`)
 const sermon = computed(() => data.value?.sermon ?? null)
 const isTeacher = computed(() => Boolean(data.value?.isTeacher))
+
+// Who has set what about sharing it, shown only to its teacher, the pastor, administrators and
+// those who run the teaching. A change comes back from the server, so this stays its copy.
+const sharing = ref<SharingView | null>(data.value?.sharing ?? null)
+watch(data, value => sharing.value = value?.sharing ?? null)
+const holdParties = computed(() => data.value?.holdParties ?? [])
 
 // The message's own teacher edits its details here.
 const editorOpen = ref(false)

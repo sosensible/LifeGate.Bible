@@ -27,6 +27,10 @@ export const statement = {
   sermon: ['create', 'update', 'delete', 'publish'],
   // Scheduling Google Meet and YouTube Live links on the Teaching page.
   liveMeeting: ['manage'],
+  // Pausing sharing of a message (server/lib/sermons.ts). The pastor and the
+  // administrator each hold their own pause, apart from the office's publish settings
+  // and the teacher's choice; each lifts only its own.
+  sermonHold: ['pastor', 'admin'],
   ministry: ['update'],
   // The church's name, address, logo, contact details and service times
   // (/admin/site). Reading them is public; this is who may change them.
@@ -90,6 +94,7 @@ export const directoryManager = ac.newRole({
 
 export const pastor = ac.newRole({
   people: ['viewContact'],
+  sermonHold: ['pastor'],
   ministryList: ['view', 'viewLeadersOnly'],
   missions: ['update', 'delete'],
   speakers: ['update', 'delete'],
@@ -132,6 +137,7 @@ export const admin = ac.newRole({
   ...adminAc.statements,
   people: ['viewContact', 'create', 'update', 'delete', 'managePrivacy'],
   sermon: ['create', 'update', 'delete', 'publish'],
+  sermonHold: ['admin'],
   liveMeeting: ['manage'],
   ministry: ['update'],
   siteSettings: ['update'],

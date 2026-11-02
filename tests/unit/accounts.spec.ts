@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { needsDirectoryEntry } from '../../shared/accounts'
+import { needsDirectoryEntry, splitAccountName } from '../../shared/accounts'
 import { parseRoles, permissionLabels } from '../../shared/auth/role-info'
 
 const dir = mkdtempSync(join(tmpdir(), 'lifegate-accounts-'))
@@ -12,6 +12,7 @@ process.env.DATABASE_PATH = join(dir, 'test.db')
 let lib: typeof import('../../server/lib/accounts')
 let db: typeof import('../../server/lib/db').db
 let schema: typeof import('../../server/database/schema/index')
+let orm: typeof import('drizzle-orm')
 
 const addUser = (id: string, role: string, banned = false) => {
   const now = new Date()
@@ -24,6 +25,7 @@ beforeAll(async () => {
   migrate(db, { migrationsFolder: 'server/database/migrations' })
   schema = await import('../../server/database/schema/index')
   lib = await import('../../server/lib/accounts')
+  orm = await import('drizzle-orm')
 
   addUser('only-admin', 'admin,member')
   addUser('editor', 'member,contentEditor')
@@ -118,5 +120,55 @@ describe('connecting accounts to directory entries', () => {
     expect(lib.loadAccount('new-member')!.person).toBeNull()
     expect(lib.loadUnlinkedPeople().map(p => p.id)).toContain(ruth)
     expect(links().at(-1)).toMatchObject({ action: 'account.unlink', entityId: ruth })
+  })
+})
+
+describe('a directory entry made from an account', () => {
+  const named = (id: string, name: string, role = 'member') => {
+    const now = new Date()
+    db.insert(schema.user).values({ id, name, email: `${id}@example.org`, emailVerified: true, role, createdAt: now, updatedAt: now }).run()
+  }
+
+  it('splits an account name at its last word, and does not guess from a single word', () => {
+    expect(splitAccountName('Jane Public')).toEqual({ firstName: 'Jane', lastName: 'Public' })
+    expect(splitAccountName('  Mary  Ann   Smith ')).toEqual({ firstName: 'Mary Ann', lastName: 'Smith' })
+    expect(splitAccountName('Cher')).toBeNull()
+    expect(splitAccountName('   ')).toBeNull()
+  })
+
+  it('creates the entry from the account’s name and email, and connects them', () => {
+    named('make-entry', 'Grace Hopper')
+    const personId = db.transaction(tx => lib.createDirectoryEntry(tx, 'only-admin', 'make-entry'))
+    const person = db.select().from(schema.people).where(orm.eq(schema.people.id, personId)).get()!
+    expect(person).toMatchObject({ firstName: 'Grace', lastName: 'Hopper', email: 'make-entry@example.org', userId: 'make-entry', kind: 'member', isMinor: false })
+    expect(lib.loadAccount('make-entry')!.person).toMatchObject({ id: personId, firstName: 'Grace' })
+    expect(needsDirectoryEntry(lib.loadAccount('make-entry')!)).toBe(false)
+    const actions = db.select().from(schema.auditLog).all().filter(e => e.entityId === personId).map(e => e.action)
+    expect(actions).toEqual(expect.arrayContaining(['person.create', 'account.link']))
+  })
+
+  it('shares nothing it was not told: the new entry starts with everything private', () => {
+    const person = db.select().from(schema.people).where(orm.eq(schema.people.userId, 'make-entry')).get()!
+    expect(person).toMatchObject({ shareEmail: false, sharePhone: false, shareAddress: false, shareBirthday: false, sharePhoto: false, shareHousehold: false })
+  })
+
+  it('refuses an account that already has an entry, one with a one-word name, and one that does not exist', () => {
+    const status = (fn: () => unknown) => { try { fn() } catch (e) { return (e as { statusCode?: number }).statusCode } }
+    expect(status(() => db.transaction(tx => lib.createDirectoryEntry(tx, 'only-admin', 'make-entry')))).toBe(409)
+    named('one-word', 'Cher')
+    expect(status(() => db.transaction(tx => lib.createDirectoryEntry(tx, 'only-admin', 'one-word')))).toBe(400)
+    expect(lib.loadAccount('one-word')!.person).toBeNull()
+    expect(status(() => db.transaction(tx => lib.createDirectoryEntry(tx, 'only-admin', 'nobody')))).toBe(404)
+  })
+})
+
+describe('what the accounts list shows of a person’s photo', () => {
+  it('shows the photo only when the person shares it', () => {
+    const now = new Date()
+    db.insert(schema.user).values({ id: 'pic-user', name: 'Pic Person', email: 'pic@example.org', emailVerified: true, role: 'member', createdAt: now, updatedAt: now }).run()
+    const personId = db.insert(schema.people).values({ firstName: 'Pic', lastName: 'Person', userId: 'pic-user', photoUrl: '/api/photos/x.jpg', sharePhoto: false }).returning().get().id
+    expect(lib.loadAccount('pic-user')!.person!.photoUrl).toBeNull()
+    db.update(schema.people).set({ sharePhoto: true }).where(orm.eq(schema.people.id, personId)).run()
+    expect(lib.loadAccount('pic-user')!.person!.photoUrl).toBe('/api/photos/x.jpg')
   })
 })

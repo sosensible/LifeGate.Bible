@@ -69,6 +69,7 @@ export default defineNuxtConfig({
     scheduledTasks: {
       '0 5,11,17,23 * * *': ['stewardship:sync'],
       '0 6 * * *': ['stewardship:recurring'],
+      '*/2 * * * *': ['hosted-video:refresh'],
     },
     prerender: {
       crawlLinks: false,

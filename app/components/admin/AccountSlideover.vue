@@ -54,7 +54,7 @@
           <div v-if="!canLink">
             <dt class="text-gold-600 text-[10px] tracking-[0.15em] uppercase">Directory</dt>
             <dd class="text-toned">
-              <NuxtLink v-if="account.person" to="/admin/people" class="text-primary hover:underline">{{ account.person.firstName }} {{ account.person.lastName }}</NuxtLink>
+              <NuxtLink v-if="account.person" :to="`/people/${account.person.id}`" class="text-primary hover:underline">{{ account.person.firstName }} {{ account.person.lastName }}</NuxtLink>
               <span v-else>Not connected</span>
             </dd>
           </div>

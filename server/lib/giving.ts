@@ -11,6 +11,7 @@ import { UNDESIGNATED_LABEL, type CountSummary, type CountTotals, type CountView
 import { AVAILABLE_TO_FUND_ID, CASH_ACCOUNT_KINDS } from '../../shared/stewardship.ts'
 import { categories, categoryGroups, financeAccounts, financeTransactions, gifts, givers, households, offeringCounts, people, transactionSplits } from '../database/schema/index.ts'
 import type { Tx } from './audit.ts'
+import { chooseCounters, countersNamed } from './counters.ts'
 import { db } from './db.ts'
 import { addDays } from './schedule.ts'
 import { createManualTransaction, replaceSplits } from './transactions.ts'
@@ -282,6 +283,7 @@ export const loadCount = (id: string, reader: Reader = db): CountView => {
     expectedCashCents: count.expectedCashCents,
     expectedCheckCents: count.expectedCheckCents,
     counterNames: count.counterNames,
+    counters: countersNamed(count.counterUserIds ?? [], reader),
     notes: count.notes,
     closedAt: count.closedAt?.toISOString() ?? null,
     balanced: totals.cashCents === count.expectedCashCents && totals.checkCents === count.expectedCheckCents && totals.totalCents > 0,
@@ -302,21 +304,38 @@ export const loadCount = (id: string, reader: Reader = db): CountView => {
   }
 }
 
-export const openCount = (tx: Tx, input: Omit<typeof offeringCounts.$inferInsert, 'id' | 'status'>) =>
-  tx.insert(offeringCounts).values({ ...input, status: 'open' }).returning({ id: offeringCounts.id }).get().id
+type CountInput = Omit<typeof offeringCounts.$inferInsert, 'id' | 'status' | 'counterNames' | 'counterUserIds'> & { counterUserIds?: string[] }
 
-export const updateCount = (tx: Tx, id: string, changes: Partial<Pick<typeof offeringCounts.$inferInsert, 'countedOn' | 'label' | 'expectedCashCents' | 'expectedCheckCents' | 'counterNames' | 'notes'>>) => {
+export const openCount = (tx: Tx, input: CountInput) => {
+  const { counterUserIds, ...rest } = input
+  // Who counted is chosen from people allowed to count; their names are kept with the count.
+  const counted = counterUserIds ? chooseCounters(tx, counterUserIds) : {}
+  return tx.insert(offeringCounts).values({ ...rest, ...counted, status: 'open' }).returning({ id: offeringCounts.id }).get().id
+}
+
+type CountChanges = Partial<Pick<typeof offeringCounts.$inferInsert, 'countedOn' | 'label' | 'expectedCashCents' | 'expectedCheckCents' | 'notes'>> & { counterUserIds?: string[] }
+
+export const updateCount = (tx: Tx, id: string, changes: CountChanges) => {
   const count = findCount(tx, id)
   assertCountOpen(count)
-  const fields = (Object.keys(changes) as Array<keyof typeof changes>).filter(f => changes[f] !== undefined && changes[f] !== count[f])
-  if (!fields.length) return fields
-  tx.update(offeringCounts).set(Object.fromEntries(fields.map(f => [f, changes[f]]))).where(eq(offeringCounts.id, id)).run()
+  const { counterUserIds, ...plain } = changes
+  const next: Partial<typeof offeringCounts.$inferInsert> = { ...plain }
+  // Left out, who counted stays as it was. Someone already named may stay even if they
+  // have since lost the right to count.
+  if (counterUserIds !== undefined) {
+    const named = chooseCounters(tx, counterUserIds, count.counterUserIds ?? [])
+    if (JSON.stringify(named.counterUserIds) !== JSON.stringify(count.counterUserIds ?? [])) Object.assign(next, named)
+  }
+  const fields = (Object.keys(next) as Array<keyof typeof next>).filter(f => next[f] !== undefined && JSON.stringify(next[f]) !== JSON.stringify(count[f]))
+  if (!fields.length) return []
+  tx.update(offeringCounts).set(Object.fromEntries(fields.map(f => [f, next[f]]))).where(eq(offeringCounts.id, id)).run()
   // Gifts dated with the count move with it; ones given their own date stay.
   if (changes.countedOn && changes.countedOn !== count.countedOn) {
     tx.update(gifts).set({ receivedOn: changes.countedOn })
       .where(and(eq(gifts.countId, id), eq(gifts.receivedOn, count.countedOn))).run()
   }
-  return fields
+  // The audit trail names the field once, not both columns that hold it.
+  return fields.filter(f => f !== 'counterUserIds')
 }
 
 // `existing`: a category a gift already has may stay even if it was archived since.

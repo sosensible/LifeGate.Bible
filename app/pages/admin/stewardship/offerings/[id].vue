@@ -19,7 +19,12 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2">
               <UBadge :color="isOpen ? 'warning' : 'success'" variant="subtle" size="lg">{{ isOpen ? 'Open' : 'Closed' }}</UBadge>
-              <span v-if="count.counterNames" class="text-toned text-sm">Counted by {{ count.counterNames }}</span>
+              <span v-if="count.counterNames" class="text-toned text-sm inline-flex flex-wrap items-center gap-1.5">
+                Counted by
+                <UBadge v-for="counter in count.counters" :key="counter.userId" color="neutral" variant="subtle" size="sm" icon="i-lucide-user-round-check">{{ counter.name }}</UBadge>
+                <!-- A count made before names were chosen has them as typed. -->
+                <template v-if="!count.counters.length">{{ count.counterNames }}</template>
+              </span>
             </div>
             <UButton v-if="isOpen && canRecord" size="sm" variant="outline" color="neutral" icon="i-lucide-pencil" @click="detailsOpen = true">Edit details</UButton>
           </div>

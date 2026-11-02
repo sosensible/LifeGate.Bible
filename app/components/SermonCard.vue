@@ -3,7 +3,7 @@
     <NuxtLink :to="`/teaching/${sermon.slug}`" class="block relative aspect-video shrink-0" :style="{ backgroundColor: sermonColor(sermon.id) }" :aria-label="`Watch ${sermon.title}`">
       <img v-if="sermon.videoId" :src="sermonThumbnailUrl(sermon.slug)" alt="" class="absolute inset-0 w-full h-full object-cover" loading="lazy">
       <span class="absolute inset-0 flex items-center justify-center">
-        <UIcon :name="sermon.videoId ? 'i-lucide-circle-play' : 'i-lucide-book-open'" class="w-10 h-10 text-white/80 drop-shadow" />
+        <UIcon :name="hasVideo ? 'i-lucide-circle-play' : 'i-lucide-book-open'" class="w-10 h-10 text-white/80 drop-shadow" />
       </span>
       <UBadge v-if="showVisibility && sermon.visibility === 'public'" size="sm" color="neutral" variant="solid" class="absolute top-2.5 left-2.5 bg-white/90 text-primary uppercase tracking-wide">Public</UBadge>
     </NuxtLink>
@@ -27,7 +27,7 @@
         </button>
       </div>
       <NuxtLink :to="`/teaching/${sermon.slug}`" class="text-primary text-xs font-bold border-b-2 border-gold-500 pb-0.5 mt-auto self-start hover:text-primary-700">
-        {{ sermon.videoId ? 'Watch' : 'Read more' }} →
+        {{ hasVideo ? 'Watch' : 'Read more' }} →
       </NuxtLink>
     </div>
   </article>
@@ -36,11 +36,14 @@
 <script setup lang="ts">
 import type { SermonView } from '#shared/sermons'
 
-defineProps<{
+const props = defineProps<{
   sermon: SermonView
   // Members see which messages are also public.
   showVisibility?: boolean
 }>()
+
+// A YouTube video, or our own copy once it is ready to play.
+const hasVideo = computed(() => Boolean(props.sermon.videoId) || props.sermon.hosted?.state === 'ready')
 
 const emit = defineEmits<{ tag: [tag: string] }>()
 </script>

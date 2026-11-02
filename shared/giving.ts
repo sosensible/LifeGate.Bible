@@ -65,7 +65,9 @@ export const countSchema = z.object({
   label: optionalText(80),
   expectedCashCents: sheetCents,
   expectedCheckCents: sheetCents,
-  counterNames: optionalText(200),
+  // Accounts of people allowed to count; the names are filled in from them. Left out
+  // on an update, it leaves who counted as it was.
+  counterUserIds: z.array(z.string().min(1)).max(8).optional(),
   notes: optionalText(1000),
 })
 
@@ -214,6 +216,12 @@ export interface CountSummary {
   depositLinked: boolean
 }
 
+// Someone allowed to count: has a role that may enter gifts.
+export interface CounterOption {
+  userId: string
+  name: string
+}
+
 export interface CountView {
   id: string
   countedOn: string
@@ -222,6 +230,8 @@ export interface CountView {
   expectedCashCents: number
   expectedCheckCents: number
   counterNames: string | null
+  // Who counted, as people allowed to count: for choosing, and for showing by name.
+  counters: CounterOption[]
   notes: string | null
   closedAt: string | null
   // Cash and checks both match the count sheet.

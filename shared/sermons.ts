@@ -1,6 +1,8 @@
 // Sermon validation and shapes, shared by the admin form and the server routes.
 import { z } from 'zod'
 import { BIBLE_BOOKS } from './bible.ts'
+import type { HostedVideoView } from './hosted-video.ts'
+import type { SharingView } from './sermon-sharing.ts'
 import { parseYouTubeId } from './youtube.ts'
 
 const optionalText = (max: number) => z.string().trim().max(max, `Keep this under ${max} characters`).nullable()
@@ -78,6 +80,8 @@ export interface SermonView {
   visibility: 'public' | 'members'
   videoProvider: 'youtube' | null
   videoId: string | null
+  // Our own hosted copy, if it has one. Only its state: playing it takes a signed link.
+  hosted: HostedVideoView | null
 }
 
 // What the sermon admin receives: everything, including drafts.
@@ -86,6 +90,10 @@ export interface AdminSermonView extends SermonView {
   status: 'draft' | 'published'
   publishedAt: string | null
   updatedAt: string
+  // Who has set what about sharing it, and who may see it as a result.
+  sharing: SharingView
+  // Set to publish itself as soon as its hosted video is ready.
+  publishWhenReady: boolean
 }
 
 // A speaker to pick in the sermon form.

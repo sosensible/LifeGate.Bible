@@ -200,6 +200,11 @@ export const sermonSeries = sqliteTable('sermon_series', {
 export const SERMON_VISIBILITY = ['public', 'members'] as const
 export const SERMON_STATUS = ['draft', 'published'] as const
 export const VIDEO_PROVIDERS = ['youtube'] as const
+// Where a message's own hosted copy stands (see shared/bunny.ts).
+export const HOSTED_VIDEO_STATES = ['processing', 'ready', 'failed'] as const
+// What a message's teacher allows, and who may place a hold on one (see shared/sermon-sharing.ts).
+export const TEACHER_SHARE = ['public', 'members', 'none'] as const
+export const HOLD_PARTIES = ['pastor', 'admin'] as const
 
 export const sermons = sqliteTable('sermons', {
   id: id(),
@@ -223,11 +228,26 @@ export const sermons = sqliteTable('sermons', {
   // is only ever sent to someone allowed to see the sermon.
   videoProvider: text('video_provider', { enum: VIDEO_PROVIDERS }),
   videoId: text('video_id'),
+  // A second copy held on our video host, so a message can have both. The host's id for
+  // it is only a handle: playing it needs a short-lived signed link from the server,
+  // which is given only to someone who may watch the message.
+  hostedVideoId: text('hosted_video_id'),
+  hostedVideoState: text('hosted_video_state', { enum: HOSTED_VIDEO_STATES }),
+  // Who asked for this message to be published as soon as its hosted video is ready. The
+  // site does it when the video host finishes, and clears this; it is the person recorded
+  // in the audit log for that publication.
+  publishWhenReadyBy: text('publish_when_ready_by').references(() => user.id, { onDelete: 'set null' }),
 
   // New sermons start members-only and unpublished.
   visibility: text('visibility', { enum: SERMON_VISIBILITY }).notNull().default('members'),
   status: text('status', { enum: SERMON_STATUS }).notNull().default('draft'),
   publishedAt: integer('published_at', { mode: 'timestamp' }),
+
+  // The teacher's own control over who may see this message, kept apart from the
+  // office's `visibility` and `status`. It only ever narrows: a message is shown to
+  // the narrower of the two, and not at all if the teacher sets `none`. It starts
+  // open, so teaching that existed before this was added is unchanged.
+  teacherShare: text('teacher_share', { enum: TEACHER_SHARE }).notNull().default('public'),
 
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -236,6 +256,16 @@ export const sermons = sqliteTable('sermons', {
   index('sermons_series_idx').on(table.seriesId),
   index('sermons_speaker_person_idx').on(table.speakerPersonId),
 ])
+
+// A hold pauses sharing of a message. The pastor and the administrator each have
+// their own, apart from the office's publish settings and the teacher's choice: any
+// one of them blocks the message, and each is lifted only by the party that placed it.
+export const sermonHolds = sqliteTable('sermon_holds', {
+  sermonId: text('sermon_id').notNull().references(() => sermons.id, { onDelete: 'cascade' }),
+  party: text('party', { enum: HOLD_PARTIES }).notNull(),
+  placedBy: text('placed_by').references(() => user.id, { onDelete: 'set null' }),
+  placedAt: integer('placed_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, table => [primaryKey({ columns: [table.sermonId, table.party] })])
 
 // Live meetings: a Google Meet or YouTube Live link shown only at scheduled
 // times. The rules live in shared/live.ts. A members-only link is the key to
@@ -590,7 +620,11 @@ export const offeringCounts = sqliteTable('offering_counts', {
   // The count sheet's totals, which the entered gifts must match to close.
   expectedCashCents: integer('expected_cash_cents').notNull().default(0),
   expectedCheckCents: integer('expected_check_cents').notNull().default(0),
+  // Who counted it: the accounts of people allowed to count (`counterUserIds`), and
+  // their names as they were when it was counted (`counterNames`, which is also all
+  // that older counts have, typed in by hand).
   counterNames: text('counter_names'),
+  counterUserIds: text('counter_user_ids', { mode: 'json' }).$type<string[]>(),
   notes: text('notes'),
   openedByUserId: text('opened_by_user_id').references(() => user.id, { onDelete: 'set null' }),
   closedByUserId: text('closed_by_user_id').references(() => user.id, { onDelete: 'set null' }),

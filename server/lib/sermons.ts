@@ -1,39 +1,64 @@
 // Reading sermons and deciding who may see each one.
-import { and, asc, desc, eq, like, or } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, like, or } from 'drizzle-orm'
 import { createError } from 'h3'
 import { byBibleOrder } from '../../shared/bible.ts'
 import { sermonSlug, type AdminSermonView, type SermonInput, type SermonView, type SpeakerChoice } from '../../shared/sermons.ts'
+import { availability, type HoldParty, type SharingView, type TeacherShare } from '../../shared/sermon-sharing.ts'
 import { parseYouTubeId } from '../../shared/youtube.ts'
-import { people, sermonSeries, sermons } from '../database/schema/index.ts'
+import { people, sermonHolds, sermonSeries, sermons } from '../database/schema/index.ts'
+import type { Tx } from './audit.ts'
 import { db } from './db.ts'
 
-export type SermonRow = typeof sermons.$inferSelect & { seriesName: string | null }
+export type SermonRow = typeof sermons.$inferSelect & {
+  seriesName: string | null
+  // The pauses currently placed on it, each by its own party.
+  holds: Array<{ party: HoldParty, at: Date }>
+}
 
 export interface SermonViewer {
   // Holds memberArea:view.
   isMember: boolean
   // Holds sermon:update, so may see drafts.
   canManage: boolean
+  // May place a pause on a message (the pastor, an administrator). They can still
+  // open a message they have paused, so they can lift it.
+  canHold?: boolean
 }
 
 // Newest first. The caller decides what anyone may see.
-export const loadSermons = (where?: { id?: string, slug?: string }): SermonRow[] =>
-  db
+export const loadSermons = (where?: { id?: string, slug?: string }): SermonRow[] => {
+  const rows = db
     .select({ sermon: sermons, seriesName: sermonSeries.name })
     .from(sermons)
     .leftJoin(sermonSeries, eq(sermons.seriesId, sermonSeries.id))
     .where(where?.id ? eq(sermons.id, where.id) : where?.slug ? eq(sermons.slug, where.slug) : undefined)
     .orderBy(desc(sermons.preachedOn), desc(sermons.createdAt))
     .all()
-    .map(({ sermon, seriesName }) => ({ ...sermon, seriesName }))
+  const holds = rows.length
+    ? db.select().from(sermonHolds).where(inArray(sermonHolds.sermonId, rows.map(row => row.sermon.id))).all()
+    : []
+  return rows.map(({ sermon, seriesName }) => ({
+    ...sermon,
+    seriesName,
+    holds: holds.filter(hold => hold.sermonId === sermon.id).map(hold => ({ party: hold.party, at: hold.placedAt })),
+  }))
+}
 
 export const loadSermon = (where: { id?: string, slug?: string }): SermonRow | undefined => loadSermons(where)[0]
 
-// Drafts: only people who manage sermons. Members-only: members (and managers).
-// Public and published: everyone.
-export const canViewSermon = (sermon: Pick<SermonRow, 'status' | 'visibility'>, viewer: SermonViewer) => {
-  if (sermon.status !== 'published') return viewer.canManage
-  if (sermon.visibility === 'members') return viewer.isMember || viewer.canManage
+// What each message shows to whom is decided in shared/sermon-sharing.ts, from what
+// the office, the teacher, the pastor and an administrator have each set. Nobody
+// sees a message while any one of them is blocking it, except the people who run the
+// teaching, and a pastor or administrator who may need to lift their own pause.
+type Viewable = Pick<SermonRow, 'status' | 'visibility'> & Partial<Pick<SermonRow, 'teacherShare' | 'holds'>>
+
+export const sermonAvailability = (sermon: Viewable) =>
+  availability({ status: sermon.status, visibility: sermon.visibility, teacherShare: sermon.teacherShare, holds: sermon.holds?.map(hold => hold.party) })
+
+export const canViewSermon = (sermon: Viewable, viewer: SermonViewer) => {
+  const { audience, draft } = sermonAvailability(sermon)
+  if (audience === 'nobody') return viewer.canManage || Boolean(viewer.canHold && !draft)
+  if (audience === 'members') return viewer.isMember || viewer.canManage
   return true
 }
 
@@ -51,10 +76,19 @@ export const presentSermon = (sermon: SermonRow): SermonView => ({
   visibility: sermon.visibility,
   videoProvider: sermon.videoProvider,
   videoId: sermon.videoId,
+  hosted: sermon.hostedVideoId && sermon.hostedVideoState ? { state: sermon.hostedVideoState } : null,
+})
+
+export const presentSharing = (sermon: SermonRow): SharingView => ({
+  teacherShare: sermon.teacherShare,
+  holds: sermon.holds.map(hold => ({ party: hold.party, at: hold.at.toISOString() })),
+  availability: sermonAvailability(sermon),
 })
 
 export const presentAdminSermon = (sermon: SermonRow): AdminSermonView => ({
   ...presentSermon(sermon),
+  sharing: presentSharing(sermon),
+  publishWhenReady: sermon.publishWhenReadyBy !== null,
   speakerPersonId: sermon.speakerPersonId,
   status: sermon.status,
   publishedAt: sermon.publishedAt?.toISOString() ?? null,
@@ -151,6 +185,32 @@ export const assertSeriesExists = (seriesId: string | null | undefined) => {
 export const listSermonsFor = (viewer: SermonViewer) => {
   const all = loadSermons()
   const visible = all.filter(sermon => sermon.status === 'published' && canViewSermon(sermon, viewer))
-  const hiddenCount = all.filter(sermon => sermon.status === 'published' && !canViewSermon(sermon, viewer)).length
+  // Only members-only messages an invitation to sign in could open; one that is paused
+  // or withdrawn is not counted, so nothing is hinted at.
+  const hiddenCount = all.filter(sermon => sermonAvailability(sermon).audience === 'members' && !canViewSermon(sermon, viewer)).length
   return { sermons: visible.map(presentSermon), hiddenCount }
+}
+
+// ---- Who may share a message ---------------------------------------------------
+
+// The teacher's own choice for a message they taught: anyone, members only, or not shared.
+export const setTeacherShare = (tx: Tx, sermonId: string, userId: string, share: TeacherShare) => {
+  const sermon = loadSermon({ id: sermonId })
+  if (!sermon || !isTeacherOf(sermon, userId)) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
+  if (sermon.teacherShare === share) return false
+  tx.update(sermons).set({ teacherShare: share }).where(eq(sermons.id, sermonId)).run()
+  return true
+}
+
+// A pause by the pastor or an administrator. Each is its own, placed and lifted only by
+// that party; the route checks the person holds the right for the party they name.
+// Returns whether anything changed.
+export const placeHold = (tx: Tx, sermonId: string, party: HoldParty, userId: string) => {
+  if (!loadSermon({ id: sermonId })) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
+  return tx.insert(sermonHolds).values({ sermonId, party, placedBy: userId }).onConflictDoNothing().run().changes > 0
+}
+
+export const liftHold = (tx: Tx, sermonId: string, party: HoldParty) => {
+  if (!loadSermon({ id: sermonId })) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
+  return tx.delete(sermonHolds).where(and(eq(sermonHolds.sermonId, sermonId), eq(sermonHolds.party, party))).run().changes > 0
 }

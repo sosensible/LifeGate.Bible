@@ -60,12 +60,16 @@ export const getViewer = async (event: H3Event) => {
 // Who is looking, for sermon visibility. Never throws.
 export const getSermonViewer = async (event: H3Event) => {
   const session = await getAuthSession(event)
-  if (!session) return { session: null, isMember: false, canManage: false }
-  const [isMember, canManage] = await Promise.all([
+  if (!session) return { session: null, isMember: false, canManage: false, canHold: false, holdParties: [] as Array<'pastor' | 'admin'> }
+  const [isMember, canManage, pastor, admin] = await Promise.all([
     hasPermission(session.user.id, { memberArea: ['view'] }),
     hasPermission(session.user.id, { sermon: ['update'] }),
+    hasPermission(session.user.id, { sermonHold: ['pastor'] }),
+    hasPermission(session.user.id, { sermonHold: ['admin'] }),
   ])
-  return { session, isMember, canManage }
+  // The pauses this person may place and lift: the pastor's, an administrator's, or both.
+  const holdParties = [...(pastor ? ['pastor' as const] : []), ...(admin ? ['admin' as const] : [])]
+  return { session, isMember, canManage, canHold: holdParties.length > 0, holdParties }
 }
 
 // Missions pages: members read them; staff, admins and people serving in the

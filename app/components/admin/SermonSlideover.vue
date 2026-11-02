@@ -21,6 +21,8 @@
           />
         </section>
 
+        <AdminHostedVideoField v-model:file="pendingFile" v-model:publish-when-ready="publishWhenReady" :sermon="current" :can-publish="canPublish" @changed="onHostedChanged" />
+
         <!-- Message -->
         <section class="space-y-4">
           <UFormField label="Title" name="title" required>
@@ -106,6 +108,7 @@
 <script setup lang="ts">
 import { BIBLE_BOOKS, type BibleBook } from '#shared/bible'
 import { sermonSchema, type AdminSermonView, type SeriesView, type SpeakerChoice } from '#shared/sermons'
+import { detailsFromFileName } from '#shared/hosted-video'
 import { youTubeWatchUrl } from '#shared/youtube'
 
 const props = defineProps<{
@@ -162,6 +165,8 @@ const published = computed({
 const load = () => {
   const s = props.sermon
   lookup.value = null
+  pendingFile.value = null
+  publishWhenReady.value = false
   Object.assign(state, s
     ? {
         title: s.title, preachedOn: s.preachedOn, speaker: s.speaker, speakerPersonId: s.speakerPersonId, seriesId: s.series?.id ?? null,
@@ -198,6 +203,29 @@ const speakerChoice = computed({
 const addGuest = (name: string) => {
   guestNames.value.push(name)
   speakerChoice.value = `guest:${name}`
+}
+
+// The message as last saved or changed here, so a video upload shows its state at once
+// without waiting for the form to be saved.
+const latest = ref<AdminSermonView | null>(null)
+// A video chosen while adding a message: it uploads once the message is saved.
+const pendingFile = ref<File | null>(null)
+const publishWhenReady = ref(false)
+const uploads = useHostedVideoUploads()
+watch(pendingFile, (picked) => {
+  if (!picked) return
+  // A new message takes its title, and its date if the file name starts with one, from the file.
+  const { title, date } = detailsFromFileName(picked.name)
+  if (!props.sermon) {
+    if (!state.title && title) state.title = title
+    if (date && state.preachedOn === today()) state.preachedOn = date
+  }
+})
+const current = computed(() => latest.value ?? props.sermon)
+watch(() => props.sermon, value => latest.value = value, { immediate: true })
+const onHostedChanged = (changed: AdminSermonView) => {
+  latest.value = changed
+  emit('saved', changed)
 }
 
 const lookup = ref<{ title: string | null, channel: string | null } | null>(null)
@@ -245,7 +273,12 @@ const save = async () => {
       ? (await $fetch<{ sermon: AdminSermonView }>(`/api/admin/sermons/${props.sermon.id}`, { method: 'PATCH', body })).sermon
       : (await $fetch('/api/admin/sermons', { method: 'POST', body: { ...body, status: canPublish.value ? state.status : 'draft' } })).sermon
     emit('saved', sermon)
-    toast.add({ title: props.sermon ? 'Changes saved' : `“${sermon.title}” added`, color: 'success', icon: 'i-lucide-circle-check' })
+    // A video chosen with a new message uploads in the background from here.
+    if (!props.sermon && pendingFile.value) {
+      void uploads.start(sermon, pendingFile.value, { publishWhenReady: canPublish.value && publishWhenReady.value && state.status === 'draft' })
+    }
+    toast.add({ title: props.sermon ? 'Changes saved' : `“${sermon.title}” added`, description: !props.sermon && pendingFile.value ? 'Its video is uploading in the background.' : undefined, color: 'success', icon: 'i-lucide-circle-check' })
+    pendingFile.value = null
     open.value = false
   }
   catch (error) {

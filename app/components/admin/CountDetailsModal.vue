@@ -6,8 +6,8 @@
           <UFormField label="Date" name="countedOn" required>
             <UInput v-model="state.countedOn" type="date" class="w-full" />
           </UFormField>
-          <UFormField label="Service" name="label" hint="Optional">
-            <UInput v-model="label" placeholder="e.g. Sunday morning" class="w-full" />
+          <UFormField label="Offering name" name="label" hint="Optional" help="What was collected. A special offering has its own name.">
+            <UInput v-model="label" placeholder="e.g. Sunday morning, or Missions special offering" class="w-full" />
           </UFormField>
           <UFormField label="Cash on the count sheet" name="expectedCashCents">
             <AdminMoneyInput v-model="state.expectedCashCents" class="w-full" />
@@ -16,9 +16,13 @@
             <AdminMoneyInput v-model="state.expectedCheckCents" class="w-full" />
           </UFormField>
         </div>
-        <UFormField label="Counted by" name="counterNames" hint="Optional">
-          <UInput v-model="counterNames" placeholder="e.g. two deacons’ names" class="w-full" />
+        <UFormField label="Counted by" name="counterUserIds" hint="Optional" help="Only people who are allowed to count can be chosen.">
+          <USelectMenu v-model="state.counterUserIds" :items="counterItems" value-key="value" multiple searchable :loading="loadingCounters" placeholder="Choose who counted" class="w-full" />
         </UFormField>
+        <!-- A count made before names were chosen has them typed in. -->
+        <p v-if="legacyNames" class="text-xs text-muted -mt-2">
+          Entered earlier as “{{ legacyNames }}”. Choosing people above replaces it.
+        </p>
       </UForm>
     </template>
     <template #footer>
@@ -29,30 +33,49 @@
 </template>
 
 <script setup lang="ts">
-import { countSchema, type CountView } from '#shared/giving'
+import { countSchema, type CounterOption, type CountView } from '#shared/giving'
 
 const props = defineProps<{ count?: CountView | null }>()
 const emit = defineEmits<{ saved: [id: string, count?: CountView] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
-const state = reactive({ countedOn: todayIso(), label: null as string | null, expectedCashCents: 0, expectedCheckCents: 0, counterNames: null as string | null, notes: null as string | null })
+const auth = useAuthStore()
+const state = reactive({ countedOn: todayIso(), label: null as string | null, expectedCashCents: 0, expectedCheckCents: 0, counterUserIds: [] as string[], notes: null as string | null })
 const label = computed({ get: () => state.label ?? '', set: (v: string) => { state.label = v || null } })
-const counterNames = computed({ get: () => state.counterNames ?? '', set: (v: string) => { state.counterNames = v || null } })
+
+// The people who may count, from the server; anyone already on this count stays in the
+// list even if they have since lost the right, so editing does not drop them silently.
+const { data: counterData, status: counterStatus } = useFetch<{ counters: CounterOption[] }>('/api/admin/giving/counters', { server: false, lazy: true })
+const loadingCounters = computed(() => counterStatus.value === 'pending')
+const counterItems = computed(() => {
+  const known = new Map<string, string>()
+  for (const counter of counterData.value?.counters ?? []) known.set(counter.userId, counter.name)
+  for (const counter of props.count?.counters ?? []) if (!known.has(counter.userId)) known.set(counter.userId, counter.name)
+  return [...known].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+})
+const legacyNames = computed(() => (props.count && props.count.counterNames && !props.count.counters.length ? props.count.counterNames : null))
 
 watch(open, (isOpen) => {
   if (!isOpen) return
   const c = props.count
   Object.assign(state, c
-    ? { countedOn: c.countedOn, label: c.label, expectedCashCents: c.expectedCashCents, expectedCheckCents: c.expectedCheckCents, counterNames: c.counterNames, notes: c.notes }
-    : { countedOn: todayIso(), label: null, expectedCashCents: 0, expectedCheckCents: 0, counterNames: null, notes: null })
+    ? { countedOn: c.countedOn, label: c.label, expectedCashCents: c.expectedCashCents, expectedCheckCents: c.expectedCheckCents, counterUserIds: c.counters.map(counter => counter.userId), notes: c.notes }
+    : { countedOn: todayIso(), label: null, expectedCashCents: 0, expectedCheckCents: 0, counterUserIds: [], notes: null })
 }, { immediate: true })
+
+// Starting a count: the person starting it is usually one of those counting.
+watch([open, counterData], () => {
+  const me = auth.user?.id
+  if (open.value && !props.count && me && !state.counterUserIds.length && counterData.value?.counters.some(c => c.userId === me)) state.counterUserIds = [me]
+})
 
 const saving = ref(false)
 const save = async () => {
   saving.value = true
   try {
-    const body = { countedOn: state.countedOn, label: state.label, expectedCashCents: state.expectedCashCents, expectedCheckCents: state.expectedCheckCents, counterNames: state.counterNames }
+    // A count that had names typed in, and is saved with none chosen, keeps them.
+    const body = { countedOn: state.countedOn, label: state.label, expectedCashCents: state.expectedCashCents, expectedCheckCents: state.expectedCheckCents, ...(legacyNames.value && !state.counterUserIds.length ? {} : { counterUserIds: state.counterUserIds }) }
     if (props.count) {
       const result = await $fetch(`/api/admin/giving/counts/${props.count.id}`, { method: 'PATCH', body })
       emit('saved', props.count.id, result.count)

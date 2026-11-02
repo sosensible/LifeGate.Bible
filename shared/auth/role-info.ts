@@ -37,6 +37,8 @@ const PERMISSION_LABELS: Record<string, string> = {
   'sermon.delete': 'Remove teaching',
   'sermon.publish': 'Publish teaching',
   'liveMeeting.manage': 'Schedule live meetings',
+  'sermonHold.pastor': 'Pause sharing of a message, as the pastor',
+  'sermonHold.admin': 'Pause sharing of a message, as an administrator',
   'ministry.update': 'Edit ministries',
   'siteSettings.update': 'Change the church’s name, address, logo and contact details',
   'ministryList.view': 'Read every ministry’s lists and tasks',

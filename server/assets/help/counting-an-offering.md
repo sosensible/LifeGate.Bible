@@ -17,15 +17,19 @@ Open **Offerings** from your account menu.
 
 1. Press **Start a count**.
 2. **Date** — the day of the offering. Today's date is filled in.
-3. **Service** — optional, for example "Sunday morning". Use it when there is
-   more than one offering on the same day.
+3. **Offering name** — optional, for example "Sunday morning" or "Missions
+   special offering". Use it when there is more than one offering on the same
+   day, or the offering is not the regular one.
 4. **Cash on the count sheet** and **Checks on the count sheet** — the two
    totals from the paper sheet. Enter them before the gifts; they are what the
    count is checked against.
-5. **Counted by** — optional, for example the two names on the sheet.
+5. **Counted by** — optional. Choose the people who counted, from those who are
+   allowed to count. You are chosen automatically when you start a count. If
+   someone who counted is not in the list, ask the church office to give them the
+   Counter role.
 6. Press **Start count**. The new count opens, ready for gifts.
 
-If you need to correct the date, service, sheet totals or names later, press
+If you need to correct the date, offering name, sheet totals or who counted later, press
 **Edit details** at the top of an open count.
 
 ## Enter a gift

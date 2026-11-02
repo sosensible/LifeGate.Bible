@@ -2,7 +2,7 @@
 // from locking itself out.
 import { eq, isNull, max } from 'drizzle-orm'
 import { createError } from 'h3'
-import type { AccountView } from '../../shared/accounts.ts'
+import { splitAccountName, type AccountView } from '../../shared/accounts.ts'
 import { parseRoles, type AssignableRole } from '../../shared/auth/role-info.ts'
 import { auditLog, people, user } from '../database/schema/index.ts'
 import { recordAudit, type Tx } from './audit.ts'
@@ -19,13 +19,13 @@ export const loadAccounts = (id?: string): AccountView[] => {
   )
 
   return db
-    .select({ account: user, personId: people.id, firstName: people.firstName, lastName: people.lastName })
+    .select({ account: user, personId: people.id, firstName: people.firstName, lastName: people.lastName, photoUrl: people.photoUrl, sharePhoto: people.sharePhoto })
     .from(user)
     .leftJoin(people, eq(people.userId, user.id))
     .where(id ? eq(user.id, id) : undefined)
     .orderBy(user.name)
     .all()
-    .map(({ account, personId, firstName, lastName }) => {
+    .map(({ account, personId, firstName, lastName, photoUrl, sharePhoto }) => {
       const lastSignIn = lastSignIns.get(account.id) as Date | number | null | undefined
       return {
         id: account.id,
@@ -34,7 +34,8 @@ export const loadAccounts = (id?: string): AccountView[] => {
         roles: parseRoles(account.role),
         blocked: Boolean(account.banned),
         blockReason: account.banReason ?? null,
-        person: personId && firstName && lastName ? { id: personId, firstName, lastName } : null,
+        // A photo is shown here only if the person shares it, as to any other member.
+        person: personId && firstName && lastName ? { id: personId, firstName, lastName, photoUrl: sharePhoto ? photoUrl : null } : null,
         createdAt: account.createdAt.toISOString(),
         lastSignInAt: lastSignIn ? new Date(lastSignIn instanceof Date ? lastSignIn : Number(lastSignIn) * 1000).toISOString() : null,
       }
@@ -94,6 +95,23 @@ export const assertCanLink = (personId: string, userId?: string) => {
 export const linkAccount = (tx: Tx, actorUserId: string, personId: string, userId: string) => {
   tx.update(people).set({ userId }).where(eq(people.id, personId)).run()
   recordAudit(tx, { actorUserId, action: 'account.link', entityType: 'person', entityId: personId })
+}
+
+// Makes a directory entry for an account that has none, from its name and email, and
+// connects them. The office then fills in the rest on the People page. Nothing is
+// guessed: an account whose name is one word has to be named first.
+export const createDirectoryEntry = (tx: Tx, actorUserId: string, userId: string) => {
+  const account = tx.select({ name: user.name, email: user.email }).from(user).where(eq(user.id, userId)).get()
+  if (!account) throw createError({ statusCode: 404, statusMessage: 'Account not found' })
+  if (tx.select({ id: people.id }).from(people).where(eq(people.userId, userId)).get()) {
+    throw createError({ statusCode: 409, statusMessage: 'That account is already connected to a directory entry' })
+  }
+  const name = splitAccountName(account.name)
+  if (!name) throw createError({ statusCode: 400, statusMessage: 'This account’s name is one word. Give it a first and last name first, or add the person on the People page.' })
+  const personId = tx.insert(people).values({ ...name, kind: 'member', isMinor: false, email: account.email, userId }).returning({ id: people.id }).get().id
+  recordAudit(tx, { actorUserId, action: 'person.create', entityType: 'person', entityId: personId, note: 'From an account' })
+  recordAudit(tx, { actorUserId, action: 'account.link', entityType: 'person', entityId: personId })
+  return personId
 }
 
 export const unlinkAccount = (tx: Tx, actorUserId: string, personId: string) => {

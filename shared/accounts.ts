@@ -29,7 +29,8 @@ export interface AccountView {
   roles: AssignableRole[]
   blocked: boolean
   blockReason: string | null
-  person: { id: string, firstName: string, lastName: string } | null
+  // `photoUrl` only when the person has chosen to share their photo.
+  person: { id: string, firstName: string, lastName: string, photoUrl: string | null } | null
   createdAt: string
   lastSignInAt: string | null
 }
@@ -42,6 +43,15 @@ export interface UnlinkedPerson {
   email: string | null
   kind: 'member' | 'guest'
   isMinor: boolean
+}
+
+// A first and last name from an account's one name, for making its directory entry:
+// the last word is the last name ("Jane Q Public" is Jane Q, Public). Null when there
+// is only one word, since a directory entry needs both and nobody should guess.
+export const splitAccountName = (name: string) => {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length < 2) return null
+  return { firstName: words.slice(0, -1).join(' '), lastName: words[words.length - 1]! }
 }
 
 // A member login with no directory entry reaches the members area but has no

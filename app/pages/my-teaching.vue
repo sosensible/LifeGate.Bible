@@ -13,7 +13,7 @@
 
         <p class="text-toned text-sm max-w-2xl">
           Messages that name you as the speaker. You can edit their title, date, series, passage, books, topics and notes.
-          The video, who can watch and publishing are kept by the church office.
+          The video and publishing are kept by the church office. You choose whether a message is shared with everyone the office allows, with members only, or not at all.
         </p>
 
         <UEmpty
@@ -36,11 +36,14 @@
               <div class="flex flex-wrap gap-1">
                 <UBadge variant="subtle" :color="row.original.status === 'published' ? 'success' : 'warning'">{{ row.original.status === 'published' ? 'Published' : 'Draft' }}</UBadge>
                 <UBadge variant="subtle" color="neutral" :icon="row.original.visibility === 'public' ? 'i-lucide-globe' : 'i-lucide-lock'">{{ row.original.visibility === 'public' ? 'Everyone' : 'Members' }}</UBadge>
+                <UBadge v-if="row.original.sharing.availability.blockedBy.length" variant="subtle" color="warning" icon="i-lucide-pause">{{ blockedSentence(row.original.sharing.availability.blockedBy) }}</UBadge>
+                <UBadge v-else-if="row.original.sharing.teacherShare === 'members'" variant="subtle" color="info" icon="i-lucide-users">Limited by you</UBadge>
               </div>
             </template>
             <template #actions-cell="{ row }">
               <div class="flex justify-end gap-1">
                 <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-external-link" :to="`/teaching/${row.original.slug}`" :aria-label="`View ${row.original.title}`" />
+                <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-share-2" :aria-label="`Who can see ${row.original.title}`" @click="openSharing(row.original)" />
                 <UButton size="xs" variant="ghost" color="primary" icon="i-lucide-pencil" :aria-label="`Edit ${row.original.title}`" @click="edit(row.original)" />
               </div>
             </template>
@@ -50,12 +53,14 @@
     </div>
 
     <TeachingEditor v-model:open="editorOpen" :sermon="editing" :series="series" @saved="onSaved" />
+    <SermonSharingModal v-model:open="sharingOpen" :sermon="sharingSermon" can-teach @changed="onShared" />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { AdminSermonView } from '#shared/sermons'
+import { blockedSentence } from '#shared/sermon-sharing'
 
 // Any signed-in account: a guest speaker with an account need not be a member.
 definePageMeta({
@@ -86,4 +91,14 @@ const edit = (sermon: AdminSermonView) => {
 const onSaved = (saved: AdminSermonView) => {
   sermons.value = sermons.value.map(s => s.id === saved.id ? saved : s)
 }
+
+// The list holds the current copy, so the dialog always shows what was last saved.
+const sharingOpen = ref(false)
+const sharingId = ref<string | null>(null)
+const sharingSermon = computed(() => sermons.value.find(s => s.id === sharingId.value) ?? null)
+const openSharing = (sermon: AdminSermonView) => {
+  sharingId.value = sermon.id
+  sharingOpen.value = true
+}
+const onShared = onSaved
 </script>
