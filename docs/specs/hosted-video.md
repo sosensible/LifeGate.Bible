@@ -49,7 +49,7 @@ A hosted copy plays in the video host's own player, with no advertising or third
 - A video chosen in the message form can also go to YouTube, **unlisted**. The browser sends the file **straight to YouTube** (the server only starts the upload and returns its address), so nothing passes through the tunnel. A dropped connection resumes from what YouTube already has.
 - The video id the browser reports is attached to the message only if it is **really on the church's channel**.
 - A message can go to the video host, YouTube, or both, one after the other.
-- Not verified against Google: whether unverified projects can upload unlisted today, whether the sign-in needs Google's review for these scopes, and whether the app must be in production to avoid a 7-day expiry (Google's docs say Testing mode expires after 7 days).
+- Google's documentation says videos uploaded by an unaudited API project (created after 28 July 2020) are locked to Private, so YouTube copies may arrive private until the project passes the API compliance audit. The Help page says so. Also not verified against Google: whether unverified projects can upload unlisted today, whether the sign-in needs Google's review for these scopes, and whether the app must be in production to avoid a 7-day expiry (Google's docs say Testing mode expires after 7 days).
 
 ## A copy on the church server (steps 1 to 5 built)
 
@@ -98,6 +98,10 @@ A hosted copy plays in the video host's own player, with no advertising or third
 - Not built: reserving a place ahead of the broadcast (a place is taken on first entry while it is open), concurrent-viewer counting, and the soStream side of checking the viewer id.
 
 **Still to build:** only the items under Out of scope. from the video host when the file is stored only there (step 4; not possible from YouTube, which does not return the original); and moving where the copies are kept (step 5): change the folder and move the files, keep a message only on the video host, or push to a new host from the master.
+
+### Importing videos copied onto the server
+
+Videos placed by hand in `<folder>/import` are listed on Church details > Video > Import videos from the folder. The server reads each MP4, M4V and MOV for its creation date, length and, from a phone, position (`server/lib/mp4-meta.ts`, no media tool needed; QuickTime's local-time key for iPhones is preferred over the UTC header), else uses the date in the file name or the file's modified date, and says which. Dates are counted in the church's time zone. It suggests teachings by nearest date and shared title words (`shared/video-import.ts`); a person confirms each match. Importing files the video exactly like an upload (`storeUploaded`: checksum, move, record, audit) and queues the send to the video host, and to YouTube when asked. Links and path tricks are refused; a teaching that already has a copy is only replaced when the person says so. A teaching has to exist first.
 
 ## Setup guides and version
 

@@ -84,7 +84,8 @@
               </div>
             </form>
             <div v-if="local?.writable" class="flex flex-wrap items-center gap-2 border-t border-default pt-4">
-              <span class="text-muted text-sm">Send every stored video again to:</span>
+              <UButton size="xs" icon="i-lucide-folder-input" @click="importing = true">Import videos from the folder</UButton>
+              <span class="text-muted ml-2 text-sm">Send every stored video again to:</span>
               <UButton v-if="targets.host" size="xs" color="neutral" variant="outline" icon="i-lucide-send" :disabled="!local.stored.count" @click="resendTarget = 'host'">the video host</UButton>
               <UButton v-if="targets.youtube" size="xs" color="neutral" variant="outline" icon="i-lucide-send" :disabled="!local.stored.count" @click="resendTarget = 'youtube'">YouTube</UButton>
               <span v-if="!targets.host && !targets.youtube" class="text-muted text-sm">connect the video host or YouTube first</span>
@@ -173,6 +174,8 @@
           </section>
         </template>
       </div>
+
+      <AdminVideoImport v-model:open="importing" @imported="load" />
 
       <AdminFolderPicker :open="browsing !== null" :start="browsing ? form[browsing] : ''" @update:open="closeBrowser" @choose="chosenFolder" />
 
@@ -320,6 +323,7 @@ onMounted(async () => {
 
 // Moving the stored videos, and sending them all again.
 const confirmingMove = ref(false)
+const importing = ref(false)
 const resendTarget = ref<'host' | 'youtube' | null>(null)
 const moveBusy = ref(false)
 const startMove = async () => {

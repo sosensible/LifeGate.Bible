@@ -64,14 +64,26 @@ describe('looking through folders', () => {
     expect(lib.listFolder(join(dir, 'tree', 'alpha')).parent).toBe(join(dir, 'tree'))
   })
 
-  it('has no folder above the top', () => {
-    const top = lib.listFolder('/')
-    expect(top.parent === null || top.parent === '').toBe(true)
+  it('sends the top of a drive up to the list of drives', () => {
+    expect(lib.listFolder('/').parent).toBe('')
   })
 
-  it('starts at the top of the system when nothing is chosen yet and no folder is set', () => {
-    expect(lib.listFolder().path).toBe('/')
-    expect(lib.listFolder('').path).toBe('/')
+  it('starts at the list of drives and mounted folders when nothing is chosen yet and no folder is set', () => {
+    for (const listing of [lib.listFolder(), lib.listFolder('')]) {
+      expect(listing.path).toBeNull()
+      expect(listing.parent).toBeNull()
+      expect(listing.folders.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('puts the main drive last, with its room and whether it can be written to', () => {
+    const top = lib.listFolder('').folders
+    const main = top.at(-1)!
+    expect(main.path).toBe('/')
+    expect(main.name).toMatch(/main drive/i)
+    expect(main.freeBytes).toBeGreaterThan(0)
+    expect(typeof main.writable).toBe('boolean')
+    expect(top.filter(place => place.path === '/')).toHaveLength(1)
   })
 
   it('refuses a path that is not a full path, or tries to climb out', () => {
@@ -132,5 +144,33 @@ describe('making a folder', () => {
     chmodSync(closed, 0o555)
     if (process.getuid?.() !== 0) expect(statusOf(() => lib.createFolder(closed, 'child'))).toBe(403)
     chmodSync(closed, 0o755)
+  })
+})
+
+describe('reading the mount table', () => {
+  const sample = [
+    '22 28 0:21 / /proc rw,nosuid - proc proc rw',
+    '29 1 0:27 / / rw,relatime - overlay overlay rw,lowerdir=/x',
+    '40 29 8:17 /lifegate/videos /videos rw,relatime - ext4 /dev/sdb1 rw',
+    '41 29 8:33 / /media/Second\\040Drive rw,relatime - xfs /dev/sdc1 rw',
+    '42 29 0:50 / /app/.data rw,relatime - ext4 /dev/sda2 rw',
+    '43 29 0:51 / /dev/shm rw - tmpfs shm rw',
+    'not a mount line',
+  ].join('\n')
+
+  it('finds each mount point and its kind, decoding spaces in the name', () => {
+    const mounts = lib.parseMountInfo(sample)
+    expect(mounts.map(mount => mount.mountPoint)).toEqual(['/proc', '/', '/videos', '/media/Second Drive', '/app/.data', '/dev/shm'])
+    expect(mounts.find(mount => mount.mountPoint === '/videos')?.fsType).toBe('ext4')
+    expect(mounts.find(mount => mount.mountPoint === '/')?.fsType).toBe('overlay')
+  })
+
+  it('offers real disks, and leaves out the root, the system plumbing and the container image', () => {
+    expect(lib.usableMountPoints(sample)).toEqual(['/videos', '/media/Second Drive', '/app/.data'])
+  })
+
+  it('ignores lines that are not mounts', () => {
+    expect(lib.parseMountInfo('')).toEqual([])
+    expect(lib.parseMountInfo('nonsense')).toEqual([])
   })
 })

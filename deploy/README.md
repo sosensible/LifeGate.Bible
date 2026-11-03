@@ -130,6 +130,13 @@ what the site's own user may open.
 then choose `/videos`, or a folder made inside it. A folder anywhere else in the container
 disappears when the site is updated.
 
+**A second drive.** To keep the videos off the system disk, mount a folder from the other drive
+instead (`-v /mnt/disk2/lifegate-videos:/videos`), or mount the whole drive at a path of your
+choice so Browse can look through it. The chooser opens on a list of **Drives and mounted
+folders** with each one's free space, the main drive last, so the second drive is the obvious
+pick. A drive that is mounted read-only is marked and cannot be chosen. Check the drive is
+mounted on the host at boot, or the container will write into an empty folder on the system disk.
+
 **Permissions.** The image runs as user `node` (uid 1000). The mounted folder must be writable
 by it, or Church details says the server cannot write there:
 

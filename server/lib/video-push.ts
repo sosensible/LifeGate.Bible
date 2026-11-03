@@ -7,7 +7,7 @@
 // it is only the master, and the source for sending elsewhere.
 import { randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream, mkdirSync, openAsBlob, rmSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { and, eq, lt, lte, or } from 'drizzle-orm'
@@ -23,7 +23,7 @@ import { integrationValue } from './integration-secrets.ts'
 import { absolutePath, INCOMING, loadLocalFile, storeUploaded } from './local-files.ts'
 import { checkFolder, localVideoFolder } from './local-video.ts'
 import { loadSermon } from './sermons.ts'
-import { connectedAccess, siteOrigin, startUploadSession, videoIsOnChannel, youtubeConfig, type YouTubeConfig } from './youtube.ts'
+import { connectedAccess, siteOrigin, startUploadSession, videoIsOnChannel, youtubeConfig, youtubeStatus, type YouTubeConfig } from './youtube.ts'
 
 type Fetch = typeof fetch
 export type PushTarget = 'host' | 'youtube' | 'pull'
@@ -69,6 +69,13 @@ export const queueSends = (sermonId: string, sha256: string, wishes: { youtube: 
   return queued
 }
 
+// After a video is filed (uploaded or imported): send it on to the church video host if one is
+// connected, and to YouTube if asked and the channel is connected, in the background.
+export const sendStoredVideoOn = (sermonId: string, sha256: string, wishes: { youtube: boolean }) => {
+  queueSends(sermonId, sha256, wishes, { host: bunnyConfig() !== null, youtube: youtubeConfig() !== null && youtubeStatus().connected })
+  kickPushes()
+}
+
 // Sends every stored video again to one place, for instance after the church moves to a new video
 // library or a new channel. Each message is queued afresh; the usual rules (one at a time, retries,
 // replace only once the whole file has arrived) then apply.
@@ -91,7 +98,7 @@ export const uploadFileToHost: HostUploader = (config, file, videoId, title, now
     chunkSize: options.pieceBytes ?? PIECE_BYTES,
     retryDelays: options.retryDelays ?? [0, 3000, 10000, 30000, 60000],
     headers: { AuthorizationSignature: ticket.signature, AuthorizationExpire: String(ticket.expires), VideoId: ticket.videoId, LibraryId: ticket.libraryId },
-    metadata: { filetype: 'video/mp4', title },
+    metadata: { filetype: MIME[extname(file.path).toLowerCase()] ?? 'video/mp4', title },
     onError: reject,
     onSuccess: () => resolve(),
   })

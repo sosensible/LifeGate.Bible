@@ -5,20 +5,14 @@ import type { H3Event } from 'h3'
 import { auth } from '../lib/auth.ts'
 import { uploadServer } from '../lib/local-files.ts'
 import { checkFolder, localVideoFolder } from '../lib/local-video.ts'
-import { bunnyConfig } from '../lib/bunny.ts'
 import { refuseDuringMove } from '../lib/folder-move.ts'
-import { kickPushes, queueSends } from '../lib/video-push.ts'
-import { youtubeConfig, youtubeStatus } from '../lib/youtube.ts'
+import { sendStoredVideoOn } from '../lib/video-push.ts'
 
 // The upload server asks who is signed in from each request's own cookie.
 const whoIs = async (req: Request) => (await auth.api.getSession({ headers: req.headers }))?.user.id ?? null
 
-// Once a video is filed, it is sent on in the background: to the church video host if one is
-// connected, and to YouTube if the volunteer asked and the channel is connected.
-const afterStored = (sermonId: string, sha256: string, wishes: { youtube: boolean }) => {
-  queueSends(sermonId, sha256, wishes, { host: bunnyConfig() !== null, youtube: youtubeConfig() !== null && youtubeStatus().connected })
-  kickPushes()
-}
+// Once a video is filed, it is sent on in the background (see sendStoredVideoOn).
+const afterStored = (sermonId: string, sha256: string, wishes: { youtube: boolean }) => sendStoredVideoOn(sermonId, sha256, wishes)
 
 // Needs the right to edit teaching, and a folder chosen on Church details that the server can write to.
 export const handleLocalUpload = async (event: H3Event) => {

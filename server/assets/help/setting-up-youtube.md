@@ -52,6 +52,19 @@ Google may then show an "unverified app" warning when you connect. It is the chu
 so choose **Advanced**, then continue. I could not confirm from Google's pages whether Google
 requires a review for these two scopes; if it asks for one, follow its instructions.
 
+### Videos may arrive as Private, and long ones need a verified channel
+
+- Google's documentation says videos uploaded through its programming interface by an app that
+  has **not passed Google's API compliance audit** are locked to **Private**, whatever the site
+  asks for. If that happens, the video is on the channel but nobody else can watch it, and the
+  channel owner sees an email from YouTube saying so. Passing the audit (through the API
+  compliance form for the project in Google Cloud) lifts it. Until then, members still watch the
+  copy on the church video host.
+- A channel must be **verified** (a phone number, in YouTube Studio) to upload videos longer than
+  15 minutes. A teaching is longer than that.
+- Google limits how many uploads an app may make a day. Several videos at once may stop part
+  way and carry on the next day; the site retries on its own.
+
 ## 5. Create the sign-in key
 
 1. Open **Credentials**, then **Create credentials**, then **OAuth client ID**.

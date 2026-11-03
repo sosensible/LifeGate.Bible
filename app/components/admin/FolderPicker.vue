@@ -3,8 +3,9 @@
     <template #body>
       <div class="space-y-3">
         <div class="flex items-center gap-2">
-          <UButton color="neutral" variant="outline" icon="i-lucide-arrow-up" :disabled="loading || listing?.parent === null || !listing" aria-label="Up one folder" @click="go(listing?.parent ?? '')" />
-          <code class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1.5 text-xs">{{ listing?.path ?? 'All drives' }}</code>
+          <UButton color="neutral" variant="outline" icon="i-lucide-hard-drive" :disabled="loading || listing?.path === null" aria-label="Show all drives" @click="go('')">Drives</UButton>
+          <UButton color="neutral" variant="outline" icon="i-lucide-arrow-up" :disabled="loading || listing?.path === null || !listing" aria-label="Up one folder" @click="go(listing?.parent ?? '')" />
+          <code class="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1.5 text-xs">{{ listing?.path ?? 'Drives and mounted folders' }}</code>
         </div>
 
         <UAlert v-if="error" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="error" />
@@ -19,16 +20,23 @@
 
         <div class="max-h-72 overflow-y-auto rounded-lg border border-default">
           <p v-if="loading" class="text-muted p-3 text-sm">Looking…</p>
-          <p v-else-if="listing && !listing.folders.length" class="text-muted p-3 text-sm">No folders in here.</p>
+          <p v-else-if="listing && !listing.folders.length" class="text-muted p-3 text-sm">{{ listing.path === null ? 'No drives or mounted folders were found. If the site runs in a container, mount a folder or drive into it first.' : 'No folders in here.' }}</p>
           <ul v-else class="divide-y divide-default">
             <li v-for="folder in listing?.folders" :key="folder.path">
               <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted" @click="go(folder.path)">
-                <UIcon name="i-lucide-folder" class="text-muted size-4 shrink-0" />
-                <span class="truncate">{{ folder.name }}</span>
+                <UIcon :name="listing?.path === null ? 'i-lucide-hard-drive' : 'i-lucide-folder'" class="text-muted size-4 shrink-0" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate">{{ folder.name }}</span>
+                  <span v-if="listing?.path === null" class="text-muted block truncate text-xs">{{ folder.path }}</span>
+                </span>
+                <span v-if="listing?.path === null" class="shrink-0 text-xs" :class="folder.writable ? 'text-muted' : 'text-warning'">
+                  {{ folder.writable ? (folder.freeBytes != null ? `${Math.round(folder.freeBytes / 1e9)} GB free` : 'can save here') : 'read only' }}
+                </span>
               </button>
             </li>
           </ul>
         </div>
+        <p v-if="listing?.path === null" class="text-muted text-xs">Pick a drive, then the folder on it. Choose a second drive over the main drive if you want the videos kept off the system disk.</p>
         <p v-if="listing?.more" class="text-muted text-xs">Only the first {{ listing.folders.length }} folders are shown. Type a name above to narrow it down, or type the path instead.</p>
 
         <form v-if="listing?.path" class="flex items-center gap-2" @submit.prevent="make">
@@ -47,7 +55,7 @@
 <script setup lang="ts">
 // Lets an Admin look through the server's folders and make a new one, instead of typing a path.
 // Folders only. The server decides what can be seen; this only asks (see server/lib/folder-browser.ts).
-interface Listing { path: string | null, parent: string | null, folders: { name: string, path: string }[], more: boolean, writable: boolean, freeBytes: number | null }
+interface Listing { path: string | null, parent: string | null, folders: { name: string, path: string, freeBytes?: number | null, writable?: boolean }[], more: boolean, writable: boolean, freeBytes: number | null }
 
 const props = defineProps<{ start?: string }>()
 const emit = defineEmits<{ choose: [path: string] }>()

@@ -17,8 +17,10 @@ Only an **Admin** can set this up.
 ## 1. Choose a folder
 
 1. Open **Church details** from your account menu, then open the **Video** section.
-2. Under **Copy on the church server**, press **Browse**. Look through the server's folders,
-   press **Make folder** if you need a new one, then **Use this folder**. You can also type the
+2. Under **Copy on the church server**, press **Browse**. It opens on a list of the drives and
+   mounted folders the server can use, with how much room each has and the main drive last. Pick
+   the drive you want (a second drive keeps the videos off the system disk), look through its
+   folders, press **Make folder** if you need a new one, then **Use this folder**. You can also type the
    **full path** instead, written as the server sees it (it starts with `/`, or with a drive
    letter on Windows).
 3. Press **Save folder**. The site makes the folder if it is missing, checks it can write there,
@@ -72,6 +74,28 @@ in its form. Uploading again replaces the earlier copy.
   still holds the original, which it does only if **Keep original files** was on when the video
   was uploaded. A video that is only on YouTube cannot be brought in, because YouTube does not give
   the original back; upload the file in the message form to keep a copy.
+
+## Importing videos you copied onto the server
+
+If the videos are already on the server, or on a drive plugged into it, copy them there yourself
+(a file share, a USB drive, SSH) and let the site pick them up.
+
+1. Copy the files into the **import** folder, which the site makes inside the folder you chose
+   (for example `…/lifegate-videos/import`). Name each one like `2026-11-01_The Good Shepherd.mov`
+   if you can: the date at the start and the title after it make the best match.
+2. On **Church details**, in the **Video** section, press **Import videos from the folder**.
+3. Each video is listed with its size, its length and the date the site found, and a label that
+   says where the date came from. **From the name** and **from the video** are good. **File date,
+   check it** is only when the file was last changed, and may not be the day it was preached.
+4. Choose the teaching it belongs to. The best matches are at the top, and every other teaching
+   is in the list. A teaching that already has a copy is marked, and importing then replaces it.
+5. Press **Import**. The site checks the file, files it in its own place, and sends it on to the
+   video host (and to YouTube if you ticked that box). The file leaves the import folder.
+
+A teaching has to exist first. Make it on the Teaching page, then import its video.
+
+It reads the date, length and, for a phone recording, the place from MP4, M4V and MOV files. For
+other kinds (MKV, WebM, AVI) it uses the date in the file name or the file date.
 
 ## Moving the stored videos to another folder
 
