@@ -76,6 +76,39 @@ describe('teachers', () => {
     expect(sermons.speakerChoices().map(c => c.name)).toEqual(['Robert Hayes', 'Ray Retired'])
   })
 
+  it('lets a message name an adult church member, who is added to the Speakers list only by someone who may keep it', () => {
+    const ron = db.insert(schema.people).values({ firstName: 'Ron', lastName: 'Woods', kind: 'member' }).returning().get().id
+    const kid = db.insert(schema.people).values({ firstName: 'Kid', lastName: 'Woods', kind: 'member', isMinor: true }).returning().get().id
+    const visitor = db.insert(schema.people).values({ firstName: 'Vic', lastName: 'Visitor', kind: 'guest' }).returning().get().id
+
+    // Offered only to those who may keep the list, after the speakers and marked as members.
+    expect(sermons.speakerChoices().map(c => c.name)).not.toContain('Ron Woods')
+    const offered = sermons.speakerChoices(true)
+    expect(offered.find(c => c.name === 'Ron Woods')).toEqual({ id: ron, name: 'Ron Woods', member: true })
+    expect(offered.find(c => c.name === 'Robert Hayes')?.member).toBeUndefined()
+    expect(offered.map(c => c.name)).not.toContain('Kid Woods')
+    expect(offered.map(c => c.name)).not.toContain('Vic Visitor')
+
+    // Without that right the member is refused and nothing changes.
+    expect(() => sermons.assertSpeakerPerson(ron)).toThrow(/not allowed to add/)
+    expect(db.select().from(schema.people).where(orm.eq(schema.people.id, ron)).get()!.isSpeaker).toBe(false)
+    // Children and guests who are not speakers are never offered by being named.
+    expect(() => sermons.assertSpeakerPerson(kid, true)).toThrow(/Speakers list/)
+    expect(() => sermons.assertSpeakerPerson(visitor, true)).toThrow(/Speakers list/)
+    expect(() => sermons.assertSpeakerPerson('missing', true)).toThrow(/Speakers list/)
+
+    // With it, naming returns the member to add; adding puts them on the list and leaves a record.
+    const actor = addUser('keeper@example.org')
+    expect(sermons.assertSpeakerPerson(ron, true)).toBe(ron)
+    expect(sermons.assertSpeakerPerson(robert, true)).toBeNull()
+    db.transaction(tx => sermons.addMemberAsSpeaker(tx, ron, actor))
+    expect(db.select().from(schema.people).where(orm.eq(schema.people.id, ron)).get()!.isSpeaker).toBe(true)
+    expect(db.select().from(schema.auditLog).where(orm.eq(schema.auditLog.entityId, ron)).all().map(row => row.action)).toEqual(['speaker.add'])
+    // Now on the list, so they are an ordinary speaker, offered once and no longer marked.
+    expect(() => sermons.assertSpeakerPerson(ron)).not.toThrow()
+    expect(sermons.speakerChoices(true).filter(c => c.name === 'Ron Woods')).toEqual([{ id: ron, name: 'Ron Woods' }])
+  })
+
   it('links existing messages by exact name when the migration runs, but never guesses between two people', () => {
     const backfill = readFileSync('server/database/migrations/0016_sermon_speaker_person.sql', 'utf8').split('--> statement-breakpoint').at(-1)!
     const unique = addSermon({ title: 'Before the link', speaker: 'Robert Hayes', speakerPersonId: null })

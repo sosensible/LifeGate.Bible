@@ -92,7 +92,13 @@ If the videos are already on the server, or on a drive plugged into it, copy the
 5. Press **Import**. The site checks the file, files it in its own place, and sends it on to the
    video host (and to YouTube if you ticked that box). The file leaves the import folder.
 
-A teaching has to exist first. Make it on the Teaching page, then import its video.
+A teaching has to exist first. If a video has none, press **Not in the list? Add a teaching for this
+video** under it. The form opens with the title and date from the file name, and once you save, the
+teaching is chosen for that video.
+
+In the **Speaker** box, pick someone from the Speakers list, or one of the **Church members** below
+it (saving adds them to the Speakers list), or type a guest's name. The members appear only for
+people who may keep the Speakers list.
 
 It reads the date, length and, for a phone recording, the place from MP4, M4V and MOV files. For
 other kinds (MKV, WebM, AVI) it uses the date in the file name or the file date.

@@ -158,7 +158,7 @@ const toast = useToast()
 const canCreate = computed(() => auth.can({ sermon: ['create'] }))
 const canScheduleLive = computed(() => auth.can({ liveMeeting: ['manage'] }))
 
-const [{ data: sermonData, error }, { data: seriesData, refresh: refreshSeries }, { data: speakerData }] = await Promise.all([
+const [{ data: sermonData, error }, { data: seriesData, refresh: refreshSeries }, { data: speakerData, refresh: refreshSpeakers }] = await Promise.all([
   useFetch('/api/admin/sermons'),
   useFetch('/api/admin/sermon-series'),
   useFetch('/api/admin/sermons/speakers'),
@@ -219,6 +219,8 @@ const newestFirst = (a: AdminSermonView, b: AdminSermonView) => b.preachedOn.loc
 const onSaved = (saved: AdminSermonView) => {
   sermons.value = [...sermons.value.filter(s => s.id !== saved.id), saved].sort(newestFirst)
   refreshSeries()
+  // Naming a church member adds them to the Speakers list.
+  if (speakerChoices.value.some(c => c.member && c.id === saved.speakerPersonId)) refreshSpeakers()
 }
 
 const onRemoved = (id: string) => {

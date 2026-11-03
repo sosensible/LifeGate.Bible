@@ -108,6 +108,8 @@ export interface AdminSermonView extends SermonView {
 export interface SpeakerChoice {
   id: string
   name: string
+  // An adult church member who is not on the Speakers list yet; naming them adds them to it.
+  member?: boolean
 }
 
 export interface SeriesView {

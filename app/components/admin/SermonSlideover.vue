@@ -36,7 +36,7 @@
               label="Speaker"
               name="speaker"
               required
-              :help="state.speakerPersonId ? 'On the Speakers list. If they have an account, they can edit this message’s details.' : state.speaker ? 'A typed name, not linked to the Speakers list.' : 'Pick from the Speakers list, or type a guest’s name.'"
+              :help="speakerHelp"
             >
               <USelectMenu v-model="speakerChoice" :items="speakerItems" value-key="value" create-item placeholder="Who taught" class="w-full" @create="addGuest" />
             </UFormField>
@@ -106,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import type { SelectMenuItem } from '@nuxt/ui'
 import { BIBLE_BOOKS, type BibleBook } from '#shared/bible'
 import { sermonSchema, type AdminSermonView, type SeriesView, type SpeakerChoice } from '#shared/sermons'
 import { detailsFromFileName } from '#shared/hosted-video'
@@ -118,6 +119,8 @@ const props = defineProps<{
   speakers: string[]
   // The Speakers list; picking one links the message to that person.
   speakerChoices: SpeakerChoice[]
+  // A new message starts with these (the import screen makes one from a video's file name).
+  prefill?: { title?: string, preachedOn?: string } | null
 }>()
 
 const emit = defineEmits<{
@@ -145,7 +148,7 @@ const blank = () => ({
   preachedOn: today(),
   // The most recent speaker, linked if they are on the Speakers list.
   speaker: props.speakers[0] ?? '',
-  speakerPersonId: props.speakerChoices.find(c => c.name === props.speakers[0])?.id ?? null,
+  speakerPersonId: props.speakerChoices.find(c => !c.member && c.name === props.speakers[0])?.id ?? null,
   seriesId: null as string | null,
   scripture: '',
   books: [] as BibleBook[],
@@ -173,19 +176,31 @@ const load = () => {
         scripture: s.scripture ?? '', books: [...s.books] as BibleBook[], tags: [...s.tags], description: s.description ?? '',
         video: s.videoId ? youTubeWatchUrl(s.videoId) : '', visibility: s.visibility, status: s.status,
       }
-    : blank())
+    : { ...blank(), ...props.prefill })
 }
 
 // Speakers: the list's people by id, and typed guest names as `guest:Name`.
 const guestNames = ref<string[]>([])
-const speakerItems = computed(() => {
+const speakerItems = computed<SelectMenuItem[][]>(() => {
   const listed = new Set(props.speakerChoices.map(c => c.name))
   const guests = [...new Set([...props.speakers, ...guestNames.value, ...(state.speaker && !state.speakerPersonId ? [state.speaker] : [])])]
     .filter(name => name && !listed.has(name))
-  return [
-    props.speakerChoices.map(c => ({ value: c.id, label: c.name, icon: 'i-lucide-user-round-check' })),
-    guests.map(name => ({ value: `guest:${name}`, label: name, icon: 'i-lucide-user-round' })),
-  ].filter(group => group.length)
+  const choose = (members: boolean) => props.speakerChoices
+    .filter(c => Boolean(c.member) === members)
+    .map(c => ({ value: c.id, label: c.name, icon: members ? 'i-lucide-user-round-plus' : 'i-lucide-user-round-check' }))
+  const groups = [
+    { label: 'Speakers', items: choose(false) },
+    { label: 'Church members (added to Speakers when you save)', items: choose(true) },
+    { label: 'Guests', items: guests.map(name => ({ value: `guest:${name}`, label: name, icon: 'i-lucide-user-round' })) },
+  ].filter(group => group.items.length)
+  // Headings only help when there is more than one kind of person to tell apart.
+  return groups.length > 1 ? groups.map(group => [{ type: 'label' as const, label: group.label }, ...group.items]) : groups.map(group => group.items)
+})
+const speakerHelp = computed(() => {
+  const picked = props.speakerChoices.find(c => c.id === state.speakerPersonId)
+  if (picked?.member) return 'A church member. Saving adds them to the Speakers list.'
+  if (picked) return 'On the Speakers list. If they have an account, they can edit this message’s details.'
+  return state.speaker ? 'A typed name, not linked to the Speakers list.' : 'Pick a speaker or church member, or type a guest’s name.'
 })
 const speakerChoice = computed({
   get: () => state.speakerPersonId ?? (state.speaker ? `guest:${state.speaker}` : undefined),

@@ -11,7 +11,16 @@
         <p v-if="loading" class="text-muted text-sm">Looking in the folder…</p>
         <p v-else-if="scan && !scan.files.length" class="text-muted rounded-lg border border-default p-4 text-sm">No videos are waiting. Supported: {{ VIDEO_EXTENSIONS.join(', ') }}.</p>
 
-        <ul v-else-if="scan" class="space-y-3">
+        <UAlert
+          v-if="!loading && scan && scan.files.length && !scan.teachings.length"
+          color="info"
+          variant="subtle"
+          icon="i-lucide-info"
+          title="There are no teachings yet"
+          :description="canCreate ? 'A video is filed under a teaching. Add one for each video below: its title, date and who taught.' : 'A video is filed under a teaching, and none exist yet. Ask someone who can add teachings to add them.'"
+        />
+
+        <ul v-if="!loading && scan && scan.files.length" class="space-y-3">
           <li v-for="file in scan.files" :key="file.name" class="space-y-3 rounded-lg border border-default p-4">
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div class="min-w-0">
@@ -29,6 +38,7 @@
               <UFormField label="Which teaching is this?">
                 <USelectMenu v-model="choice[file.name]" :items="itemsFor(file)" value-key="value" placeholder="Choose a teaching" searchable class="w-full" />
               </UFormField>
+              <UButton v-if="canCreate" size="xs" color="neutral" variant="link" icon="i-lucide-plus" class="-mt-1" @click="startTeaching(file)">Not in the list? Add a teaching for this video</UButton>
               <UAlert v-if="chosen(file)?.hasCopy" color="warning" variant="subtle" icon="i-lucide-triangle-alert" description="This teaching already has a copy on the church server. Importing replaces it." />
               <UAlert v-if="state[file.name]?.error" color="error" variant="subtle" icon="i-lucide-circle-alert" :description="state[file.name]?.error" />
               <div class="flex flex-wrap items-center gap-3">
@@ -42,6 +52,16 @@
 
         <UCheckbox v-if="scan?.files.length && targets.youtube" v-model="postToYouTube" label="Also post these to the church’s YouTube channel (unlisted)" />
       </div>
+      <AdminSermonSlideover
+        v-model:open="making"
+        :sermon="null"
+        :series="series"
+        :speakers="pastSpeakers"
+        :speaker-choices="speakerChoices"
+        :prefill="prefill"
+        @saved="onMade"
+        @series-created="series.push($event)"
+      />
     </template>
     <template #footer>
       <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" :loading="loading" @click="load">Scan again</UButton>
@@ -51,6 +71,8 @@
 </template>
 
 <script setup lang="ts">
+import { detailsFromFileName } from '#shared/hosted-video'
+import type { AdminSermonView, SeriesView, SpeakerChoice } from '#shared/sermons'
 import { formatDuration, VIDEO_EXTENSIONS, type DateSource, type Suggestion, type TeachingChoice } from '#shared/video-import'
 
 // Matching videos copied onto the church server to teachings, one at a time and confirmed by a
@@ -61,6 +83,8 @@ interface Scan { directory: string, files: ImportFile[], teachings: TeachingChoi
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ imported: [] }>()
 const { targets } = useVideoTargets()
+const auth = useAuthStore()
+const canCreate = computed(() => auth.can({ sermon: ['create'] }))
 
 const scan = ref<Scan | null>(null)
 const loading = ref(false)
@@ -109,6 +133,40 @@ const load = async () => {
   finally {
     loading.value = false
   }
+}
+
+// Adding a teaching for a video that has none: the same form as on the Teaching page, started with
+// the title and date the file name gives. Once saved the folder is read again and it is chosen.
+const making = ref(false)
+const makingFor = ref<ImportFile | null>(null)
+const series = ref<SeriesView[]>([])
+const speakerChoices = ref<SpeakerChoice[]>([])
+const pastSpeakers = computed(() => [...new Set((scan.value?.teachings ?? []).map(item => item.speaker))])
+const prefill = computed(() => makingFor.value
+  ? { title: detailsFromFileName(makingFor.value.name).title, preachedOn: makingFor.value.date.date }
+  : null)
+
+const startTeaching = async (file: ImportFile) => {
+  error.value = ''
+  try {
+    const [seriesList, speakerList] = await Promise.all([
+      $fetch<{ series: SeriesView[] }>('/api/admin/sermon-series'),
+      $fetch<{ speakers: SpeakerChoice[] }>('/api/admin/sermons/speakers'),
+    ])
+    series.value = seriesList.series
+    speakerChoices.value = speakerList.speakers
+    makingFor.value = file
+    making.value = true
+  }
+  catch (failure) {
+    error.value = apiErrorMessage(failure, 'The teaching form could not be opened.')
+  }
+}
+
+const onMade = async (sermon: AdminSermonView) => {
+  const file = makingFor.value
+  await load()
+  if (file && !state[file.name]?.done) choice[file.name] = sermon.id
 }
 
 const importOne = async (file: ImportFile) => {

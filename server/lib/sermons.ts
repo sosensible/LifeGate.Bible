@@ -7,8 +7,9 @@ import { availability, type HoldParty, type SharingView, type TeacherShare } fro
 import { presentPush } from '../../shared/hosted-video.ts'
 import { parseYouTubeId } from '../../shared/youtube.ts'
 import { people, sermonFiles, sermonHolds, sermonSeries, sermons, videoPushes } from '../database/schema/index.ts'
-import type { Tx } from './audit.ts'
+import { recordAudit, type Tx } from './audit.ts'
 import { db } from './db.ts'
+import { loadSpeakerCandidates } from './speakers.ts'
 
 export type SermonRow = typeof sermons.$inferSelect & {
   seriesName: string | null
@@ -157,23 +158,40 @@ export const uniqueSermonSlug = (preachedOn: string, title: string) => {
 }
 
 // A speaker picked in the sermon form must be on the Speakers list.
-export const assertSpeakerPerson = (personId: string | null | undefined) => {
-  if (!personId) return
-  if (!db.select({ id: people.id }).from(people).where(and(eq(people.id, personId), eq(people.isSpeaker, true))).get()) {
-    throw createError({ statusCode: 400, statusMessage: 'That speaker is not on the Speakers list' })
+// Whether a message may name this person as its speaker. Someone on the Speakers list always may.
+// An adult church member who is not on it yet may too, when the one saving may keep that list
+// (speakers:update): naming them adds them. Returns the member to add, or null when there is none.
+export const assertSpeakerPerson = (personId: string | null | undefined, canAddMember = false): string | null => {
+  if (!personId) return null
+  const person = db.select({ id: people.id, kind: people.kind, isMinor: people.isMinor, isSpeaker: people.isSpeaker }).from(people).where(eq(people.id, personId)).get()
+  if (person?.isSpeaker) return null
+  if (person?.kind === 'member' && !person.isMinor) {
+    if (canAddMember) return person.id
+    throw createError({ statusCode: 403, statusMessage: 'That person is not on the Speakers list, and you are not allowed to add them to it' })
   }
+  throw createError({ statusCode: 400, statusMessage: 'That speaker is not on the Speakers list' })
 }
 
-// Active speakers for the sermon form, plus any archived one a message still names.
-export const speakerChoices = (): SpeakerChoice[] => {
+// Puts a church member on the Speakers list because a message names them.
+export const addMemberAsSpeaker = (tx: Tx, personId: string, actorUserId: string) => {
+  tx.update(people).set({ isSpeaker: true, speakerArchivedAt: null }).where(eq(people.id, personId)).run()
+  recordAudit(tx, { actorUserId, action: 'speaker.add', entityType: 'person', entityId: personId, note: 'member, named on a message' })
+}
+
+// Active speakers for the sermon form, plus any archived one a message still names. With
+// `includeMembers`, adult church members not yet on the list follow, marked `member`: naming one
+// adds them to it.
+export const speakerChoices = (includeMembers = false): SpeakerChoice[] => {
   const linked = new Set(db.select({ id: sermons.speakerPersonId }).from(sermons).all().map(r => r.id).filter(Boolean))
-  return db.select({ id: people.id, first: people.firstName, last: people.lastName, archivedAt: people.speakerArchivedAt })
+  const speakers = db.select({ id: people.id, first: people.firstName, last: people.lastName, archivedAt: people.speakerArchivedAt })
     .from(people)
     .where(eq(people.isSpeaker, true))
     .orderBy(asc(people.lastName), asc(people.firstName))
     .all()
     .filter(p => !p.archivedAt || linked.has(p.id))
     .map(p => ({ id: p.id, name: `${p.first} ${p.last}` }))
+  if (!includeMembers) return speakers
+  return [...speakers, ...loadSpeakerCandidates().map(p => ({ id: p.id, name: `${p.firstName} ${p.lastName}`, member: true }))]
 }
 
 // ---- Teachers ----------------------------------------------------------------
